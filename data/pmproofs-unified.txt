@@ -1,0 +1,1436 @@
+  Shortest known proofs of the propositional calculus theorems from
+  -----------------------------------------------------------------
+                        _Principia Mathematica_
+                        -----------------------
+
+----------------------------------------------------------------------------
+                           ~~ PUBLIC DOMAIN ~~
+This work is waived of all rights, including copyright, according to the CC0
+Public Domain Dedication.  http://creativecommons.org/publicdomain/zero/1.0/
+----------------------------------------------------------------------------
+
+Created and maintained by Norman Megill http://us.metamath.org/email.html
+
+Revision history:
+
+03-Oct-2022:  Eliminated (sub-)proofs by lexicographically smaller
+  (sub-)strings. 26 proofs affected: *2.6, *2.67, *2.68, *2.69, *2.85,
+  *2.86, *3.37, *3.4, *4.72, *4.78, *4.79, *5.1, *5.15, *5.18, *5.19,
+  *5.23, *5.24, *5.25, *5.32, *5.35, *5.41, *5.501, *5.53, *5.62, *5.7,
+  and *5.74.
+02-Oct-2022:  Shorter proofs of *2.62, *3.31, *3.43, *3.44, *4.14, *4.32,
+  *4.39, *4.41, *4.76, *4.77, *4.86, *4.87, *5.31, *5.6, *5.75, meredith,
+  and biass were found by Samiro Discher (SD).
+15-Oct-2020:  Shorter proofs of *5.19, *3.31, *3.43, *3.44, *4.39,
+  *4.82, and meredith were found by Rohan Ridenour (RR).  A proof of biass
+  by RR was added.  (Theorem biass completes the set of theorems needed as
+  axioms for classical equivalence logic, although it was omitted from
+  _Principia Mathematica_.)
+23-Jul-2020:  Shorter proofs of *3.37 and *3.44 were found by Rohan Ridenour
+  (RR).
+20-Jul-2020:  Shorter proofs of *2.6, *5.25, *5.31, *5.62, and meredith
+  were found by Rohan Ridenour (RR).  See the 20-Jul-2020 note on
+  http://us.metamath.org/mmsolitaire/mms.html for a mention of one of
+  the tools he used.
+21-Aug-2018:  A shorter proof of peirce was found by George Szpiro (GSZ).
+18-Aug-2018:  Added proof of Peirce's axiom (peirce).
+10-May-2018:  A shorter proof of *3.37 was found by George Szpiro (GSZ).
+22-Apr-2018:  A shorter proof of meredith was found by George Szpiro (GSZ).
+22-Mar-2018:  drule.c now allows checking a single proof.  See the note
+  below with this date.
+13-Feb-2013:  Shorter proofs of *3.1, *3.43, *4.4, *4.41, *4.5, *4.76,
+  *4.83, *5.33, *5.35, *5.36, and meredith were found by Scott Fenton (SF).
+23-Jan-2012:  Added a clarification.
+30-Aug-2011:  Shorter proofs of *3.33, *3.45, *4.36, and meredith
+  were found by Scott Fenton (SF).
+12-Jun-2010:  A proof of Meredith's single axiom for propositional
+  calculus was added.  Contributed by Scott Fenton.
+06-Mar-2008:  Corrected theorems *2.36, *2.37, and *2.38, which were
+  shown with v expanded into ~ and ->.  (The "Result of proof" and the
+  proof itself were still correct, however).
+04-May-2004:  Gregory Bush found shorter proofs for 67 of the original
+  193 proofs.  This file has been updated with them.  When you see a
+  comment like "(GB 35->25)" after the theorem, it means the original
+  proof had 35 steps and Greg found a shorter version with only 25 steps.
+
+I found the original proofs in the 1990s.  I believe that all the proofs
+with 21 or fewer steps are the shortest possible since they resulted
+from an exhaustive search.
+
+------------------------------------------------------------------------
+
+Description
+-----------
+
+This file contains proofs of all 193 theorems of propositional calculus
+in Whitehead and Russell's _Principia Mathematica_, directly from axioms
+ax-1, ax-2, ax-3, and ax-mp in the Metamath Solitaire applet
+(http://us.metamath.org/mmsolitaire/mms.html).  These are the shortest
+known direct proofs.  If you find a shorter one, let me know at nm (at)
+alum (dot) mit (dot) edu (include the word "Metamath" in the subject).
+
+In these proofs, the resulting theorem is in a form which has all
+abbreviations expanded, so instead of "(~ P v P)" for theorem *2.1 you
+will see "(~ ~ P -> P)" or in Metamath Solitaire's ASCII notation,
+"(-. -. P -> P)".  To get "(~ P v P)" we would apply the definition of
+logical OR, which is shown in the applet using:  Select Logic Family ->
+Propositional Calculus + Definitions -> Axiom Information -> Axioms ->
+df-or.  If we wanted we could extend the proof to apply the definition
+directly in the proof, but that is somewhat tedious and was not our
+purpose here.
+
+In addition, sometimes "more general" theorems are proved.  For example,
+the proof of theorem *1.6 actually proves
+"((P -> Q) -> ((R -> P) -> (R -> Q)))" in the applet.  We obtain theorem
+*1.6 by substituting "-. R" for "R", then applying the definition of
+logical OR.
+
+The notation for proofs is as follows.  For theorem *1.6, for example,
+the proof shown is "DD2D121".  To enter this into the applet, you enter
+the steps in _reverse_ order i.e. "121D2DD".  The character mapping is
+as follows:  "1" is ax-1, "2" is ax-2, "3" is ax-3, and "D" is ax-mp.
+Thus this proof would be entered into the applet as:
+
+  ax-1 ax-2 ax-1 ax-mp ax-2 ax-mp ax-mp
+
+As a historical note, the notation in "DD2D121" is called "condensed
+detachment" and expresses the proof in Polish notation.  It was invented
+by logician C. A. Meredith in the 1950's.  For more information on this
+notation you can reference the article "A Finitely Axiomatized
+Formalization of Predicate Calculus with Equality" linked to from the
+Metamath Home Page.  The Appendix in that article shows how to write a
+very simple program for verifying these proofs.  For longer proofs such
+a program is much more convenient than repeated clicks on the applet.
+
+If this interests you, I have a hastily-written C program, drule.c,
+that implements the algorithm and which was used to verify these proofs.
+It is unpolished and probably not suitable for general release, but it
+has no known bugs.  Download here:
+
+  http://us.metamath.org/downloads/drule.c
+
+To compile:
+
+  gcc drule.c -o drule
+
+To run:
+
+  ./drule < pmproofs.txt > newpmproofs.txt
+
+where "pmproofs.txt" is the name of this file.  Then drule.c will verify
+each proof below and also regenerate the "Result of proof" and the
+number of steps in the output file "newpmproofs.txt".  Unfortunately, it
+will also discard this comment header, which must be put back by hand.
+
+    Note added 22-Mar-2018:  If given a single argument, drule.c will now
+    assume it is a proof and print the result in Polish prefix notation.
+    E.g. "./drule DD211" will print ">PP".
+
+See comments at the top of drule.c for more information.  Note:
+everything up to and including the LAST LINE OF DASHES below is treated
+as a comment, i.e. discarded, by the drule.c proof checker.  In
+addition, due to the crudeness of drule.c, the text above the last line
+of dashes MUST NOT CONTAIN SEMICOLONS.  This is not a bug but is an
+intentional design shortcut made to write the program quickly.
+(Algorithm:  Until there is a semicolon identifying the end of the
+first statement, no processing occurs.  When a line of dashes is
+encountered, reading of the input restarts.)  If you want to enhance the
+program, be my guest.  :)
+
+
+------------------------------------------------------------------------
+
+File format
+-----------
+
+For each theorem below, we list:  (1) the theorem as it appears in
+_Principia Mathematica_ along with P.M.'s theorem number, (2) the
+unabbreviated result of the proof as it will appear in the Metamath
+Solitaire Java applet, and (3) the proof in the condensed detachment
+notation explained above.  A semicolon ends the theorem or proof, and an
+exclamation point means the rest of the line is a comment.  All
+proofs were verified and formatted by drule.c as explained above.
+
+In the condensed detachment notation, "D" stands for the second of its
+two arguments detached from the first (i.e. the first argument is the
+major premise, and the second the minor premise, of modus ponens).  "1",
+"2", and "3" stand for the three axioms of the system called P_2
+(attributed to Lukasiewicz and popularized by Church):
+
+  ax-1  (P -> (Q -> P))
+  ax-2  ((P -> (Q -> R)) -> ((P -> Q) -> (P -> R)))
+  ax-3  ((~ P -> ~ Q) -> (Q -> P))
+
+These axioms are hard-coded into the drule.c program (see below).
+
+
+------------------------------------------------------------------------
+
+Clarification added 23-Jan-2012
+-------------------------------
+
+The general idea behind this page is to present the shortest known
+formal proof as it is usually defined in most logic textbooks for a
+system with axiom schemes.  In such a system, a proof step is either an
+axiom (i.e. a specific _instance_ of an axiom scheme) or the result of
+an inference rule applied to previous steps.
+
+The D-rule, as used in the literature, results in a (most general)
+_scheme_.  With the aid of a more complex notation, a proof could be
+built up from D-proof pieces that are referenced multiple times as
+subproofs, resulting in fewer total steps.  However, on this page, the
+D-notation is intended instead merely as a convenient way to abbreviate
+textbook formal proofs, in which it is rare that a specific _instance_
+of an axiom scheme repeats in the formal proof.  In the occasional case
+where that happens, a slightly shorter formal proof could be
+reconstructed from the D-proof by expanding it and looking for repeated
+instances, obtaining a formal proof whose length would be slightly less
+than the D-proof length.  (I haven't looked at how often such repeated
+instances occur or even if they occur at all in these proofs.)
+
+To avoid such quibbles, we can restate our goal as simply being the
+shortest complete formal proof expressible in pure D-notation.
+
+---------------------------------------------------------------------------
+For drule.c:  THERE MUST BE NO SEMICOLONS IN THE ENTIRE BODY OF TEXT ABOVE.
+For drule.c:  THIS COMMENT HEADER ENDS WITH THE LINE OF DASHES BELOW.
+---------------------------------------------------------------------------
+
+
+((P v P) -> P); ! *1.2 Taut
+((~ P -> P) -> P); ! Result of proof
+DD2DD2D13D2DD2D1311; ! 19 steps
+
+(Q -> (P v Q)); ! *1.3 Add
+(P -> (Q -> P)); ! Result of proof
+1; ! 1 step
+
+((P v Q) -> (Q v P)); ! *1.4
+((~ P -> Q) -> (~ Q -> P)); ! Result of proof
+DD2D13D2D1D3DD2DD2D13DD2D1311; ! 29 steps
+
+((P v (Q v R)) -> (Q v (P v R))); ! *1.5 Assoc
+((P -> (Q -> R)) -> (Q -> (P -> R))); ! Result of proof
+DD2D1DD22D11DD2D112; ! 19 steps
+
+((Q -> R) -> ((P v Q) -> (P v R))); ! *1.6 Sum
+((P -> Q) -> ((R -> P) -> (R -> Q))); ! Result of proof
+DD2D121; ! 7 steps
+
+((P -> ~ P) -> ~ P); ! *2.01
+((P -> ~ P) -> ~ P); ! Result of proof
+DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2D1311; ! 49 steps
+
+(Q -> (P -> Q)); ! *2.02 Simp
+(P -> (Q -> P)); ! Result of proof
+1; ! 1 step
+
+((P -> ~ Q) -> (Q -> ~ P)); ! *2.03
+((P -> ~ Q) -> (Q -> ~ P)); ! Result of proof
+DD2D13DD2D1DD22D2DD2D13DD2D1311; ! 31 steps
+
+((P -> (Q -> R)) -> (Q -> (P -> R))); ! *2.04 Comm
+((P -> (Q -> R)) -> (Q -> (P -> R))); ! Result of proof
+DD2D1DD22D11DD2D112; ! 19 steps
+
+((Q -> R) -> ((P -> Q) -> (P -> R))); ! *2.05 Syll
+((P -> Q) -> ((R -> P) -> (R -> Q))); ! Result of proof
+DD2D121; ! 7 steps
+
+((P -> Q) -> ((Q -> R) -> (P -> R))); ! *2.06 Syll
+((P -> Q) -> ((Q -> R) -> (P -> R))); ! Result of proof
+DD2D1D2DD2D1211; ! 15 steps
+
+(P -> (P v P)); ! *2.07
+(P -> (Q -> P)); ! Result of proof
+1; ! 1 step
+
+(P -> P); ! *2.08 Id
+(P -> P); ! Result of proof
+DD211; ! 5 steps
+
+(~ P v P); ! *2.1
+(~ ~ P -> P); ! Result of proof
+DD2DD2D13DD2D1311; ! 17 steps
+
+(P v ~ P); ! *2.11
+(P -> P); ! Result of proof
+DD211; ! 5 steps
+
+(P -> ~ ~ P); ! *2.12
+(P -> ~ ~ P); ! Result of proof
+D3DD2DD2D13DD2D1311; ! 19 steps
+
+(P v ~ ~ ~ P); ! *2.13
+(P -> ~ ~ P); ! Result of proof
+D3DD2DD2D13DD2D1311; ! 19 steps
+
+(~ ~ P -> P); ! *2.14
+(~ ~ P -> P); ! Result of proof
+DD2DD2D13DD2D1311; ! 17 steps
+
+((~ P -> Q) -> (~ Q -> P)); ! *2.15 Transp
+((~ P -> Q) -> (~ Q -> P)); ! Result of proof
+DD2D13D2D1D3DD2DD2D13DD2D1311; ! 29 steps
+
+((P -> Q) -> (~ Q -> ~ P)); ! *2.16
+((P -> Q) -> (~ Q -> ~ P)); ! Result of proof
+DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311
+; ! 59 steps
+
+((~ Q -> ~ P) -> (P -> Q)); ! *2.17 Transp
+((~ P -> ~ Q) -> (Q -> P)); ! Result of proof
+3; ! 1 step
+
+((~ P -> P) -> P); ! *2.18
+((~ P -> P) -> P); ! Result of proof
+DD2DD2D13D2DD2D1311; ! 19 steps
+
+(P -> (P v Q)); ! *2.2
+(P -> (~ P -> Q)); ! Result of proof
+DD2D1D2DD2D1311; ! 15 steps
+
+(~ P -> (P -> Q)); ! *2.21
+(~ P -> (P -> Q)); ! Result of proof
+DD2D131; ! 7 steps
+
+(P -> (~ P -> Q)); ! *2.24
+(P -> (~ P -> Q)); ! Result of proof
+DD2D1D2DD2D1311; ! 15 steps
+
+(P v ((P v Q) -> Q)); ! *2.25
+(P -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1D2DD2111; ! 13 steps
+
+(~ P v ((P -> Q) -> Q)); ! *2.26 (GB 35->25)
+(~ ~ P -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1D2DD211DD2D13DD2D131; ! 25 steps
+
+(P -> ((P -> Q) -> Q)); ! *2.27
+(P -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1D2DD2111; ! 13 steps
+
+((P v (Q v R)) -> (P v (R v Q))); ! *2.3
+((P -> (~ Q -> R)) -> (P -> (~ R -> Q))); ! Result of proof
+D2D1DD2D13D2D1D3DD2DD2D13DD2D1311; ! 33 steps
+
+((P v (Q v R)) -> ((P v Q) v R)); ! *2.31
+((P -> (~ Q -> R)) -> (~ (P -> Q) -> R)); ! Result of proof
+DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D11DD2D112D2D1DD2D13D
+2D1D3DD2DD2D13DD2D1311; ! 91 steps
+
+(((P v Q) v R) -> (P v (Q v R))); ! *2.32
+((~ (P -> Q) -> R) -> (P -> (~ Q -> R))); ! Result of proof
+DD2D1D2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D11DD2D112DD2D13D
+2D1D3DD2DD2D13DD2D1311; ! 91 steps
+
+((Q -> R) -> ((P v Q) -> (R v P))); ! *2.36
+((P -> Q) -> ((~ R -> P) -> (~ Q -> R))); ! Result of proof
+DD2D1D2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D121; ! 45 steps
+
+((Q -> R) -> ((Q v P) -> (P v R))); ! *2.37
+((P -> Q) -> ((~ P -> R) -> (~ R -> Q))); ! Result of proof
+DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D121; ! 53 steps
+
+((Q -> R) -> ((Q v P) -> (R v P))); ! *2.38
+((P -> Q) -> ((~ P -> R) -> (~ Q -> R))); ! Result of proof
+DD2D1DD2D1D2DD2D1211DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D
+13DD2D1311; ! 79 steps
+
+((P v (P v Q)) -> (P v Q)); ! *2.4
+((P -> (P -> Q)) -> (P -> Q)); ! Result of proof
+DD22D21; ! 7 steps
+
+((Q v (P v Q)) -> (P v Q)); ! *2.41
+((~ P -> (Q -> P)) -> (Q -> P)); ! Result of proof
+DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD22D11DD2D112; ! 47 steps
+
+((~ P v (P -> Q)) -> (P -> Q)); ! *2.42
+((~ ~ P -> (P -> Q)) -> (P -> Q)); ! Result of proof
+DD2D1DD22D21DD2DD2D121D1D3DD2DD2D13DD2D1311; ! 43 steps
+
+((P -> (P -> Q)) -> (P -> Q)); ! *2.43
+((P -> (P -> Q)) -> (P -> Q)); ! Result of proof
+DD22D21; ! 7 steps
+
+(~ (P v Q) -> ~ P); ! *2.45
+(~ (P -> Q) -> P); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D131; ! 33 steps
+
+(~ (P v Q) -> ~ Q); ! *2.46
+(~ (P -> Q) -> ~ Q); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D131; ! 39 steps
+
+(~ (P v Q) -> (~ P v Q)); ! *2.47 (GB 35->31)
+(~ (P -> Q) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D131DD2D11DD2D131; ! 31 steps
+
+(~ (P v Q) -> (P v ~ Q)); ! *2.48 (GB 45->43)
+(~ (P -> Q) -> (R -> ~ Q)); ! Result of proof
+DD2D1DD2D1DD2D13DD22D1DD2D13DD2D1311DD2D131; ! 43 steps
+
+(~ (P v Q) -> (~ P v ~ Q)); ! *2.49 (GB 35->31)
+(~ (P -> Q) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D131DD2D11DD2D131; ! 31 steps
+
+(~ (P -> Q) -> (~ P -> Q)); ! *2.5 (GB 35->31)
+(~ (P -> Q) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D131DD2D11DD2D131; ! 31 steps
+
+(~ (P -> Q) -> (P -> ~ Q)); ! *2.51 (GB 45->43)
+(~ (P -> Q) -> (R -> ~ Q)); ! Result of proof
+DD2D1DD2D1DD2D13DD22D1DD2D13DD2D1311DD2D131; ! 43 steps
+
+(~ (P -> Q) -> (~ P -> ~ Q)); ! *2.52 (GB 35->31)
+(~ (P -> Q) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D131DD2D11DD2D131; ! 31 steps
+
+(~ (P -> Q) -> (Q -> P)); ! *2.521 (GB 29->25)
+(~ (P -> Q) -> (Q -> R)); ! Result of proof
+DD2D1DD22D11DD2D11DD2D131; ! 25 steps
+
+((P v Q) -> (~ P -> Q)); ! *2.53
+(P -> P); ! Result of proof
+DD211; ! 5 steps
+
+((~ P -> Q) -> (P v Q)); ! *2.54
+(P -> P); ! Result of proof
+DD211; ! 5 steps
+
+(~ P -> ((P v Q) -> Q)); ! *2.55
+(P -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1D2DD2111; ! 13 steps
+
+(~ Q -> ((P v Q) -> P)); ! *2.56 (GB 37->35)
+(~ P -> ((~ Q -> P) -> Q)); ! Result of proof
+DD2D1D2DD2D1D231DD2D12DD2D11DD2D131; ! 35 steps
+
+((~ P -> Q) -> ((P -> Q) -> Q)); ! *2.6 (RR 89->77)
+((~ P -> Q) -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D12113D2D1D3DD2DD2D13
+DD2D1311; ! 77 steps
+
+((P -> Q) -> ((~ P -> Q) -> Q)); ! *2.61
+((P -> Q) -> ((~ P -> Q) -> Q)); ! Result of proof
+DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2
+D1311DD2D121; ! 81 steps
+
+((P v Q) -> ((P -> Q) -> Q)); ! *2.62 (SD 89->77)
+((~ P -> Q) -> ((P -> Q) -> Q)); ! Result of proof
+DD2D1DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D12113D2D1D3DD2DD2D13
+DD2D1311; ! 77 steps
+
+((P -> Q) -> ((P v Q) -> Q)); ! *2.621
+((P -> Q) -> ((~ P -> Q) -> Q)); ! Result of proof
+DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2
+D1311DD2D121; ! 81 steps
+
+((P v Q) -> ((~ P v Q) -> Q)); ! *2.63
+((P -> Q) -> ((~ P -> Q) -> Q)); ! Result of proof
+DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2
+D1311DD2D121; ! 81 steps
+
+((P v Q) -> ((P v ~ Q) -> P)); ! *2.64 (GB 61->39)
+((~ P -> Q) -> ((~ P -> ~ Q) -> P)); ! Result of proof
+DD2D13D2DD2D13DD2D1D2DD2DD2D13DD2D13111; ! 39 steps
+
+((P -> Q) -> ((P -> ~ Q) -> ~ P)); ! *2.65
+((P -> Q) -> ((P -> ~ Q) -> ~ P)); ! Result of proof
+DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2DD2D13DD2D1D2DD2DD2D13DD2D13111
+; ! 69 steps
+
+(((P v Q) -> Q) -> (P -> Q)); ! *2.67
+(((~ P -> Q) -> R) -> (P -> R)); ! Result of proof
+DD2D1DD22D1DD2D1D2DD2D13111; ! 27 steps
+
+(((P -> Q) -> Q) -> (P v Q)); ! *2.68
+(((P -> Q) -> R) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D1311; ! 19 steps
+
+(((P -> Q) -> Q) -> ((Q -> P) -> P)); ! *2.69
+(((P -> Q) -> R) -> ((R -> P) -> P)); ! Result of proof
+DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D1211DD2D1DD22D1DD2D1311
+; ! 67 steps
+
+((P -> Q) -> (((P v Q) v R) -> (Q v R))); ! *2.73
+((P -> Q) -> ((~ (~ P -> Q) -> R) -> (~ Q -> R))); ! Result of proof
+DD2D1DD2D1D2DD2D1211DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD
+2DD2D13DD2D1311DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D
+1D3DD2DD2D13DD2D1311DD2D121; ! 165 steps
+
+((Q -> P) -> (((P v Q) v R) -> (P v R))); ! *2.74
+((P -> Q) -> ((~ (~ Q -> P) -> R) -> (~ Q -> R))); ! Result of proof
+DD2D1DD2D1D2DD2D1211DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD
+2DD2D13DD2D1311DD2D1D2D1DD2DD2D13D2DD2D1311DD2D121; ! 119 steps
+
+((P v Q) -> ((P v (Q -> R)) -> (P v R))); ! *2.75
+((P -> Q) -> ((P -> (Q -> R)) -> (P -> R))); ! Result of proof
+DD2D1D221; ! 9 steps
+
+((P v (Q -> R)) -> ((P v Q) -> (P v R))); ! *2.76
+((P -> (Q -> R)) -> ((P -> Q) -> (P -> R))); ! Result of proof
+2; ! 1 step
+
+((P -> (Q -> R)) -> ((P -> Q) -> (P -> R))); ! *2.77
+((P -> (Q -> R)) -> ((P -> Q) -> (P -> R))); ! Result of proof
+2; ! 1 step
+
+((Q v R) -> ((~ R v S) -> (Q v S))); ! *2.8 (GB 63->43)
+((P -> Q) -> ((~ ~ Q -> R) -> (P -> R))); ! Result of proof
+DD2D1DD2D1D2DD2D1211D2D1D3DD2DD2D13DD2D1311; ! 43 steps
+
+((Q -> (R -> S)) -> ((P v Q) -> ((P v R) -> (P v S)))); ! *2.81
+((P -> (Q -> R)) -> ((S -> P) -> ((S -> Q) -> (S -> R))))
+; ! Result of proof
+DD2D1D2D12DD2D121; ! 17 steps
+
+(((P v Q) v R) -> (((P v ~ R) v S) -> ((P v Q) v S))); ! *2.82
+((~ (P -> Q) -> R) -> ((~ (P -> ~ R) -> S) -> (~ (P -> Q) -> S)))
+; ! Result of proof
+DD2D1DD2D1D2DD2D1211D2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2D1D3DD
+2DD2D13DD2D1311DD2D131; ! 91 steps
+
+((P -> (Q -> R)) -> ((P -> (R -> S)) -> (P -> (Q -> S)))); ! *2.83
+((P -> (Q -> R)) -> ((P -> (R -> S)) -> (P -> (Q -> S))))
+; ! Result of proof
+DD2D12D2D1DD2D1D2DD2D1211; ! 25 steps
+
+(((P v Q) -> (P v R)) -> (P v (Q -> R))); ! *2.85 (GB 41->37)
+(((P -> Q) -> (R -> S)) -> (R -> (Q -> S))); ! Result of proof
+DD2D1DD2D1DD22D111DD2D12DD2D1DD22D111; ! 37 steps
+
+(((P -> Q) -> (P -> R)) -> (P -> (Q -> R))); ! *2.86 (GB 41->37)
+(((P -> Q) -> (R -> S)) -> (R -> (Q -> S))); ! Result of proof
+DD2D1DD2D1DD22D111DD2D12DD2D1DD22D111; ! 37 steps
+
+((P ^ Q) -> ~ (~ P v ~ Q)); ! *3.1 (GB 79->73) (SF 73->69)
+(~ (P -> Q) -> ~ (~ ~ P -> Q)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2DD2D12DD2D13DD2D131D1D3DD2DD2D13DD2D1311
+; ! 69 steps
+
+(~ (~ P v ~ Q) -> (P ^ Q)); ! *3.11 (GB 73->63)
+(~ (~ ~ P -> Q) -> ~ (P -> Q)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD22D2DD2D13DD2D131DD2D13DD2D131
+; ! 63 steps
+
+((~ P v ~ Q) v (P ^ Q)); ! *3.12 (GB 73->63)
+(~ (~ ~ P -> Q) -> ~ (P -> Q)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD22D2DD2D13DD2D131DD2D13DD2D131
+; ! 63 steps
+
+(~ (P ^ Q) -> (~ P v ~ Q)); ! *3.13 (GB 47->37)
+(~ ~ (P -> Q) -> (~ ~ P -> Q)); ! Result of proof
+DD2D1DD22D2DD2D13DD2D131DD2D13DD2D131; ! 37 steps
+
+((~ P v ~ Q) -> ~ (P ^ Q)); ! *3.14
+((~ ~ P -> Q) -> ~ ~ (P -> Q)); ! Result of proof
+DD2D1D3DD2DD2D13DD2D1311DD2DD2D121D1D3DD2DD2D13DD2D1311; ! 55 steps
+
+(P -> (Q -> (P ^ Q))); ! *3.2
+(P -> (Q -> ~ (P -> ~ Q))); ! Result of proof
+DD2D13DD2D1D2DD2DD2D13DD2D13111; ! 31 steps
+
+(Q -> (P -> (P ^ Q))); ! *3.21
+(P -> (Q -> ~ (Q -> ~ P))); ! Result of proof
+DD2D1D2DD2D13DD2D1D2DD2DD2D13DD2D131111; ! 39 steps
+
+((P ^ Q) -> (Q ^ P)); ! *3.22 (GB 79->69)
+(~ (P -> ~ Q) -> ~ (Q -> ~ P)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D1DD22D2DD2D13DD2D131DD2D13DD2D131
+; ! 69 steps
+
+~ (P ^ ~ P); ! *3.24
+~ ~ (P -> ~ ~ P); ! Result of proof
+DD3DD2DD2D13DD2D1311D3DD2DD2D13DD2D1311; ! 39 steps
+
+((P ^ Q) -> P); ! *3.26 Simp
+(~ (P -> Q) -> P); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D131; ! 33 steps
+
+((P ^ Q) -> Q); ! *3.27 Simp
+(~ (P -> ~ Q) -> Q); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D13111; ! 27 steps
+
+(((P ^ Q) -> R) -> (P -> (Q -> R))); ! *3.3 Exp (GB 63->59)
+((~ (P -> ~ Q) -> R) -> (P -> (Q -> R))); ! Result of proof
+DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD2D1D2DD2DD2D13DD2D131111
+; ! 59 steps
+
+((P -> (Q -> R)) -> ((P ^ Q) -> R)); ! *3.31 Imp (SD 103->83)
+((P -> (Q -> R)) -> (~ (P -> ~ Q) -> R)); ! Result of proof
+DD2DD2D12DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1D3DD2D1D3DD2D
+D2D13DD2D13111; ! 83 steps
+
+(((P -> Q) ^ (Q -> R)) -> (P -> R))
+; ! *3.33 Syll (GB 113->105) (SF 105->95)
+(~ ((P -> Q) -> ~ (Q -> R)) -> (P -> R)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD
+2D1D2DD2D12DD2D13DD2D13111; ! 95 steps
+
+(((Q -> R) ^ (P -> Q)) -> (P -> R)); ! *3.34 Syll
+(~ ((P -> Q) -> ~ (R -> P)) -> (R -> Q)); ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2
+D1311D2D1D3DD2DD2D13DD2D1311DD2D1211; ! 105 steps
+
+((P ^ (P -> Q)) -> Q); ! *3.35 Ass (GB 93->63)
+(~ (P -> ~ (P -> Q)) -> Q); ! Result of proof
+DD2D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131
+; ! 63 steps
+
+(((P ^ Q) -> R) -> ((P ^ ~ R) -> ~ Q))
+; ! *3.37 Transp (GSZ 179->171) (RR 171->141)
+((~ (P -> ~ Q) -> R) -> (~ (P -> ~ ~ R) -> ~ Q)); ! Result of proof
+DD2D1DD2D13D2DD2D1DD2D1D2D1DD2D1D3DD2DD2D13DD2D1311D2D1D3DD2DD2D13DD2
+D1311DD2D1DD2D1D2DD2D1211D2DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D13DD2D1
+311; ! 141 steps
+
+((P ^ Q) -> (P -> Q)); ! *3.4 (GB 33->31)
+(~ (P -> ~ Q) -> (R -> Q)); ! Result of proof
+DD2D13DD2D1DD22D11DD2D11DD2D131; ! 31 steps
+
+((P -> R) -> ((P ^ Q) -> R)); ! *3.41
+((P -> Q) -> (~ (P -> R) -> Q)); ! Result of proof
+DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131; ! 45 steps
+
+((Q -> R) -> ((P ^ Q) -> R)); ! *3.42
+((P -> Q) -> (~ (R -> ~ P) -> Q)); ! Result of proof
+DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D13111; ! 39 steps
+
+(((P -> Q) ^ (P -> R)) -> (P -> (Q ^ R)))
+; ! *3.43 Comp (SF 143->139) (RR 139->137) (SD 137->117)
+(~ ((P -> Q) -> ~ (P -> R)) -> (P -> ~ (Q -> ~ R)))
+; ! Result of proof
+DD2DD2D12DD2D1D2D13DD2D1D2D1D2DD2DD2D13DD2D1311DD2D1D2D11D3DD2D1D3DD2
+DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111; ! 117 steps
+
+(((Q -> P) ^ (R -> P)) -> ((Q v R) -> P))
+; ! *3.44 (RR 271->203) (SD 203->183)
+(~ ((P -> Q) -> ~ (R -> Q)) -> ((~ P -> R) -> Q)); ! Result of proof
+DD2DD2D12DD2D1D2D13DD2D1D2D1D2DD2D131DD2DD2D12DD2D11DD2D1DD2D121D3DD2
+D1D3DD2DD2D13DD2D1311DD2D131DD2D1D2D13DD2D1D2D1D2D1D3DD2DD2D13DD2D131
+1DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111D1D11; ! 183 steps
+
+((P -> Q) -> ((P ^ R) -> (Q ^ R)))
+; ! *3.45 Fact (GB 79->71) (SF 71->61)
+((P -> Q) -> (~ (P -> R) -> ~ (Q -> R))); ! Result of proof
+DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D12DD2D13DD2D1311
+; ! 61 steps
+
+(((P -> R) ^ (Q -> S)) -> ((P ^ Q) -> (R ^ S))); ! *3.47
+(~ ((P -> Q) -> ~ (R -> S)) -> (~ (P -> ~ R) -> ~ (Q -> ~ S)))
+; ! Result of proof
+DD2DD2D1DD2D12D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2DD2D121D1D3D
+D2D1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1D
+D2DD2D121D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D13111
+; ! 203 steps
+
+(((P -> R) ^ (Q -> S)) -> ((P v Q) -> (R v S)))
+; ! *3.48 (GB 245->241)
+(~ ((P -> Q) -> ~ (R -> S)) -> ((~ P -> R) -> (~ Q -> S)))
+; ! Result of proof
+DD2D1D2DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D11DD2D112DD2D
+1D2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D1
+DD2DD2D121D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D13
+11DD2D1DD2D1D2D1DD2D1D2DD2D1211211; ! 241 steps
+
+((P -> Q) <-> (~ Q -> ~ P)); ! *4.1
+~ (((P -> Q) -> (~ Q -> ~ P)) -> ~ ((~ R -> ~ S) -> (S -> R)))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD
+2DD2D13DD2D13113; ! 85 steps
+
+((P <-> Q) <-> (~ P <-> ~ Q)); ! *4.11
+~ ((~ ((P -> Q) -> ~ (R -> S)) -> ~ ((~ S -> ~ R) -> ~ (~ Q -> ~
+ P))) -> ~ (~ ((~ T -> ~ U) -> ~ (~ V -> ~ W)) -> ~ ((W -> V) -> ~
+ (U -> T)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311D3DD2D1D3D
+D2DD2D13DD2D13111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD
+2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2DD2D1DD2D13DD2D1D2DD2
+DD2D13DD2D13111DD2D13D3DD2D1D3DD2DD2D13DD2D13111DD2D13D3DD2D1D3DD2DD2
+D13DD2D1311DD2D131; ! 363 steps
+
+((P <-> ~ Q) <-> (Q <-> ~ P)); ! *4.12
+~ ((~ ((P -> ~ Q) -> ~ (~ R -> S)) -> ~ ((Q -> ~ P) -> ~ (~ S ->
+ R))) -> ~ (~ ((T -> ~ U) -> ~ (~ V -> W)) -> ~ ((U -> ~ T) -> ~ (~
+ W -> V)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+DD2D13DD2D1DD22D2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1
+DD2D13D2D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D1
+3DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D3DD2D1
+D3DD2DD2D13DD2D1311DD2D131DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311D3DD2D1D3
+DD2DD2D13DD2D13111; ! 363 steps
+
+(P <-> ~ ~ P); ! *4.13
+~ ((P -> ~ ~ P) -> ~ (~ ~ Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2DD2D13DD2D1311DD2DD2D13DD2D1311
+; ! 61 steps
+
+(((P ^ Q) -> R) <-> ((P ^ ~ R) -> ~ Q))
+; ! *4.14 (GB 325->321) (SD 321->283)
+~ (((~ (P -> ~ Q) -> R) -> (~ (P -> ~ ~ R) -> ~ Q)) -> ~ ((~ (S -> ~
+ ~ T) -> U) -> (~ (S -> U) -> T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D13D2DD2D1DD2D1D2D1DD2D1D3DD2DD2D13D
+D2D1311D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1D2DD2D1211D2DD2D13DD2D1D2DD2D
+D2D13DD2D13111DD2D13DD2D1311DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD
+2D1DD22D11DD2D112DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD2D1D2DD2DD2D13DD2
+D131111; ! 283 steps
+
+(((P ^ Q) -> ~ R) <-> ((Q ^ R) -> ~ P)); ! *4.15 (GB 281->277)
+~ (((~ (P -> ~ Q) -> R) -> (~ (Q -> R) -> ~ P)) -> ~ ((~ (S -> ~ T)
+ -> ~ U) -> (~ (U -> ~ S) -> ~ T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D
+1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD2D1D2DD2DD2D13
+DD2D131111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2
+D1311DD2D1DD2D1DD22D11DD2D112DD2D1D2D1DD2D13DD2D1DD22D2DD2D13DD2D1311
+3; ! 277 steps
+
+(P <-> P); ! *4.2
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+((P <-> Q) <-> (Q <-> P)); ! *4.21 (GB 183->163)
+~ ((~ (P -> ~ Q) -> ~ (Q -> ~ P)) -> ~ (~ (R -> ~ S) -> ~ (S -> ~
+ R))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D1DD22D2D
+D2D13DD2D131DD2D13DD2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D1DD22D2D
+D2D13DD2D131DD2D13DD2D131; ! 163 steps
+
+(((P <-> Q) ^ (Q <-> R)) -> (P <-> R)); ! *4.22 (GB 329->273)
+(~ (~ ((P -> Q) -> ~ (R -> S)) -> ~ ~ ((Q -> T) -> ~ (U -> R))) -> ~
+ ((P -> T) -> ~ (U -> S))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D1DD2D121D3DD2D1D3D3DD2D
+1D3DD2DD2D13DD2D13DD2D13DD2D13111DD2D131D3DD2D1DD2D1D3DD2DD2D13DD2D13
+11DD2D1D2DD2D1311DD2D131DD2DD2D1DD2D121D3DD2D1DD2D1D3DD2DD2D13DD2D131
+1DD2D1D2DD2D13111D3DD2D1D3D3DD2D1D3DD2DD2D13DD2D13DD2D13DD2D131111
+; ! 273 steps
+
+(P <-> (P ^ P)); ! *4.24 (GB 91->89)
+~ ((P -> ~ (P -> ~ P)) -> ~ (~ (Q -> ~ R) -> R)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1D231DD2D1D2DD2DD2D13DD2D13111D3DD2D1
+D3DD2DD2D13DD2D13111; ! 89 steps
+
+(P <-> (P v P)); ! *4.25
+~ ((P -> (Q -> P)) -> ~ ((~ R -> R) -> R)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D11DD2DD2D13D2DD2D1311; ! 45 steps
+
+((P ^ Q) <-> (Q ^ P)); ! *4.3 (GB 183->163)
+~ ((~ (P -> ~ Q) -> ~ (Q -> ~ P)) -> ~ (~ (R -> ~ S) -> ~ (S -> ~
+ R))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D1DD22D2D
+D2D13DD2D131DD2D13DD2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D1DD22D2D
+D2D13DD2D131DD2D13DD2D131; ! 163 steps
+
+((P v Q) <-> (Q v P)); ! *4.31
+~ (((~ P -> Q) -> (~ Q -> P)) -> ~ ((~ R -> S) -> (~ S -> R)))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D13D2D1D3DD2
+DD2D13DD2D1311; ! 83 steps
+
+(((P ^ Q) ^ R) <-> (P ^ (Q ^ R)))
+; ! *4.32 (GB 359->355) (SD 355->317)
+~ ((~ (~ (P -> ~ Q) -> R) -> ~ (P -> ~ ~ (Q -> R))) -> ~ (~ (S -> ~
+ ~ (T -> U)) -> ~ (~ (S -> ~ T) -> U))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD2DD2D1
+2DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1D3DD2D1D3DD2DD2D13DD2
+D13111D2D1DD2DD2D13DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D131
+1DD2D1DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD
+2D1D2DD2DD2D13DD2D131111DD2DD2D13DD2D1311; ! 317 steps
+
+(((P v Q) v R) <-> (P v (Q v R))); ! *4.33
+~ (((~ (P -> Q) -> R) -> (P -> (~ Q -> R))) -> ~ ((S -> (~ T -> U))
+ -> (~ (S -> T) -> U))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1D
+D2D1DD22D11DD2D112DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D13D2D1D3DD2DD
+2D13DD2D1311DD2D1DD2D1DD22D11DD2D112D2D1DD2D13D2D1D3DD2DD2D13DD2D1311
+; ! 207 steps
+
+((P <-> Q) -> ((P ^ R) <-> (Q ^ R)))
+; ! *4.36 (GB 311->291) (SF 291->271)
+(~ ((P -> Q) -> ~ (R -> S)) -> ~ ((~ (P -> T) -> ~ (Q -> T)) -> ~ (~
+ (R -> U) -> ~ (S -> U)))); ! Result of proof
+D3DDD22D2DD2D13DD2D131D1DD2D1D3DD2DD2D13DD2D1311DDDD2DD2D12DD2D11DD2D
+12DD2D11DD2D121D1DD2D1D2DD2D1211D3DDD22D2DD2D13DD2D131D1DD2D1D3DD2DD2
+D13DD2D1311DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D12DD2D13DD2D1
+311DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D12DD2D13DD2D1311
+; ! 271 steps
+
+((P <-> Q) -> ((P v R) <-> (Q v R))); ! *4.37 (GB 311->307)
+(~ ((P -> Q) -> ~ (R -> S)) -> ~ (((~ P -> T) -> (~ Q -> T)) -> ~
+ ((~ R -> U) -> (~ S -> U)))); ! Result of proof
+D3DDD22D2DD2D13DD2D131D1DD2D1D3DD2DD2D13DD2D1311DDDD2DD2D12DD2D11DD2D
+12DD2D11DD2D121D1DD2D1D2DD2D1211D3DDD22D2DD2D13DD2D131D1DD2D1D3DD2DD2
+D13DD2D1311DD2D1DD2D1D2DD2D1211DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2
+D1D3DD2DD2D13DD2D1311DD2D1DD2D1D2DD2D1211DD2D1DD2D13DD2D1DD22D2DD2D13
+DD2D1311D2D1D3DD2DD2D13DD2D1311; ! 307 steps
+
+(((P <-> R) ^ (Q <-> S)) -> ((P ^ Q) <-> (R ^ S))); ! *4.38
+(~ (~ ((P -> Q) -> ~ (R -> S)) -> ~ ~ ((T -> U) -> ~ (V -> W))) -> ~
+ ((~ (P -> ~ T) -> ~ (Q -> ~ U)) -> ~ (~ (R -> ~ V) -> ~ (S -> ~
+ W)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D1DD2D12D2D1DD2D13DD2D1D
+2DD2DD2D13DD2D13111DD2D1DD2D1DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD
+2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D1
+31DD2D1DD2D1DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13
+DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D12D2D1DD2D13DD2
+D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D131
+1DD2D131D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131D
+D2D1DD2D1DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2
+D13111D3DD2D1D3DD2DD2D13DD2D13111; ! 585 steps
+
+(((P <-> R) ^ (Q <-> S)) -> ((P v Q) <-> (R v S)))
+; ! *4.39 (GB 913->901) (RR 901->609) (SD 609->479)
+(~ (~ ((P -> Q) -> ~ (R -> S)) -> ~ ~ ((T -> U) -> ~ (V -> W))) -> ~
+ (((~ P -> T) -> (~ Q -> U)) -> ~ ((~ R -> V) -> (~ S -> W))))
+; ! Result of proof
+DD2DD2D13DD2D1D2DD2DD2D13DD2D1311DD2D11DD2DD2D12DD2D11DD2D1DD2D121D3D
+D2D1D3D3DD2D1D3DD2DD2D13DD2D13DD2D13DD2D13111DD2D131DD2D1D2DD2D121DD2
+D11DD2D13DD2DD2D12DD2D11DD2D1D2D1D3DD2DD2D13DD2D1311D3DD2D1DD2D1D3DD2
+DD2D13DD2D1311DD2D1D2DD2D1311DD2D131D1DD2DD2D13DD2D1311DD2DD2D12DD2D1
+1DD2D12DD2D13DD2DD2D12DD2D11DD2D13DD2D13DD2D1DD22D11DD2D11DD2D131D11D
+D2D1D2DD2D121DD2D11DD2D13DD2DD2D12DD2D11DD2D1D2D1D3DD2DD2D13DD2D1311D
+3DD2D1DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D13111D1DD2DD2D13DD2D1311
+; ! 479 steps
+
+((P ^ (Q v R)) <-> ((P ^ Q) v (P ^ R))); ! *4.4 (SF 359->355)
+~ ((~ (P -> ~ (Q -> R)) -> (~ ~ (P -> Q) -> ~ (P -> ~ R))) -> ~ ((~
+ ~ (S -> T) -> ~ (S -> ~ U)) -> ~ (S -> ~ (T -> U))))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D2DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D
+1311D2D1D3DD2DD2D13DD2D1311DD2D1DD2D12D2D1DD2D13DD2D1D2D1D3DD2DD2D13D
+D2D1311DD2D1D2DD2DD2D13DD2D13111DD2DD2D13DD2D13111D3DD2D1DD2DD2D1DD2D
+13DD2D1D2DD2DD2D13DD2D13111DD2D1D3DD2DD2D13DD2D1311D2D1D3DD2D1D3DD2DD
+2D13DD2D1311DD2D131D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D131DD2DD2D
+13DD2D1311; ! 355 steps
+
+((P v (Q ^ R)) <-> ((P v Q) ^ (P v R)))
+; ! *4.41 (SF 275->271) (SD 271->249)
+~ (((P -> ~ (Q -> ~ R)) -> ~ ((P -> Q) -> ~ (P -> R))) -> ~ (~ ((S
+ -> T) -> ~ (S -> U)) -> (S -> ~ (T -> ~ U)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D2D1D
+3DD2D1D3DD2DD2D13DD2D1311DD2D131D2D1D3DD2D1D3DD2DD2D13DD2D13111DD2DD2
+D12DD2D1D2D13DD2D1D2D1D2DD2DD2D13DD2D1311DD2D1D2D11D3DD2D1D3DD2DD2D13
+DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111; ! 249 steps
+
+(P <-> ((P ^ Q) v (P ^ ~ Q))); ! *4.42 (GB 175->165)
+~ ((P -> (~ ~ (P -> Q) -> ~ (P -> ~ Q))) -> ~ ((~ ~ (R -> S) -> ~ (R
+ -> T)) -> R)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD22D2DD2D13DD2D1311DD2D1D2D2DD2D1
+3DD2D1D2DD2DD2D13DD2D131111D3DD2DD2D1DD2D1D2DD2D13DD2D1D2DD2D13DD2DD2
+D13DD2D131111DD2D131DD2D131; ! 165 steps
+
+(P <-> ((P v Q) ^ (P v ~ Q))); ! *4.43
+~ ((P -> ~ ((~ P -> Q) -> ~ (~ P -> R))) -> ~ (~ ((~ S -> T) -> ~ (~
+ S -> ~ T)) -> S)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+D2DD2D1311DD2D1D2DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D2DD2D13DD2
+D1D2DD2DD2D13DD2D131111; ! 161 steps
+
+(P <-> (P v (P ^ Q))); ! *4.44
+~ ((P -> (~ P -> Q)) -> ~ ((~ R -> ~ (R -> S)) -> R))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D2DD2D1311DD2DD2D13D2DD2D1D2DD2D131DD2D
+11DD2D1313; ! 79 steps
+
+(P <-> (P ^ (P v Q))); ! *4.45 (GB 161->107)
+~ ((P -> ~ (P -> ~ (~ P -> Q))) -> ~ (~ (R -> S) -> R))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2
+D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D131; ! 107 steps
+
+((P ^ Q) <-> ~ (~ P v ~ Q)); ! *4.5 (GB 177->161) (SF 161->157)
+~ ((~ (P -> Q) -> ~ (~ ~ P -> Q)) -> ~ (~ (~ ~ R -> S) -> ~ (R ->
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2DD2D12DD2D13DD2
+D131D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD22D2DD2D13D
+D2D131DD2D13DD2D131; ! 157 steps
+
+(~ (P ^ Q) <-> (~ P v ~ Q)); ! *4.51 (GB 127->117)
+~ ((~ ~ (P -> Q) -> (~ ~ P -> Q)) -> ~ ((~ ~ R -> S) -> ~ ~ (R ->
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD22D2DD2D13DD2D131DD2D13DD2D131DD2D1D3
+DD2DD2D13DD2D1311DD2DD2D121D1D3DD2DD2D13DD2D1311; ! 117 steps
+
+((P ^ ~ Q) <-> ~ (~ P v Q)); ! *4.52 (GB 231->219)
+~ ((~ (P -> ~ ~ Q) -> ~ (~ ~ P -> Q)) -> ~ (~ (~ ~ R -> S) -> ~ (R
+ -> ~ ~ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD2D13DD2D13D
+2D1D3DD2DD2D13DD2D13DD2D13DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13
+DD2D1311DD2D1DD2D1D2D1DD2DD2D13DD2D1311DD2D1DD22D2DD2D13DD2D1311DD2DD
+2D13DD2D1311; ! 219 steps
+
+(~ (P ^ ~ Q) <-> (~ P v Q)); ! *4.53 (GB 181->169)
+~ ((~ ~ (P -> ~ ~ Q) -> (~ ~ P -> Q)) -> ~ ((~ ~ R -> S) -> ~ ~ (R
+ -> ~ ~ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1D2D1DD2DD2D13DD2D1311DD2D1DD22D2DD
+2D13DD2D1311DD2DD2D13DD2D1311DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D13D2D1
+D3DD2DD2D13DD2D13DD2D13DD2D1311; ! 169 steps
+
+((~ P ^ Q) <-> ~ (P v ~ Q)); ! *4.54
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+(~ (~ P ^ Q) <-> (P v ~ Q)); ! *4.55
+~ ((~ ~ P -> P) -> ~ (Q -> ~ ~ Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D13DD2D1311D3DD2DD2D13DD2D1311
+; ! 61 steps
+
+((~ P ^ ~ Q) <-> ~ (P v Q)); ! *4.56
+~ ((~ (P -> ~ ~ Q) -> ~ (P -> Q)) -> ~ (~ (R -> S) -> ~ (R -> ~ ~
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1D3DD2DD2D
+13DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2DD2D
+13DD2D1311DD2DD2D13DD2D1311; ! 165 steps
+
+(~ (~ P ^ ~ Q) <-> (P v Q)); ! *4.57
+~ ((~ ~ (P -> ~ ~ Q) -> (P -> Q)) -> ~ ((R -> S) -> ~ ~ (R -> ~ ~
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D2D1DD2DD2D13DD2D1311DD2DD2D13DD2D1311D
+D2D1D3DD2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311; ! 115 steps
+
+((P -> Q) <-> (~ P v Q)); ! *4.6
+~ (((P -> Q) -> (~ ~ P -> Q)) -> ~ ((~ ~ R -> S) -> (R -> S)))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD22D2DD2D13DD2D1311DD2DD2D121D1D3DD2DD
+2D13DD2D1311; ! 81 steps
+
+(~ (P -> Q) <-> (P ^ ~ Q)); ! *4.61
+~ ((~ (P -> Q) -> ~ (P -> ~ ~ Q)) -> ~ (~ (R -> ~ ~ S) -> ~ (R ->
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2DD2D13
+DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1D3DD2DD2D
+13DD2D1311DD2DD2D13DD2D1311; ! 165 steps
+
+((P -> ~ Q) <-> (~ P v ~ Q)); ! *4.62
+~ (((P -> Q) -> (~ ~ P -> Q)) -> ~ ((~ ~ R -> S) -> (R -> S)))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD22D2DD2D13DD2D1311DD2DD2D121D1D3DD2DD
+2D13DD2D1311; ! 81 steps
+
+(~ (P -> ~ Q) <-> (P ^ Q)); ! *4.63
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+((~ P -> Q) <-> (P v Q)); ! *4.64
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+(~ (~ P -> Q) <-> (~ P ^ ~ Q)); ! *4.65
+~ ((~ (P -> Q) -> ~ (P -> ~ ~ Q)) -> ~ (~ (R -> ~ ~ S) -> ~ (R ->
+ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2DD2D13
+DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1D3DD2DD2D
+13DD2D1311DD2DD2D13DD2D1311; ! 165 steps
+
+((~ P -> ~ Q) <-> (P v ~ Q)); ! *4.66
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+(~ (~ P -> ~ Q) <-> (~ P ^ Q)); ! *4.67
+~ ((P -> P) -> ~ (Q -> Q)); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD211DD211; ! 35 steps
+
+((P -> Q) <-> (P -> (P ^ Q))); ! *4.7
+~ (((P -> Q) -> (P -> ~ (P -> ~ Q))) -> ~ ((R -> ~ (S -> ~ T)) -> (R
+ -> T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D2DD2D13DD2D1D2DD2DD2D13DD2D13111D2D1D3DD2D1
+D3DD2DD2D13DD2D13111; ! 89 steps
+
+((P -> Q) <-> (P <-> (P ^ Q))); ! *4.71
+~ (((P -> Q) -> ~ ((P -> ~ (P -> ~ Q)) -> ~ (~ (R -> S) -> R))) -> ~
+ (~ ((T -> ~ (U -> ~ V)) -> W) -> (T -> V))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2DD2D13DD2D1D2DD2DD2D13DD2D13111D1D3D
+D2D1D3DD2DD2D13DD2D1311DD2D131D2DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D
+2D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131
+; ! 201 steps
+
+((P -> Q) <-> (Q <-> (P v Q))); ! *4.72
+~ (((P -> Q) -> ~ ((R -> (S -> R)) -> ~ ((~ P -> Q) -> Q))) -> ~ (~
+ (T -> ~ ((~ U -> V) -> W)) -> (U -> W))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D3DD2DD2DD2D13DD2D1311D11DD2D1D2D1DD2DD
+2D13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D121DD
+2D1DD2D1DD22D1DD2D1D2DD2D13111D3DD2D1D3DD2DD2D13DD2D13111
+; ! 195 steps
+
+(Q -> (P <-> (P ^ Q))); ! *4.73
+(P -> ~ ((Q -> ~ (Q -> ~ P)) -> ~ (~ (R -> S) -> R)))
+; ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2D13DD2D1D2DD2DD2D13D
+D2D131111D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131; ! 113 steps
+
+(~ P -> (Q <-> (P v Q))); ! *4.74
+(P -> ~ ((Q -> (R -> Q)) -> ~ ((P -> S) -> S))); ! Result of proof
+DD2D1D3DD2DD2DD2D13DD2D1311D11DD2D1D2DD2111; ! 43 steps
+
+(((P -> Q) ^ (P -> R)) <-> (P -> (Q ^ R)))
+; ! *4.76 (SF 275->271) (SD 271->249)
+~ ((~ ((P -> Q) -> ~ (P -> R)) -> (P -> ~ (Q -> ~ R))) -> ~ ((S -> ~
+ (T -> ~ U)) -> ~ ((S -> T) -> ~ (S -> U)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D12DD2D1D2D13DD2D1D2D1D2DD2DD2D13DD2D1
+311DD2D1D2D11D3DD2D1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D1
+3111DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D2D1D3DD2D1D3DD2DD2D13DD2D
+1311DD2D131D2D1D3DD2D1D3DD2DD2D13DD2D13111; ! 249 steps
+
+(((Q -> P) ^ (R -> P)) <-> ((Q v R) -> P)); ! *4.77 (SD 375->287)
+~ ((~ ((P -> Q) -> ~ (R -> Q)) -> ((~ P -> R) -> Q)) -> ~ (((~ S ->
+ T) -> U) -> ~ ((S -> U) -> ~ (T -> U)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D12DD2D1D2D13DD2D1D2D1D2DD2D131DD2DD2D
+12DD2D11DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1D2D13DD2D1D
+2D1D2D1D3DD2DD2D13DD2D1311DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111D1D1
+1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD22D1DD2D1D2DD2D13111DD
+2D1DD22D111; ! 287 steps
+
+(((P -> Q) v (P -> R)) <-> (P -> (Q v R))); ! *4.78 (GB 327->319)
+~ (((~ (P -> Q) -> (P -> R)) -> (P -> (~ Q -> R))) -> ~ ((S -> (~ T
+ -> U)) -> (~ (V -> T) -> (S -> U)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD2D1DD22D111DD2D12DD2D1DD22D111DD
+2D1DD2D1DD22D11DD2D112DD2D1DD2D1DD2D1D2D13DD2D1DD2D1DD22D11DD2D112DD2
+D1D2D1D2DD2D1D2D2DD2D13DD2D1D2DD2DD2D13DD2D131111DD2D1DD22D11DD2D112D
+2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD22D11DD2D112DD2D1DD2DD2D121D1D
+D2D1DD2D1DD2D13DD22D1DD2D13DD2D1311DD2D1312; ! 319 steps
+
+(((Q -> P) v (R -> P)) <-> ((Q ^ R) -> P)); ! *4.79 (GB 547->383)
+~ (((~ (P -> Q) -> (R -> Q)) -> (~ (P -> ~ R) -> Q)) -> ~ ((~ (S ->
+ ~ T) -> U) -> (~ (S -> V) -> (T -> U)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1
+DD2D1DD22D111DD2D12DD2D1DD22D111DD2D1D2D1DD2D1DD2D13DD2D1DD22D2DD2D13
+DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D11DD2D112DD2D1DD2D1D2D1
+DD2D1D2D1DD2DD2D13D2DD2D13112D2D1DD2D13DD2D1D2DD2D131D2D11DD2D1DD22D1
+1DD2D112DD2D1DD2D1DD2D1DD2DD2D121D1DD2D13DD2D1DD22D1DD2D131DD2D11DD2D
+131D2D132DD2D13D2D1D3DD2DD2D13DD2D1311; ! 383 steps
+
+((P -> ~ P) <-> ~ P); ! *4.8
+~ (((P -> ~ P) -> ~ P) -> ~ (Q -> (R -> Q))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2
+D13111; ! 75 steps
+
+((~ P -> P) <-> P); ! *4.81
+~ (((~ P -> P) -> P) -> ~ (Q -> (R -> Q))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D13D2DD2D13111; ! 45 steps
+
+(((P -> Q) ^ (P -> ~ Q)) <-> ~ P)
+; ! *4.82 (GB 249->179) (RR 179->175)
+~ ((~ ((P -> Q) -> ~ (P -> ~ Q)) -> ~ P) -> ~ (~ R -> ~ ((R -> S) ->
+ ~ (R -> T)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1D
+D22D2DD2D13DD2D1311D2DD2D13DD2D1D2DD2DD2D13DD2D131111DD2DD2D1DD2D13DD
+2D1D2DD2DD2D13DD2D13111DD2D131DD2D131; ! 175 steps
+
+(((P -> Q) ^ (~ P -> Q)) <-> Q); ! *4.83 (SF 249->245)
+~ ((~ ((P -> Q) -> ~ (~ P -> Q)) -> Q) -> ~ (R -> ~ ((S -> R) -> ~
+ (T -> R)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1D
+D2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2DD2D
+13D2DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1211DD2
+DD2D1DD2D13DD2D1D2DD2DD2D13DD2D1311111; ! 245 steps
+
+((P <-> Q) -> ((P -> R) <-> (Q -> R))); ! *4.84 (GB 139->135)
+(~ ((P -> Q) -> ~ (R -> S)) -> ~ (((S -> T) -> (R -> T)) -> ~ ((Q ->
+ U) -> (P -> U)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2D121DD2D13DD2D1DD22D
+11DD2D11DD2D131DD2D1D2DD2D121DD2D13DD2D1DD22D1DD2D131DD2D11DD2D131
+; ! 135 steps
+
+((P <-> Q) -> ((R -> P) <-> (R -> Q))); ! *4.85
+(~ ((P -> Q) -> ~ (R -> S)) -> ~ (((T -> P) -> (T -> Q)) -> ~ ((U ->
+ R) -> (U -> S)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D121D3DD2D1D3DD2DD2D13
+DD2D1311DD2D131DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111; ! 123 steps
+
+((P <-> Q) -> ((P <-> R) <-> (Q <-> R)))
+; ! *4.86 (GB 621->617) (SD 617->557)
+(~ ((P -> Q) -> ~ (R -> S)) -> ~ ((~ ((S -> T) -> ~ (U -> P)) -> ~
+ ((R -> T) -> ~ (U -> Q))) -> ~ (~ ((Q -> V) -> ~ (W -> R)) -> ~ ((P
+ -> V) -> ~ (W -> S))))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D12DD2D1D2D1DD2D1D2DD2D1
+3DD2D1D2DD2DD2D13DD2D131111DD2DD2D12DD2D11DD2D1DD2D121D3DD2D1D3DD2DD2
+D13DD2D1311DD2D131D1D3DD2D1D3DD2DD2D13DD2D13111DD2D1D2DD2D1DD2D121D3D
+D2D1D3DD2DD2D13DD2D1311DD2D131DD2D13DD2D1DD22D11DD2D11DD2D131DD2DD2D1
+DD2D1D2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311D
+D2D1DD2DD2D121D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD
+2D1311DD2D1D2DD2D12DD2D11DD2D121DD2D11DD2D1D2DD2D1211DD2D1D2DD2D121DD
+2D13DD2D1DD22D1DD2D131DD2D11DD2D131DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D
+13111; ! 557 steps
+
+(((((P ^ Q) -> R) <-> (P -> (Q -> R))) ^ ((P -> (Q -> R)) <-> (Q ->
+ (P -> R)))) ^ ((Q -> (P -> R)) <-> ((Q ^ P) -> R)))
+; ! *4.87 (GB 531->523) (SD 523->447)
+~ (~ (~ (((~ (P -> ~ Q) -> R) -> (P -> (Q -> R))) -> ~ ((S -> (T ->
+ U)) -> (~ (S -> ~ T) -> U))) -> ~ ~ (((V -> (W -> X)) -> (W -> (V
+ -> X))) -> ~ ((Y -> (Z -> A)) -> (Z -> (Y -> A))))) -> ~ ~ (((B ->
+ (C -> D)) -> (~ (B -> ~ C) -> D)) -> ~ ((~ (E -> ~ F) -> G) -> (E
+ -> (F -> G))))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD3DD2DD2DD2D13DD2D1311D1DD3DD2DD2DD2D13DD2D
+1311D1DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD2D1D2DD2DD2D13DD2D131111DD2D
+D2D12DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1D3DD2D1D3DD2DD2D1
+3DD2D13111DD3DD2DD2DD2D13DD2D1311D1DD2D1DD22D11DD2D112DD2D1DD22D11DD2
+D112DD3DD2DD2DD2D13DD2D1311D1DD2DD2D12DD2DD2D121D1D3DD2D1D3DD2DD2D13D
+D2D1311DD2D131D1D3DD2D1D3DD2DD2D13DD2D13111DD2D1D2DD2D1DD2D1D2DD2D121
+1DD2D13DD2D1D2DD2DD2D13DD2D131111; ! 447 steps
+
+((P ^ Q) -> (P <-> Q)); ! *5.1 (GB 111->107)
+(~ (P -> ~ Q) -> ~ ((R -> Q) -> ~ (S -> P))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D13DD2D1DD22D11DD2D11DD2D13
+1DD2D13DD2D1DD22D1DD2D131DD2D11DD2D131; ! 107 steps
+
+((P -> Q) v (~ P -> Q)); ! *5.11 (GB 35->31)
+(~ (P -> Q) -> (~ P -> R)); ! Result of proof
+DD2D1DD22D1DD2D131DD2D11DD2D131; ! 31 steps
+
+((P -> Q) v (P -> ~ Q)); ! *5.12 (GB 45->43)
+(~ (P -> Q) -> (R -> ~ Q)); ! Result of proof
+DD2D1DD2D1DD2D13DD22D1DD2D13DD2D1311DD2D131; ! 43 steps
+
+((P -> Q) v (Q -> P)); ! *5.13 (GB 29->25)
+(~ (P -> Q) -> (Q -> R)); ! Result of proof
+DD2D1DD22D11DD2D11DD2D131; ! 25 steps
+
+((P -> Q) v (Q -> R)); ! *5.14 (GB 29->25)
+(~ (P -> Q) -> (Q -> R)); ! Result of proof
+DD2D1DD22D11DD2D11DD2D131; ! 25 steps
+
+((P <-> Q) v (P <-> ~ Q)); ! *5.15
+(~ ~ ((P -> Q) -> ~ (R -> S)) -> ~ ((S -> ~ Q) -> ~ (~ R -> P)))
+; ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2D1DD2D1DD2D13DD2D1DD
+22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D13DD2D1D2DD2
+DD2D13DD2D131111DD2D1111DD2D1D2DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D
+1DD2D1D2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1311DD2D1311
+; ! 267 steps
+
+~ ((P <-> Q) ^ (P <-> ~ Q)); ! *5.16 (GB 377->333)
+~ ~ (~ ((P -> Q) -> ~ (Q -> P)) -> ~ ~ ((P -> ~ Q) -> ~ (~ Q -> P)))
+; ! Result of proof
+DD3DD2DD2D13DD2D1311DD2D1D3DD2DD2D13DD2D1311DD2DD2D1DD2D12D2D1DD2D13D
+D2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1D2D1DD2
+D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2D1311DD2D1D2DD2D1211D3DD2D1D
+3DD2DD2D13DD2D13111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2DD2D13D
+D2D1D2DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131
+; ! 333 steps
+
+(((P v Q) ^ ~ (P ^ Q)) <-> (P <-> ~ Q)); ! *5.17
+~ ((~ ((~ P -> Q) -> ~ ~ ~ R) -> ~ (R -> ~ (~ Q -> P))) -> ~ (~ (S
+ -> ~ (~ T -> U)) -> ~ ((~ U -> T) -> ~ ~ ~ S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD2D1D2D1D3DD
+2DD2D13DD2D1311DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D13DD
+2D1DD22D2DD2D13DD2D1311DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2
+D1DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311DD2DD2D121D1DD2D13D2D1D3DD
+2DD2D13DD2D1311D2D1DD2DD2D13DD2D1311DD2DD2D13DD2D1311; ! 329 steps
+
+((P <-> Q) <-> ~ (P <-> ~ Q)); ! *5.18 (GB 577->503)
+~ ((~ ((P -> Q) -> ~ (Q -> P)) -> ~ ~ ((P -> ~ Q) -> ~ (~ Q -> P)))
+ -> ~ (~ ~ ((R -> ~ S) -> ~ (~ T -> U)) -> ~ ((U -> S) -> ~ (T ->
+ R)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D3DD2DD2D13DD2D1311DD2DD2D1DD2D12D2D1DD
+2D13DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1D2
+D1DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2D1311DD2D1D2DD2D1211D3D
+D2D1D3DD2DD2D13DD2D13111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2DD
+2D13DD2D1D2DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD
+2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD22D11DD2D11DD2D13DD2D1DD2
+2D111DD2D1DD2D13DD2D1DD22D1DD2D1311D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D
+131DD2DD2D13DD2D1311; ! 503 steps
+
+~ (P <-> ~ P); ! *5.19 (GB 141->131) (RR 131->123)
+~ ~ ((P -> ~ P) -> ~ (~ P -> P)); ! Result of proof
+DD3DD2DD2D13DD2D1311DD2D1DD2DD2D1DD2D13D2DD2D1D2DD2D131DD2DD2D13DD2D1
+31111DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2D1311; ! 123 steps
+
+((~ P ^ ~ Q) -> (P <-> Q)); ! *5.21 (GB 123->115)
+(~ (~ P -> ~ ~ Q) -> ~ ((P -> R) -> ~ (Q -> S))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D12DD2D11DD2D131D1DD2D1D
+2DD2D1311DD2D13DD2D13DD2D1DD22D11DD2D11DD2D131; ! 115 steps
+
+(~ (P <-> Q) <-> ((P ^ ~ Q) v (Q ^ ~ P))); ! *5.22
+~ ((~ ~ ((P -> Q) -> ~ (R -> S)) -> (~ ~ (P -> ~ ~ Q) -> ~ (R -> ~ ~
+ S))) -> ~ ((~ ~ (T -> ~ ~ U) -> ~ (V -> ~ ~ W)) -> ~ ~ ((T -> U) ->
+ ~ (V -> W)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD2D1DD22D2DD2D13DD2D1311DD2D1DD2D
+D2D121D1D2D1DD2DD2D13DD2D1311D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1D
+D2DD2D13DD2D1311DD2DD2D13DD2D1311DD2DD2D13DD2D1311DD2D1D3DD2DD2D13DD2
+D1311DD2D1DD2D1D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1D3DD2DD2D13DD2D
+1311DD2DD2D13DD2D1311DD2DD2D121D1D2D1D3DD2DD2D13DD2D1311DD2DD2D121D1D
+3DD2DD2D13DD2D1311; ! 363 steps
+
+((P <-> Q) <-> ((P ^ Q) v (~ P ^ ~ Q))); ! *5.23 (GB 557->513)
+~ ((~ ((P -> Q) -> ~ (Q -> P)) -> (~ ~ (P -> ~ Q) -> ~ (~ P -> ~ ~
+ Q))) -> ~ ((~ ~ (R -> ~ S) -> ~ (~ T -> ~ ~ U)) -> ~ ((T -> S) -> ~
+ (U -> R)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD22D2DD2D13DD2D1311DD2DD2D1DD2D12
+D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13D
+D2D1311D2DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2
+D131DD2D1DD2D1D2D1DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D2DD2D13DD2D1311DD
+2D1D2DD2D1211D3DD2D1D3DD2DD2D13DD2D13111DD2D1DD2DD2D1DD2D13DD2D1D2DD2
+DD2D13DD2D13111DD2D1DD2D13DD2D1DD22D111D2D1D3DD2D1D3DD2DD2D13DD2D1311
+DD2D131DD2D1DD2D13DD2D1DD22D1DD2D1311D2D1D3DD2D1D3DD2DD2D13DD2D13111D
+D2DD2D121D1D3DD2DD2D13DD2D1311; ! 513 steps
+
+(~ ((P ^ Q) v (~ P ^ ~ Q)) <-> ((P ^ ~ Q) v (Q ^ ~ P)))
+; ! *5.24 (GB 669->585)
+~ ((~ (~ ~ (P -> ~ Q) -> ~ (~ P -> ~ ~ Q)) -> (~ ~ (P -> ~ ~ Q) -> ~
+ (Q -> ~ ~ P))) -> ~ ((~ ~ (R -> ~ S) -> ~ (T -> ~ ~ U)) -> ~ (~ ~
+ (U -> S) -> ~ (~ R -> ~ ~ T)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD22D2DD2D13DD2D1311DD2D1DD2DD2D12
+1D1D2D1DD2DD2D13DD2D1311DD2DD2D1DD2D12D2D1DD2D13DD2D1D2DD2DD2D13DD2D1
+3111DD2D1DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D12113D3DD2D1D3DD
+2DD2D13DD2D13111DD2D1DD2D1DD2D1D2D1DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D
+2DD2D13DD2D1311DD2D12D2D1DD2D131DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD
+2D1311DD2D131DD2D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD
+2D1D3DD2DD2D13DD2D13113D2D1D3DD2D1D3DD2DD2D13DD2D13111DD2D1DD22D111DD
+2D1D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D13DD2D13DD2D131DD2D1DD22D1DD2D13
+11DD2DD2D121D1D3DD2DD2D13DD2D1311; ! 585 steps
+
+((P v Q) <-> ((P -> Q) -> Q)); ! *5.25 (RR 133->121)
+~ (((~ P -> Q) -> ((P -> Q) -> Q)) -> ~ (((R -> S) -> T) -> (~ R ->
+ T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D
+2DD2D12113D2D1D3DD2DD2D13DD2D1311DD2D1DD22D1DD2D1311; ! 121 steps
+
+(((P ^ Q) -> R) <-> ((P ^ Q) -> (P ^ R))); ! *5.3
+~ (((~ (P -> Q) -> R) -> (~ (P -> Q) -> ~ (P -> ~ R))) -> ~ ((S -> ~
+ (T -> ~ U)) -> (S -> U))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2D
+1D3DD2DD2D13DD2D1311DD2D131D2D1D3DD2D1D3DD2DD2D13DD2D13111
+; ! 127 steps
+
+((R ^ (P -> Q)) -> (P -> (Q ^ R)))
+; ! *5.31 (RR 191->119) (SD 119->109)
+(~ (P -> ~ (Q -> R)) -> (Q -> ~ (R -> ~ P))); ! Result of proof
+DD2D1D2DD2D13DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2D13DD2D1DD2D1D2DD2D12
+DD2D13DD2D1311DD2D1D2DD2DD2D13DD2D131111; ! 109 steps
+
+((P -> (Q <-> R)) <-> ((P ^ Q) <-> (P ^ R))); ! *5.32 (GB 633->625)
+~ (((P -> ~ ((Q -> R) -> ~ (S -> T))) -> ~ ((~ (P -> ~ Q) -> ~ (P ->
+ ~ R)) -> ~ (~ (P -> ~ S) -> ~ (P -> ~ T)))) -> ~ (~ ((~ (U -> ~ V)
+ -> ~ (W -> ~ X)) -> ~ (~ (U -> ~ Y) -> ~ (Z -> ~ A))) -> (U -> ~
+ ((V -> X) -> ~ (Y -> A))))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D12D2D1
+DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311D3DD2
+D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311
+D2D1D3DD2DD2D13DD2D1311DD2D12D2D1DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2
+D1311D2D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D12
+D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2D13DD2D1DD2D1DD2D1DD22D111D
+D2D12DD2D1DD22D111DD2D13D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1D2D13DD
+2D1DD2D1DD2D1DD22D111DD2D12DD2D1DD22D111DD2D13D3DD2D1D3DD2DD2D13DD2D1
+3111; ! 625 steps
+
+((P ^ (Q -> R)) <-> (P ^ ((P ^ Q) -> R))); ! *5.33 (SF 393->389)
+~ ((~ (P -> ~ (Q -> R)) -> ~ (P -> ~ (~ (S -> ~ Q) -> R))) -> ~ (~
+ (T -> ~ (~ (T -> ~ U) -> V)) -> ~ (T -> ~ (U -> V))))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2
+D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D13
+111D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111
+D3DD2D1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2
+D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311DD2D1DD2
+D1D2DD2D1211DD2D13DD2D1D2DD2DD2D13DD2D131111; ! 389 steps
+
+(((P -> Q) ^ (P -> R)) -> (P -> (Q <-> R))); ! *5.35 (SF 163->159)
+(~ ((P -> Q) -> ~ (P -> R)) -> (P -> ~ ((S -> R) -> ~ (T -> Q))))
+; ! Result of proof
+D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2
+D1311D2D1D3DD2DD2D13DD2D1311DD2D12D2D1DD2D1D2DD2D1DD2D13DD2D1D2DD2DD2
+D13DD2D131111DD2D1111; ! 159 steps
+
+((P ^ (P <-> Q)) <-> (Q ^ (P <-> Q)))
+; ! *5.36 (GB 417->393) (SF 393->381)
+~ ((~ (P -> ~ ~ ((P -> Q) -> R)) -> ~ (Q -> ~ ~ ((P -> Q) -> R))) ->
+ ~ (~ (S -> ~ ~ (T -> ~ (S -> U))) -> ~ (U -> ~ ~ (T -> ~ (S ->
+ U))))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2
+D1D3DD2DD2D13DD2D1311DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D11DD2
+D112DD2D12DD2D11DD2D131D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D13DD2D1
+D2DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2D1D3DD2DD2D
+13DD2D13111DD2D1D2DD2D13DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2DD2D13D
+D2D131111D3DD2D1D3DD2DD2D13DD2D13111; ! 381 steps
+
+((P -> (P -> Q)) <-> (P -> Q)); ! *5.4
+~ (((P -> (P -> Q)) -> (P -> Q)) -> ~ (R -> (S -> R)))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD22D211; ! 33 steps
+
+(((P -> Q) -> (P -> R)) <-> (P -> (Q -> R))); ! *5.41 (GB 67->63)
+~ ((((P -> Q) -> (R -> S)) -> (R -> (Q -> S))) -> ~ ((T -> (U -> V))
+ -> ((T -> U) -> (T -> V)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1DD2D1DD22D111DD2D12DD2D1DD22D1112
+; ! 63 steps
+
+((P -> (Q -> R)) <-> (P -> (Q -> (P ^ R)))); ! *5.42 (GB 109->105)
+~ (((P -> (Q -> R)) -> (P -> (Q -> ~ (P -> ~ R)))) -> ~ ((S -> (T ->
+ ~ (U -> ~ V))) -> (S -> (T -> V)))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D2DD2D1DD2D121DD2D13DD2D1D2DD2DD2D13DD2D1311
+1D2D1D2D1D3DD2D1D3DD2DD2D13DD2D13111; ! 105 steps
+
+((P -> Q) -> ((P -> R) <-> (P -> (Q ^ R)))); ! *5.44
+((P -> Q) -> ~ (((P -> R) -> (P -> ~ (Q -> ~ R))) -> ~ ((S -> ~ (T
+ -> ~ U)) -> (S -> U)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D12D2D1DD2D13DD2D1D2DD2DD2D
+13DD2D13111D1D2D1D3DD2D1D3DD2DD2D13DD2D13111; ! 113 steps
+
+(P -> ((P -> Q) <-> Q)); ! *5.5
+(P -> ~ (((P -> Q) -> Q) -> ~ (R -> (S -> R)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2111D11; ! 55 steps
+
+(P -> (Q <-> (P <-> Q))); ! *5.501
+(P -> ~ ((Q -> ~ ((R -> Q) -> ~ (S -> P))) -> ~ (~ ((P -> T) -> U)
+ -> T))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2D1DD2D13DD2D1D2DD2DD
+2D13DD2D131111DD2D111DD2D1D2D3DD2D1D3DD2DD2D13DD2D1311DD2D1311
+; ! 131 steps
+
+((((P v Q) v R) -> S) <-> (((P -> S) ^ (Q -> S)) ^ (R -> S)))
+; ! *5.53
+~ ((((~ (~ P -> Q) -> R) -> S) -> ~ (~ ((P -> S) -> ~ (Q -> S)) -> ~
+ (R -> S))) -> ~ (~ (~ ((T -> U) -> ~ (V -> U)) -> ~ (W -> U)) ->
+ ((~ (~ T -> V) -> W) -> U))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD
+2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D121D1DD2D1D2DD2D131DD2D11DD2
+D1D2DD2D1311DD2DD2D121D1DD2D1D2DD2D131DD2D111DD2D1DD22D111DD2D13DD2DD
+2D1DD2D12D2D1DD2D13DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD2DD2D13DD2D13
+111DD2D1DD2DD2D1DD2D12D2D1DD2D13DD2D1D2D1D3DD2DD2D13DD2D1311DD2D1D2DD
+2DD2D13DD2D13111DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D3DD2DD2
+D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD2D1DD2D13DD2D1DD22
+D2DD2D13DD2D1311D2D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111D3D
+D2D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD2D1DD2D13DD2D1DD22D2DD2D13DD2D13
+11D2D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111; ! 673 steps
+
+(((P ^ Q) <-> P) v ((P ^ Q) <-> Q)); ! *5.54 (GB 253->239)
+(~ ~ ((P -> Q) -> ~ (R -> ~ (R -> ~ S))) -> ~ ((~ (T -> ~ U) -> U)
+ -> ~ (S -> P))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D1D3DD2D1D3DD2DD2D13DD2D13111D
+3DD2D1D3DD2DD2D13DD2D1311DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+DD22D11DD2D11DD2D131DD2D1DD2D1D2DD2D13DD2D1D2DD2DD2D13DD2D13111D2D1D3
+DD2D1D3DD2DD2D13DD2D1311DD2D1311; ! 239 steps
+
+(((P v Q) <-> P) v ((P v Q) <-> Q)); ! *5.55
+(~ ~ (((~ P -> Q) -> P) -> ~ (R -> (~ R -> S))) -> ~ ((T -> Q) -> ~
+ (U -> (V -> U)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D
+D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1D2DD2D13D2D1DD2D1D3DD2DD2D13D
+D2D131111D1DD2D1D2DD2D1311D11; ! 167 steps
+
+(((P ^ ~ Q) -> R) <-> (P -> (Q v R)))
+; ! *5.6 (GB 207->203) (SD 203->167)
+~ (((~ (P -> ~ Q) -> R) -> (P -> (Q -> R))) -> ~ ((S -> (T -> U)) ->
+ (~ (S -> ~ T) -> U))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2D1D2DD2D1DD2D1D2DD2D1211DD2D13DD2D1D2DD2D
+D2D13DD2D131111DD2DD2D12DD2DD2D121D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131
+D1D3DD2D1D3DD2DD2D13DD2D13111; ! 167 steps
+
+(((P v Q) ^ ~ Q) <-> (P ^ ~ Q)); ! *5.61 (GB 269->259)
+~ ((~ ((~ P -> Q) -> ~ ~ Q) -> ~ (P -> ~ ~ Q)) -> ~ (~ (R -> S) -> ~
+ ((~ R -> T) -> S))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D3DD2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD2DD2D1
+21D1D2D1D3DD2DD2D13DD2D1311DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1DD2DD2D12
+1D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D121DD2DD2D13DD2D1311D3DD2D1D3DD2D
+D2D13DD2D1311DD2DD2D12DD2D13DD2D131D1DD2D1D2DD2D1311; ! 259 steps
+
+(((P ^ Q) v ~ Q) <-> (P v ~ Q)); ! *5.62 (RR 187->167)
+~ (((~ ~ (P -> Q) -> R) -> (~ P -> R)) -> ~ ((~ S -> T) -> (~ ~ (S
+ -> T) -> T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D121D1DD2D1D3DD2DD2D13DD2D1311DD2D131D
+D2D1DD2D1DD2D1D2DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D121DD2DD2D13DD2D
+131113D2D1D3DD2DD2D13DD2D1311; ! 167 steps
+
+((P v Q) <-> (P v (~ P ^ Q))); ! *5.63
+~ (((P -> Q) -> (P -> ~ (P -> ~ Q))) -> ~ ((R -> ~ (S -> ~ T)) -> (R
+ -> T))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1D2DD2D13DD2D1D2DD2DD2D13DD2D13111D2D1D3DD2D1
+D3DD2DD2D13DD2D13111; ! 89 steps
+
+(((P v R) <-> (Q v R)) <-> (R v (P <-> Q))); ! *5.7 (GB 681->673)
+~ ((~ (((~ P -> Q) -> (~ R -> S)) -> ~ ((~ T -> U) -> (~ V -> S)))
+ -> (~ S -> ~ ((P -> R) -> ~ (T -> V)))) -> ~ ((~ W -> ~ ((X -> Y)
+ -> ~ (Z -> A))) -> ~ (((~ X -> W) -> (~ Y -> W)) -> ~ ((~ Z -> W)
+ -> (~ A -> W))))); ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D12D2D1DD2D13DD2D1D2DD2DD2D13DD2D
+13111DD2D1DD2D1DD2D1DD2D1DD2D1DD22D111DD2D12DD2D1DD22D111D2D1DD2D13D2
+D1D3DD2DD2D13DD2D1311DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311D3DD2D1
+D3DD2DD2D13DD2D1311DD2D131DD2D1DD2D1DD2D1DD2D1DD2D1DD22D111DD2D12DD2D
+1DD22D111D2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2DD2D121D1DD2D13D2D1D3DD2
+DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D13DD2D1D2DD2DD2D
+13DD2D13111DD2D1DD2D1DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311D2
+D1DD2D13D2D1D3DD2DD2D13DD2D13112D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131
+DD2D1DD2D1DD2D1DD2DD2D121D1DD2D13D2D1D3DD2DD2D13DD2D1311D2D1DD2D13D2D
+1D3DD2DD2D13DD2D13112D2D1D3DD2D1D3DD2DD2D13DD2D13111; ! 673 steps
+
+((Q -> ~ R) -> (((P v Q) ^ R) <-> (P ^ R))); ! *5.71 (GB 259->249)
+((P -> ~ Q) -> ~ ((~ ((~ R -> P) -> ~ Q) -> ~ (R -> ~ Q)) -> ~ (~ (S
+ -> T) -> ~ ((~ S -> U) -> T)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D1DD2D12D2D1DD2D13DD2D1D
+2DD2DD2D13DD2D13111DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1DD22D1
+1DD2D112DD2D121D1D3DD2D1D3DD2DD2D13DD2D13111D1D3DD2D1D3DD2DD2D13DD2D1
+311DD2DD2D12DD2D13DD2D131D1DD2D1D2DD2D1311; ! 249 steps
+
+((P -> (Q <-> R)) <-> ((P -> Q) <-> (P -> R)))
+; ! *5.74 (GB 345->337)
+~ (((P -> ~ ((Q -> R) -> ~ (S -> T))) -> ~ (((P -> Q) -> (P -> R))
+ -> ~ ((P -> S) -> (P -> T)))) -> ~ (~ (((U -> V) -> (W -> X)) -> ~
+ ((Y -> Z) -> (W -> A))) -> (W -> ~ ((V -> X) -> ~ (Z -> A)))))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1
+2D2D1D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D12D2D1D3DD2D1D3DD2DD2D13DD2
+D13111DD2DD2D1DD2D12D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD2D
+1DD22D111DD2D12DD2D1DD22D111D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D1DD2
+D1DD2D1DD22D111DD2D12DD2D1DD22D111D3DD2D1D3DD2DD2D13DD2D13111
+; ! 337 steps
+
+(((R -> ~ Q) ^ (P <-> (Q v R))) -> ((P ^ ~ Q) <-> R))
+; ! *5.75 (SD 387->351)
+(~ ((P -> Q) -> ~ ~ ((R -> (S -> T)) -> ~ ((U -> P) -> V))) -> ~ ((~
+ (R -> ~ S) -> T) -> ~ (P -> ~ (V -> ~ Q)))); ! Result of proof
+DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD2DD2D12DD2DD2D121D
+1D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D
+1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D1DD2D12D
+2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2D1DD2D1DD2D1DD22D111D3DD2D1D3DD2
+DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311D
+D2D131; ! 351 steps
+
+(((((P -> Q) -> (~ R -> ~ S)) -> R) -> T) -> ((T -> P) -> (S -> P)))
+; ! Meredith's axiom (SF) (GSZ 205->199) (RR 199->145) (SD 145->141)
+(((((P -> Q) -> (~ R -> ~ S)) -> R) -> T) -> ((T -> P) -> (S -> P)))
+; ! Result of proof
+DD2D1D2DD2D1DD2D1D2D3DD2DD2D131DD2D1DD2D111D3DD2D1D3DD2DD2D13DD2D1311
+DD2D1DD2D1D2DD2D1211DD2D1DD2D1DD22D11DD2D112DD2D1D2D2D13DD2D11DD2D131
+211; ! 141 steps
+
+(((P -> Q) -> P) -> P); ! Peirce's axiom (GSZ 95->43)
+(((P -> Q) -> P) -> P); ! Result of proof
+DD2D1DD2DD2D13D2DD2D1311DD2D1DD22D1DD2D1311; ! 43 steps
+
+(((P <-> Q) <-> R) <-> (P <-> (Q <-> R)))
+; ! biass (RR) (SD 2127->1883)
+~ ((~ ((~ ((P -> Q) -> ~ (R -> S)) -> T) -> ~ (U -> ~ ((S -> V) -> ~
+ (R -> P)))) -> ~ ((S -> ~ ((Q -> T) -> ~ (U -> V))) -> ~ (~ ((R ->
+ U) -> ~ (T -> R)) -> P))) -> ~ (~ ((W -> ~ ((X -> Y) -> ~ (Z ->
+ A))) -> ~ (~ ((X -> Z) -> ~ (Y -> B)) -> C)) -> ~ ((~ ((C -> X) ->
+ ~ (X -> W)) -> Y) -> ~ (Z -> ~ ((W -> A) -> ~ (B -> C))))))
+; ! Result of proof
+DD3DD2DD2DD2D13DD2D1311D1DD2DD2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD
+2D12DD2D1D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D12DD2D11DD2D1DD2D1
+21D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1DD2D1D2DD2D1DD2D13DD2D1D2DD2DD2D
+13DD2D131111DD2D111DD2DD2D12DD2D11DD2D12DD2D1D2D1D3DD2D1D3DD2DD2D13DD
+2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111D11DD2D1D2D1DD2DD2D1DD2D1DD2D
+1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D12113D2D1D3DD2DD2D13DD2D1311D
+D2D1DD2D1D2DD2D1DD2D13D2D1D3DD2DD2D13DD2D1311DD2D1DD2D1D2DD2D1DD2D13D
+D2D1D2DD2DD2D13DD2D13111DD2D1311DD2D131DD2D1DD2D13DD2D1DD22D2DD2D13DD
+2D1311D2D1D3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D13111DD2DD2D12DD2D
+1D2D1D3DD2D1D3DD2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1DD
+211DD2DD2D12DD2D1D2D1DD2D13DD2D1D2DD2DD2D13DD2D13111DD2DD2D12DD2D11DD
+2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111D1D3DD2D1D3DD2DD2D13DD2D1311DD2D
+131DD2D1D2DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111DD2D13DD2D1DD22D1DD2
+D131DD2D11DD2D131DD2DD2D1DD2D1D2DD2D13DD2D1D2DD2DD2D13DD2D131111DD2DD
+2D12DD2D1D2D1DD2D1D2DD2D13DD2D1D2DD2DD2D13DD2D131111DD2DD2D12DD2D11DD
+2D1DD2D121D3DD2D1D3DD2DD2D13DD2D13111D1DD2D1D2DD2D1DD2D1D2DD2D13DD2D1
+D2DD2DD2D13DD2D1311111DD2D111DD2DD2D12DD2D11DD2D12DD2D1D2D1D3DD2D1D3D
+D2DD2D13DD2D13111D3DD2D1D3DD2DD2D13DD2D1311DD2D131D11DD2D1D2D1DD2DD2D
+1DD2D1DD2D1DD2D1D2D1DD2DD2D13D2DD2D1311DD2D1D2DD2D12113D2D1D3DD2DD2D1
+3DD2D1311DD2D1DD2D1D2DD2D1D2D3DD2D1D3DD2DD2D13DD2D1311DD2DD2D1DD2D1D2
+DD2D13DD2D1D2DD2DD2D13DD2D131111DD2D1DD22D11DD2D11DD2D131DD2DD2D12DD2
+D11DD2D131D1DD2D1D2DD2D13111DD2D1DD2D13DD2D1DD22D2DD2D13DD2D1311D2D1D
+3DD2DD2D13DD2D1311D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2DD2D12DD2D1D2D1
+D3DD2D1D3DD2DD2D13DD2D1311DD2D131D3DD2D1D3DD2DD2D13DD2D13111D1DD211DD
+2DD2D12DD2D1D2D1DD2D1D2DD2D13DD2D1D2DD2DD2D13DD2D131111DD2DD2D12DD2D1
+1DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D1311DD2D131D1D3DD2D1D3DD2DD2D13DD2
+D13111DD2D1D2DD2D1DD2D121D3DD2D1D3DD2DD2D13DD2D1311DD2D131DD2D13DD2D1
+DD22D11DD2D11DD2D131; ! 1883 steps

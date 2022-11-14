@@ -1,0 +1,34 @@
+# Lookup, Storage & Script Files
+**/*.txt
+**/*.log
+**/*.svg
+**/*.7z
+**/*.mm
+**/*.sh
+**/*.bat
+**/*.reg
+
+# Sciebo temporary files
+**/*.~*
+
+# Eclipse files
+.cproject
+.project
+.settings/
+
+# Non-development (or currently unused) directories
+icon/*
+!icon/icon.ico
+!icon/icon.rc
+!icon/icon-readme.png
+data/*
+!data/pmproofs.txt
+!data/pmproofs-unified.txt
+!data/pmproofs-old.txt
+!data/dProofs*.txt
+Debug*/
+Release*/
+
+# Non-development (or currently unused) files
+__dependency_graph.dot.py
+cppclean.py

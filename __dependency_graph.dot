@@ -1,0 +1,155 @@
+digraph {
+	CfgGrammar -> FctHelper [color=blue]
+	CfgGrammar -> iostream [color=blue]
+	CfgGrammar -> regex [color=blue]
+	CfgGrammar -> unordered_set [color=blue]
+	CfgGrammar -> IPrintable [color=red]
+	CfgGrammar -> unordered_map [color=red]
+	CfgGrammar -> vector [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\grammar" {
+		CfgGrammar
+		CfgGrammar
+	}
+	FctHelper -> Resources [color=blue]
+	FctHelper -> iomanip [color=blue]
+	FctHelper -> iostream [color=blue]
+	FctHelper -> math [color=blue]
+	FctHelper -> algorithm [color=red]
+	FctHelper -> chrono [color=red]
+	FctHelper -> filesystem [color=red]
+	FctHelper -> fstream [color=red]
+	FctHelper -> map [color=red]
+	FctHelper -> set [color=red]
+	FctHelper -> sstream [color=red]
+	FctHelper -> string [color=red]
+	FctHelper -> vector [color=red]
+	Hashing -> cstddef [color=red]
+	Hashing -> tuple [color=red]
+	Hashing -> vector [color=red]
+	ICloneable -> memory [color=red]
+	ICloneable -> unordered_map [color=red]
+	IPrintable -> FctHelper [color=blue]
+	IPrintable -> memory [color=red]
+	IPrintable -> string [color=red]
+	ProgressData -> FctHelper [color=blue]
+	ProgressData -> cstring [color=blue]
+	ProgressData -> atomic [color=red]
+	ProgressData -> chrono [color=red]
+	ProgressData -> string [color=red]
+	ProgressData -> vector [color=red]
+	Resources -> string [color=red]
+	Resources -> vector [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\helper" {
+		FctHelper
+		FctHelper
+		Hashing
+		ICloneable
+		IPrintable
+		IPrintable
+		ProgressData
+		ProgressData
+		Resources
+		Resources
+	}
+	main -> FctHelper [color=blue]
+	main -> DRuleReducer [color=blue]
+	main -> DlProofEnumerator [color=blue]
+	main -> ctime [color=blue]
+	main -> iostream [color=blue]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
+		main
+	}
+	DRuleParser -> FctHelper [color=blue]
+	DRuleParser -> TreeNode [color=blue]
+	DRuleParser -> DlCore [color=blue]
+	DRuleParser -> DlFormula [color=blue]
+	DRuleParser -> "boost/algorithm/string" [color=blue]
+	DRuleParser -> iostream [color=blue]
+	DRuleParser -> map [color=red]
+	DRuleParser -> memory [color=red]
+	DRuleParser -> set [color=red]
+	DRuleParser -> string_view [color=red]
+	DRuleParser -> string [color=red]
+	DRuleParser -> tuple [color=red]
+	DRuleParser -> unordered_map [color=red]
+	DRuleParser -> unordered_set [color=red]
+	DRuleParser -> vector [color=red]
+	DRuleReducer -> FctHelper [color=blue]
+	DRuleReducer -> TreeNode [color=blue]
+	DRuleReducer -> DlCore [color=blue]
+	DRuleReducer -> DlFormula [color=blue]
+	DRuleReducer -> DlProofEnumerator [color=blue]
+	DRuleReducer -> DRuleParser [color=blue]
+	DRuleReducer -> concurrent_map [color=blue]
+	DRuleReducer -> concurrent_vector [color=blue]
+	DRuleReducer -> parallel_for [color=blue]
+	DRuleReducer -> "boost/algorithm/string" [color=blue]
+	DRuleReducer -> execution [color=blue]
+	DRuleReducer -> iostream [color=blue]
+	DRuleReducer -> string [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\metamath" {
+		DRuleParser
+		DRuleParser
+		DRuleReducer
+		DRuleReducer
+	}
+	DlCore -> FctHelper [color=blue]
+	DlCore -> TreeNode [color=blue]
+	DlCore -> CfgGrammar [color=blue]
+	DlCore -> DlFormula [color=blue]
+	DlCore -> DlStructure [color=blue]
+	DlCore -> iostream [color=blue]
+	DlCore -> mutex [color=blue]
+	DlCore -> shared_mutex [color=blue]
+	DlCore -> cstdint [color=red]
+	DlCore -> functional [color=red]
+	DlCore -> map [color=red]
+	DlCore -> memory [color=red]
+	DlCore -> unordered_map [color=red]
+	DlCore -> unordered_set [color=red]
+	DlFormula -> TreeNode [color=blue]
+	DlFormula -> DlCore [color=blue]
+	DlFormula -> memory [color=red]
+	DlProofEnumerator -> FctHelper [color=blue]
+	DlProofEnumerator -> Resources [color=blue]
+	DlProofEnumerator -> TreeNode [color=blue]
+	DlProofEnumerator -> DRuleParser [color=blue]
+	DlProofEnumerator -> DlCore [color=blue]
+	DlProofEnumerator -> DlFormula [color=blue]
+	DlProofEnumerator -> concurrent_map [color=blue]
+	DlProofEnumerator -> concurrent_vector [color=blue]
+	DlProofEnumerator -> parallel_for [color=blue]
+	DlProofEnumerator -> execution [color=blue]
+	DlProofEnumerator -> iostream [color=blue]
+	DlProofEnumerator -> Hashing [color=red]
+	DlProofEnumerator -> ProgressData [color=red]
+	DlProofEnumerator -> concurrent_set [color=red]
+	DlProofEnumerator -> concurrent_unordered_map [color=red]
+	DlProofEnumerator -> concurrent_unordered_set [color=red]
+	DlProofEnumerator -> array [color=red]
+	DlProofEnumerator -> condition_variable [color=red]
+	DlProofEnumerator -> deque [color=red]
+	DlProofEnumerator -> map [color=red]
+	DlProofEnumerator -> memory [color=red]
+	DlProofEnumerator -> thread [color=red]
+	DlStructure -> CfgGrammar [color=blue]
+	DlStructure -> cstdint [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\nortmann" {
+		DlCore
+		DlCore
+		DlFormula
+		DlFormula
+		DlProofEnumerator
+		DlProofEnumerator
+		DlStructure
+		DlStructure
+	}
+	TreeNode -> ICloneable [color=red]
+	TreeNode -> IPrintable [color=red]
+	TreeNode -> functional [color=red]
+	TreeNode -> iomanip [color=red]
+	TreeNode -> unordered_set [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\tree" {
+		TreeNode
+	}
+}

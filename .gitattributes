@@ -1,0 +1,9 @@
+# Comment the below line in when a release should not contain source code files (e.g. for dependency builds).
+#/* export-ignore
+
+# Use Unix (LF) line endings for all text files, but do not normalize binary files
+*        text eol=lf
+*.png    -text
+*.jpg    -text
+*.gif    -text
+*.ico    -text
