@@ -1,0 +1,218 @@
+<!-- Generated from README.md with https://xamidi.github.io/md-to-html/, but
+     with CSS style from https://github.com/KrauseFx/markdown-to-html-github-style (and additional modifications).
+     Update instructions:
+     1. Manually replace <body>[...]</body> with that of the updated version
+     2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (0 occurences)
+     4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<img src\=\"icon\/icon-readme\.png\" align\=\"left\">[/REPLACE] (1 occurence)
+     5. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
+     (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4 and 5.)
+     -->
+<html>
+<head>
+<meta charset="UTF-8">
+<title>README</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/**
+ * Gained from https://github.com/KrauseFx/markdown-to-html-github-style/blob/master/style.css (partly modified)
+ */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+    font-size: 16px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-sizing: border-box;
+  color: #111;
+  background-color: #fff;
+  /*-webkit-text-size-adjust: 100%;
+  -webkit-font-feature-settings: "kern" 1;
+  -moz-font-feature-settings: "kern" 1;
+  -o-font-feature-settings: "kern" 1;
+  font-feature-settings: "kern" 1;
+  font-kerning: normal;*/
+  padding: 30px;
+}
+body > #content {
+  margin: 0px;
+  max-width: 900px;
+  border: 1px solid #e1e4e8;
+  padding: 10px 40px;
+  padding-bottom: 20px;
+  border-radius: 2px;
+  margin-left: auto;
+  margin-right: auto;
+}
+hr {
+  color: #bbb;
+  background-color: #bbb;
+  height: 1px;
+  flex: 0 1 auto;
+  margin: 1em 0;
+  padding: 0;
+  border: none;
+}
+a {
+  color: #0366d6;
+  text-decoration: none; }
+  a:visited {
+    color: #0366d6; }
+  a:hover {
+    color: #0366d6;
+    text-decoration: underline; }
+pre {
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  line-height: 1.45;
+  overflow: auto;
+  padding: 16px;
+}
+code {
+  background-color: rgba(27,31,35,.05);
+  border-radius: 3px;
+  font-size: 85%;
+  margin: 0;
+  word-wrap: break-word;
+  padding: .2em .4em;
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+}
+pre > code {
+  background-color: transparent;
+  border: 0;
+  display: inline;
+  line-height: inherit;
+  margin: 0;
+  overflow: visible;
+  padding: 0;
+  word-wrap: normal;
+}
+blockquote {
+  margin-left: 30px;
+  margin-top: 0px;
+  margin-bottom: 16px;
+  border-left-width: 3px;
+  padding: 0 1em;
+  color: #828282;
+  border-left: 4px solid #e8e8e8;
+  padding-left: 15px;
+  font-size: 18px;
+  letter-spacing: -1px;
+  font-style: italic;
+}
+blockquote * {
+  font-style: normal !important;
+  letter-spacing: 0;
+  color: #6a737d !important;
+}
+table {
+    width: max-content;
+    max-width: 100%;
+  line-height: 1.5;
+  border-spacing: 3px;
+  display: block;
+  overflow: auto;
+  margin-bottom: 16px;
+  border-collapse: collapse;
+}
+td {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+th {
+  font-weight: 600;
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+tr {
+  background-color: #fff;
+  border-top: 1px solid #c6cbd1;
+}
+table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+img {
+  max-width: 100%;
+}
+p {
+  line-height: 24px;
+  font-size: 16px;
+  color: #24292e; }
+ul {
+  margin-top: 0; }
+li {
+  color: #24292e;
+  font-size: 16px;
+  line-height: 1.5; }
+li + li {
+  margin-top: 0.25em; }
+a:visited {
+  color: #0366d6; }
+h1, h2 {
+  border-bottom: 1px solid #eaecef;
+  color: #111; }
+
+/**
+ * Gained from analysis in Mozilla Firefox inspector
+ */
+.markdown-container {
+    max-width: 1214px;
+    margin: auto;
+    background-color: #fff);
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+}
+#readme {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+    padding-left: 101px !important;
+    padding-right: 101px !important;
+}
+img {
+    border-style: none;
+    box-sizing: initial;
+    background-color: #fff;
+    margin-left: 0;
+    margin-right: 0;
+}
+img[align="left"] {
+    padding-right: 20px;
+}
+img[align=right] {
+    padding-left:20px;
+}
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+h1, h2 {
+    padding-bottom: .3em;
+}
+h3 {
+    font-size: 1.25em;
+}
+ol, ul {
+    padding-left: 2em;
+}
+ol ol, ul ol {
+    list-style-type: lower-roman;
+}
+ol ol ol, ol ul ol, ul ol ol, ul ul ol {
+    list-style-type: lower-alpha;
+}
+li br {
+    box-sizing: border-box;
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+b, strong {
+    font-weight: 600;
+}
+</style>
+</head>
+<body><div class="markdown-container ltr"><div id="readme"><img src="icon/icon-readme.png" align="left">
+<h1 id="xamidi-pmgenerator">@xamidi/pmGenerator</h1>
+<p>Code extracted from <a href="https://github.com/deontic-logic/proof-tool">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>. Eligible for high-performance computing. If you have access to a supercomputer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.</p>
+<p>Some aspects of this tool were explicated in a <a href="https://groups.google.com/g/metamath/c/v0p86y5b-m0">proposal</a> at the Metamath mailing list.</p>
+</div></div></body></html>
