@@ -7,3 +7,4 @@
 *.jpg    -text
 *.gif    -text
 *.ico    -text
+*.7z     -text

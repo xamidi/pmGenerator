@@ -25,7 +25,7 @@ data/*
 !data/pmproofs.txt
 !data/pmproofs-unified.txt
 !data/pmproofs-old.txt
-!data/dProofs*.txt
+!data/dProofs*.7z
 Debug*/
 Release*/
 

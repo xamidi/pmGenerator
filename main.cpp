@@ -23,7 +23,7 @@ struct A {
 
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, ..., <argN> }
 	//#cout << "argc = " << argc << ", argv = { " << [&]() { string s; for (int i = 0; i < argc; i++) { if (i) s += ", "; s += string { argv[i] }; } return s; }() << " }" << endl;
-	auto printUsage = [](string error = "") {
+	auto printUsage = [](const string& error = "") {
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
