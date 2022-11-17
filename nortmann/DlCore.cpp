@@ -634,14 +634,11 @@ void DlCore::calculateEmptyMeanings(const shared_ptr<DlFormula>& formula) { // N
 }
 
 void DlCore::clearMeanings(const shared_ptr<DlFormula>& formula) {
-	auto recurse = [](const shared_ptr<DlFormula>& node, const auto& me) -> void {
-		if (!node->meaning().empty()) {
-			node->meaning().clear();
-			for (uint32_t i = 0; i < node->getChildren().size(); i++)
-				me(node->children()[i], me);
-		}
-	};
-	recurse(formula, recurse);
+	if (!formula->meaning().empty()) {
+		formula->meaning().clear();
+		for (uint32_t i = 0; i < formula->getChildren().size(); i++)
+			clearMeanings(formula->children()[i]);
+	}
 }
 
 // NOTE: Supports search trees, so it can be used in DlFormulaStructuralSearchInfo::toSearchTree().
