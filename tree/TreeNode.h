@@ -6,7 +6,9 @@
 
 #include <functional>
 #include <iomanip>
+#include <sstream>
 #include <unordered_set>
+#include <vector>
 
 namespace xamid {
 namespace tree {
@@ -65,17 +67,19 @@ public:
 	std::vector<uint32_t>& meaning() { // to freely manipulate meaning
 		return _meaning;
 	}
+private:
+	void recurse_height(const TreeNode<T>* node, size_t depth, size_t& height) {
+		if (node->_children.empty()) {
+			if (depth > height)
+				height = depth;
+		} else
+			for (uint32_t i = 0; i < node->_children.size(); i++)
+				recurse_height(node->_children[i].get(), depth + 1, height);
+	}
+public:
 	size_t height() const {
 		size_t height = 0;
-		auto recurse = [&height](const TreeNode<T>* node, size_t depth, const auto& me) -> void {
-			if (node->_children.empty()) {
-				if (depth > height)
-					height = depth;
-			} else
-				for (uint32_t i = 0; i < node->_children.size(); i++)
-					me(node->_children[i].get(), depth + 1, me);
-		};
-		recurse(this, 0, recurse);
+		recurse_height(this, 0, height);
 		return height;
 	}
 	void cloneTo(TreeNode<T>& out, TreeNodeCloneMap* knownClones = nullptr, void* allClones = nullptr) const override { // override for ICloneable<TreeNode<T>>
@@ -94,67 +98,75 @@ public:
 	}
 
 	// Representations
+private:
+	std::string recurse_toAddressString(const TreeNode<T>* node, const uint32_t& indent = 0) {
+		auto toBase16 = [](size_t value) {
+			std::stringstream ss;
+			ss << std::setbase(16) << value;
+			return ss.str();
+		};
+		std::string str;
+		for (uint32_t i = 0; i < indent; i++)
+			str += "\t";
+		if (node->_children.empty())
+			str += "0x" + toBase16((size_t) node) + "\n";
+		else {
+			str += "0x" + toBase16((size_t) node) + " -> [\n";
+			for (uint32_t i = 0; i < node->_children.size(); i++)
+				str += recurse_toAddressString(node->_children[i].get(), indent + 1);
+			for (uint32_t i = 0; i < indent; i++)
+				str += "\t";
+			str += "]\n";
+		}
+		return str;
+	}
+public:
 	std::string toAddressString() {
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const uint32_t& indent = 0) -> std::string {
-			auto toBase16 = [](size_t value) {
-				std::stringstream ss;
-				ss << std::setbase(16) << value;
-				return ss.str();
-			};
-			std::string str;
+		return recurse_toAddressString(this);
+	}
+private:
+	template<typename Func>
+	std::string recurse_toString(const TreeNode<T>* node, const Func& fTtoString, const uint32_t& indent = 0) const {
+		std::string str;
+		for (uint32_t i = 0; i < indent; i++)
+			str += "\t";
+		if (node->_children.empty())
+			str += fTtoString(*node->_value) + std::string("\n");
+		else {
+			str += fTtoString(*node->_value) + std::string(" -> [\n");
+			for (uint32_t i = 0; i < node->_children.size(); i++)
+				str += recurse_toString(node->_children[i].get(), fTtoString, indent + 1);
 			for (uint32_t i = 0; i < indent; i++)
 				str += "\t";
-			if (node->_children.empty())
-				str += "0x" + toBase16((size_t) node) + "\n";
-			else {
-				str += "0x" + toBase16((size_t) node) + " -> [\n";
-				for (uint32_t i = 0; i < node->_children.size(); i++)
-					str += me(node->_children[i].get(), me, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
-					str += "\t";
-				str += "]\n";
-			}
-			return str;
-		};
-		return recurse(this, recurse);
+			str += "]\n";
+		}
+		return str;
 	}
-	std::string toString(const auto& fTtoString) const {
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const auto& fTtoString, const uint32_t& indent = 0) -> std::string {
-			std::string str;
+public:
+	template<typename Func>
+	std::string toString(const Func& fTtoString) const {
+		return recurse_toString(this, fTtoString);
+	}
+private:
+	std::string recurse_toString(const TreeNode<T>* node, const uint32_t& indent = 0) const {
+		std::string str;
+		for (uint32_t i = 0; i < indent; i++)
+			str += "\t";
+		if (node->_children.empty())
+			str += node->_value->toString() + "\n";
+		else {
+			str += node->_value->toString() + " -> [\n";
+			for (uint32_t i = 0; i < node->_children.size(); i++)
+				str += recurse_toString(node->_children[i].get(), indent + 1);
 			for (uint32_t i = 0; i < indent; i++)
 				str += "\t";
-			if (node->_children.empty())
-				str += fTtoString(*node->_value) + std::string("\n");
-			else {
-				str += fTtoString(*node->_value) + std::string(" -> [\n");
-				for (uint32_t i = 0; i < node->_children.size(); i++)
-					str += me(node->_children[i].get(), me, fTtoString, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
-					str += "\t";
-				str += "]\n";
-			}
-			return str;
-		};
-		return recurse(this, recurse, fTtoString);
+			str += "]\n";
+		}
+		return str;
 	}
+public:
 	std::string toString() const override { // override for IPrintable<T> from IPointToPrintableValue<T>
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const uint32_t& indent = 0) -> std::string {
-			std::string str;
-			for (uint32_t i = 0; i < indent; i++)
-				str += "\t";
-			if (node->_children.empty())
-				str += node->_value->toString() + "\n";
-			else {
-				str += node->_value->toString() + " -> [\n";
-				for (uint32_t i = 0; i < node->_children.size(); i++)
-					str += me(node->_children[i].get(), me, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
-					str += "\t";
-				str += "]\n";
-			}
-			return str;
-		};
-		return recurse(this, recurse);
+		return recurse_toString(this);
 	}
 
 	// Operators
@@ -183,39 +195,45 @@ public:
 	}
 
 	// Helper methods
-	bool cycleDetect() const {
-		auto recurse = [](const TreeNode<T>* node, std::unordered_set<const TreeNode<T>*> knowAncestors, const auto& me) -> bool {
-			if (knowAncestors.count(node))
+private:
+	bool recurse_cycleDetect(const TreeNode<T>* node, std::unordered_set<const TreeNode<T>*> knowAncestors) const {
+		if (knowAncestors.count(node))
+			return true;
+		const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
+		std::unordered_set<const TreeNode<T>*> knowAncestorsAndNode = knowAncestors;
+		knowAncestorsAndNode.emplace(node);
+		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
+			if (recurse_cycleDetect(descendant.get(), knowAncestorsAndNode))
 				return true;
-			const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
-			std::unordered_set<const TreeNode<T>*> knowAncestorsAndNode = knowAncestors;
-			knowAncestorsAndNode.emplace(node);
-			for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-				if (me(descendant.get(), knowAncestorsAndNode, me))
-					return true;
-			return false;
-		};
-		return recurse(this, { }, recurse);
+		return false;
 	}
-	bool cycleDetect(const auto& cycleHandler) const { // Cycle detection one-liner: node->cycleDetect([](const shared_ptr<TreeNode<T>>& cycle) { cerr << "Self reference found: " << *cycle->getValue() << endl; exit(0); });
-		auto recurse = [&](const std::shared_ptr<TreeNode<T>>& node, std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestors, const auto& me) -> bool {
-			if (node.get() == this || knowAncestors.count(node)) {
-				// NOTE: We handle 'this' differently since we do not have a shared_ptr for it, but want to use one in case it has a cycle (in which case we found a shared_ptr for it).
-				cycleHandler(node);
+public:
+	bool cycleDetect() const {
+		return recurse_cycleDetect(this, { });
+	}
+private:
+	template<typename Func>
+	bool recurse_cycleDetect(const std::shared_ptr<TreeNode<T>>& node, std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestors, const Func& cycleHandler) const {
+		if (node.get() == this || knowAncestors.count(node)) {
+			// NOTE: We handle 'this' differently since we do not have a shared_ptr for it, but want to use one in case it has a cycle (in which case we found a shared_ptr for it).
+			cycleHandler(node);
+			return true;
+		}
+		const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
+		std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestorsAndNode = knowAncestors;
+		knowAncestorsAndNode.emplace(node);
+		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
+			if (recurse_cycleDetect(descendant, knowAncestorsAndNode, cycleHandler))
 				return true;
-			}
-			const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
-			std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestorsAndNode = knowAncestors;
-			knowAncestorsAndNode.emplace(node);
-			for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-				if (me(descendant, knowAncestorsAndNode, me))
-					return true;
-			return false;
-		};
+		return false;
+	}
+public:
+	template<typename Func>
+	bool cycleDetect(const Func& cycleHandler) const { // Cycle detection one-liner: node->cycleDetect([](const shared_ptr<TreeNode<T>>& cycle) { cerr << "Self reference found: " << *cycle->getValue() << endl; exit(0); });
 		const std::vector<std::shared_ptr<TreeNode<T>>>& children = getChildren();
 		std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestorsAndNode;
 		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-			if (recurse(descendant, knowAncestorsAndNode, recurse))
+			if (recurse_cycleDetect(descendant, knowAncestorsAndNode, cycleHandler))
 				return true;
 		return false;
 	}

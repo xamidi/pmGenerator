@@ -7,6 +7,8 @@
 #include "DlCore.h"
 #include "DlFormula.h"
 
+#include <boost/filesystem/operations.hpp>
+
 #include <tbb/concurrent_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
@@ -46,7 +48,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_seq(vector<vect
 	}
 	for (uint32_t wordLengthLimit = allRepresentativesLookup.size() + 1; true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
-		if (filesystem::exists(file)) { // load
+		if (boost::filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
 			allRepresentativesLookup.push_back( { });
 			vector<string>& contents = allRepresentativesLookup.back();
@@ -92,7 +94,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 	unsigned t = 0;
 	for (uint32_t wordLengthLimit = allRepresentativesLookup.size() + 1; true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		const string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
-		if (filesystem::exists(file)) { // load
+		if (boost::filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
 			allRepresentativesLookup.push_back( { });
 			vector<string>& contents = allRepresentativesLookup.back();
@@ -230,27 +232,30 @@ tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFo
 		progressData->setStartTime();
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) { // FASTEST: Parse each string individually and without translation to DlProof objects.
 		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
-		for_each(execution::par, representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end(), [&progressData, &representativeProofs, &memReductionData](const string& s) {
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			// NOTE: Definitely stores 'conclusion', since that is how the input files were constructed.
-			representativeProofs.emplace(conclusion, s);
+		tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end()), [&progressData, &representativeProofs, &memReductionData](tbb::blocked_range<vector<string>::const_iterator>& range) {
+			for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+				const string& s = *it;
+				vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
+				shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+				if (memReductionData) {
+					DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
+					replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
+					replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
+					DlCore::clearMeanings(conclusion);
+				}
+				// NOTE: Definitely stores 'conclusion', since that is how the input files were constructed.
+				representativeProofs.emplace(conclusion, s);
 
-			// Show progress if requested
-			if (progressData) {
-				if (progressData->nextStep()) {
-					uint64_t percentage;
-					string progress;
-					string etc;
-					if (progressData->nextState(percentage, progress, etc)) {
-						time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-						cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+				// Show progress if requested
+				if (progressData) {
+					if (progressData->nextStep()) {
+						uint64_t percentage;
+						string progress;
+						string etc;
+						if (progressData->nextState(percentage, progress, etc)) {
+							time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+							cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+						}
 					}
 				}
 			}
@@ -509,41 +514,39 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 
 // NOTE: Requires 'formula' with meanings.
 void DlProofEnumerator::replaceNodes(shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<vector<uint32_t>, shared_ptr<DlFormula>, myhash<vector<uint32_t>>>& nodeStorage, atomic<uint64_t>& nodeReplacementCounter) {
-	auto recurse = [&](shared_ptr<DlFormula>& node, const auto& me) -> void {
-		pair<tbb::concurrent_unordered_map<vector<uint32_t>, shared_ptr<DlFormula>, myhash<vector<uint32_t>>>::iterator, bool> emplaceResult = nodeStorage.emplace(node->meaning(), node);
-		if (!emplaceResult.second) {
-			if (node != emplaceResult.first->second) {
-				node = emplaceResult.first->second;
-				nodeReplacementCounter++;
-			}
-		} else // node was used to initialize a fresh key => node wasn't already registered => try register children
-			for (uint32_t i = 0; i < node->getChildren().size(); i++)
-				me(node->children()[i], me);
-	};
-	recurse(formula, recurse);
+	pair<tbb::concurrent_unordered_map<vector<uint32_t>, shared_ptr<DlFormula>, myhash<vector<uint32_t>>>::iterator, bool> emplaceResult = nodeStorage.emplace(formula->meaning(), formula);
+	if (!emplaceResult.second) {
+		if (formula != emplaceResult.first->second) {
+			formula = emplaceResult.first->second;
+			nodeReplacementCounter++;
+		}
+	} else // formula was used to initialize a fresh key => formula wasn't already registered => try register children
+		for (uint32_t i = 0; i < formula->getChildren().size(); i++)
+			replaceNodes(formula->children()[i], nodeStorage, nodeReplacementCounter);
 }
 
 void DlProofEnumerator::replaceValues(shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<string, shared_ptr<String>>& valueStorage, atomic<uint64_t>& valueReplacementCounter, tbb::concurrent_unordered_set<DlFormula*>& alreadyProcessing) {
-	auto recurse = [&](shared_ptr<DlFormula>& node, const auto& me) -> void {
-		if (!alreadyProcessing.emplace(node.get()).second)
-			return; // avoid duplicated handlings
-		shared_ptr<String>& val = node->value();
-		pair<tbb::concurrent_unordered_map<string, shared_ptr<String>>::iterator, bool> emplaceResult = valueStorage.emplace(val->value, val);
-		if (!emplaceResult.second && val != emplaceResult.first->second) {
-			val = emplaceResult.first->second;
-			valueReplacementCounter++;
-		}
-		for (uint32_t i = 0; i < node->getChildren().size(); i++)
-			me(node->children()[i], me);
-	};
-	recurse(formula, recurse);
+	if (!alreadyProcessing.emplace(formula.get()).second)
+		return; // avoid duplicated handlings
+	shared_ptr<String>& val = formula->value();
+	pair<tbb::concurrent_unordered_map<string, shared_ptr<String>>::iterator, bool> emplaceResult = valueStorage.emplace(val->value, val);
+	if (!emplaceResult.second && val != emplaceResult.first->second) {
+		val = emplaceResult.first->second;
+		valueReplacementCounter++;
+	}
+	for (uint32_t i = 0; i < formula->getChildren().size(); i++)
+		replaceValues(formula->children()[i], valueStorage, valueReplacementCounter, alreadyProcessing);
 }
 
 void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter = 0;
-	atomic<uint64_t> conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter = 0;
-	atomic<uint64_t> invalidCounter = 0;
+	atomic<uint64_t> counter;
+	counter = 0;
+	atomic<uint64_t> conclusionCounter;
+	conclusionCounter = 0;
+	atomic<uint64_t> redundantCounter;
+	redundantCounter = 0;
+	atomic<uint64_t> invalidCounter;
+	invalidCounter = 0;
 	auto process = [&representativeProofs, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
@@ -606,10 +609,14 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared
 }
 
 void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter = 0;
-	atomic<uint64_t> conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter = 0;
-	atomic<uint64_t> invalidCounter = 0;
+	atomic<uint64_t> counter;
+	counter = 0;
+	atomic<uint64_t> conclusionCounter;
+	conclusionCounter = 0;
+	atomic<uint64_t> redundantCounter;
+	redundantCounter = 0;
+	atomic<uint64_t> invalidCounter;
+	invalidCounter = 0;
 	auto process = [&representativeProofsWithEquivalenceClasses, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
@@ -678,32 +685,27 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	});
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const unsigned upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::range_type& range) {
-			for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::const_iterator it = range.begin(); it != range.end(); ++it)
-				if (done)
-					return;
-				else if (it->first <= upperBound)
-					for (const shared_ptr<DlFormula>* const f : it->second) {
-						func(*f);
-						if (done)
-							return;
-					}
-		});
-	};
 	tbb::concurrent_unordered_map<const shared_ptr<DlFormula>*, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator> toErase;
 	if (progressData)
 		progressData->setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
+	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &formulasByStandardLength, &toErase](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
 		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const uint32_t formula_sequenceLength = it->second.length();
 			if (formula_sequenceLength == maxLength) {
 				const shared_ptr<DlFormula>& formula = it->first;
-				atomic<bool> redundant = false;
+				atomic<bool> redundant;
+				redundant = false;
 				unsigned formulaLen = DlCore::standardFormulaLength(formula);
-				iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const shared_ptr<DlFormula>& potentialSchema) {
-					if (formula != potentialSchema && DlCore::isSchemaOf(potentialSchema, formula)) // formula redundant
-						redundant = true;
+				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::range_type& range) {
+					for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+						if (redundant)
+							return;
+						else if (it->first <= formulaLen)
+							for (const shared_ptr<DlFormula>* const potentialSchema : it->second)
+								if (formula != *potentialSchema && DlCore::isSchemaOf(*potentialSchema, formula)) { // formula redundant
+									redundant = true;
+									return;
+								}
 				});
 				if (redundant) {
 					toErase.emplace(&it->first, it);
@@ -723,7 +725,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 				}
 			}
 		}
-	}); // NOTE: for_each(execution::par, ...) does not concurrently iterate over tbb::concurrent_unordered_map.
+	});
 	conclusionCounter -= toErase.size();
 	redundantCounter += toErase.size();
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
@@ -733,164 +735,163 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
 
-void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
-	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
-	auto recurse = [&wordLengthLimit, &knownLimit, &allRepresentatives, &queues, &mtxs, &combinations](string& prefix, vector<uint32_t>& stack, const auto& me) -> void {
-		constexpr uint32_t S = 0;
-		const uint32_t A = knownLimit + 2;
-		// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
-		if (prefix.length() + stack.size() > wordLengthLimit)
-			return;
-		if (stack.empty()) {
-			bool processed = false;
-			unsigned bestIndex = 0;
-			unsigned bestSize = UINT_MAX;
-			for (unsigned t = 0; t < queues.size(); t++) {
-				deque<string>& queue = queues[t];
-				size_t size = queue.size();
-				if (size) {
-					if (size < bestSize) {
-						bestIndex = t;
-						bestSize = size;
-					}
-				} else {
-					{
-						lock_guard<mutex> lock(mtxs[t]);
-						queue.push_back(prefix);
-					}
-					processed = true;
-					break;
+namespace {
+void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, const uint32_t wordLengthLimit, const uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs, const vector<pair<array<uint32_t, 2>, unsigned>>& combinations) {
+	constexpr uint32_t S = 0;
+	const uint32_t A = knownLimit + 2;
+	// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
+	if (prefix.length() + stack.size() > wordLengthLimit)
+		return;
+	if (stack.empty()) {
+		bool processed = false;
+		unsigned bestIndex = 0;
+		unsigned bestSize = UINT_MAX;
+		for (unsigned t = 0; t < queues.size(); t++) {
+			deque<string>& queue = queues[t];
+			size_t size = queue.size();
+			if (size) {
+				if (size < bestSize) {
+					bestIndex = t;
+					bestSize = size;
 				}
-			}
-			if (!processed) {
-				lock_guard<mutex> lock(mtxs[bestIndex]);
-				queues[bestIndex].push_back(prefix);
-			}
-		} else {
-			auto processN = [&](const vector<string>& representatives) {
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				vector<string>::const_iterator last = prev(representatives.end());
-				for (vector<string>::const_iterator it = representatives.begin(); it != last; ++it) {
-					stack_copy = stack;
-					prefix_copy = prefix;
-					prefix_copy += *it;
-					me(prefix_copy, stack_copy, me);
-				}
-				prefix += *last;
-				me(prefix, stack, me);
-			};
-			uint32_t symbol = stack.back();
-			if (symbol == S) {
-				stack.pop_back(); // pop already for all cases
-				// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				auto processRepresentatives = [&](const vector<string>& representatives) {
-					for (const string& sequence : representatives) {
-						stack_copy = stack;
-						prefix_copy = prefix;
-						prefix_copy += sequence;
-						me(prefix_copy, stack_copy, me);
-					}
-				};
-				processRepresentatives(allRepresentatives[1]);
-				uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
-				for (uint32_t s = 3; s <= knownLimit; s += 2)
-					if (remainingSpace >= s)
-						processRepresentatives(allRepresentatives[s]);
-
-				// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
-				stack.push_back(A);
-				me(prefix, stack, me);
-			} else if (symbol == A) {
-				uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
-				if (remainingSpace < knownLimit + 2)
-					return; // cancel already if adding the below sequences would exceed the word length limit
-				// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
-				// ...
-				// |combinations|/|combinations| : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
-				prefix += "D"; // same terminal for all cases, so all prefix already
-				stack.pop_back(); // pop already for all cases
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				for (unsigned i = 0; i < combinations.size() - 1; i++) {
-					const pair<array<uint32_t, 2>, unsigned>& p = combinations[i];
-					if (remainingSpace < p.second)
-						return; // cancel already if adding the following sequences would exceed the word length limit
-					stack_copy = stack;
-					prefix_copy = prefix;
-					stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
-					me(prefix_copy, stack_copy, me);
-				}
-				const pair<array<uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
-				if (remainingSpace < p.second)
-					return; // cancel already if adding the final sequence would exceed the word length limit
-				stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
-				me(prefix, stack, me);
 			} else {
-				if (symbol > 1 && prefix.length() + symbol + stack.size() - 1 > wordLengthLimit)
-					return; // cancel already if adding the below sequences would exceed the word length limit
-				stack.pop_back(); // pop already for all cases
-				// 1/1 : {w | w is known representative of length <knownLimit>}, N<symbol>, [] ; stack: pop current symbol, push nothing
-				processN(allRepresentatives[symbol]);
+				{
+					lock_guard<mutex> lock(mtxs[t]);
+					queue.push_back(prefix);
+				}
+				processed = true;
+				break;
 			}
 		}
-	};
-	recurse(prefix, stack, recurse);
+		if (!processed) {
+			lock_guard<mutex> lock(mtxs[bestIndex]);
+			queues[bestIndex].push_back(prefix);
+		}
+	} else {
+		auto processN = [&](const vector<string>& representatives) {
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			vector<string>::const_iterator last = prev(representatives.end());
+			for (vector<string>::const_iterator it = representatives.begin(); it != last; ++it) {
+				stack_copy = stack;
+				prefix_copy = prefix;
+				prefix_copy += *it;
+				recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+			}
+			prefix += *last;
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		};
+		uint32_t symbol = stack.back();
+		if (symbol == S) {
+			stack.pop_back(); // pop already for all cases
+			// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			auto processRepresentatives = [&](const vector<string>& representatives) {
+				for (const string& sequence : representatives) {
+					stack_copy = stack;
+					prefix_copy = prefix;
+					prefix_copy += sequence;
+					recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+				}
+			};
+			processRepresentatives(allRepresentatives[1]);
+			uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+			for (uint32_t s = 3; s <= knownLimit; s += 2)
+				if (remainingSpace >= s)
+					processRepresentatives(allRepresentatives[s]);
+
+			// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
+			stack.push_back(A);
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		} else if (symbol == A) {
+			uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+			if (remainingSpace < knownLimit + 2)
+				return; // cancel already if adding the below sequences would exceed the word length limit
+			// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
+			// ...
+			// |combinations|/|combinations| : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
+			prefix += "D"; // same terminal for all cases, so all prefix already
+			stack.pop_back(); // pop already for all cases
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			for (unsigned i = 0; i < combinations.size() - 1; i++) {
+				const pair<array<uint32_t, 2>, unsigned>& p = combinations[i];
+				if (remainingSpace < p.second)
+					return; // cancel already if adding the following sequences would exceed the word length limit
+				stack_copy = stack;
+				prefix_copy = prefix;
+				stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
+				recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+			}
+			const pair<array<uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
+			if (remainingSpace < p.second)
+				return; // cancel already if adding the final sequence would exceed the word length limit
+			stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		} else {
+			if (symbol > 1 && prefix.length() + symbol + stack.size() - 1 > wordLengthLimit)
+				return; // cancel already if adding the below sequences would exceed the word length limit
+			stack.pop_back(); // pop already for all cases
+			// 1/1 : {w | w is known representative of length <knownLimit>}, N<symbol>, [] ; stack: pop current symbol, push nothing
+			processN(allRepresentatives[symbol]);
+		}
+	}
+};
+}
+void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
+	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
+	recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
 }
 
 void DlProofEnumerator::_loadCondensedDetachmentPlProofs_naive_par(string& prefix, unsigned stackSize, uint32_t wordLengthLimit, vector<deque<string>>& queues, vector<mutex>& mtxs) {
-	auto recurse = [&](string& prefix, unsigned stackSize, const auto& me) -> void {
-		if (prefix.length() + stackSize > wordLengthLimit)
-			return;
-		if (!stackSize) {
-			bool processed = false;
-			unsigned bestIndex = 0;
-			unsigned bestSize = UINT_MAX;
-			for (unsigned t = 0; t < queues.size(); t++) {
-				deque<string>& queue = queues[t];
-				size_t size = queue.size();
-				if (size) {
-					if (size < bestSize) {
-						bestIndex = t;
-						bestSize = size;
-					}
-				} else {
-					{
-						lock_guard<mutex> lock(mtxs[t]);
-						queue.push_back(prefix);
-					}
-					processed = true;
-					break;
+	if (prefix.length() + stackSize > wordLengthLimit)
+		return;
+	if (!stackSize) {
+		bool processed = false;
+		unsigned bestIndex = 0;
+		unsigned bestSize = UINT_MAX;
+		for (unsigned t = 0; t < queues.size(); t++) {
+			deque<string>& queue = queues[t];
+			size_t size = queue.size();
+			if (size) {
+				if (size < bestSize) {
+					bestIndex = t;
+					bestSize = size;
 				}
+			} else {
+				{
+					lock_guard<mutex> lock(mtxs[t]);
+					queue.push_back(prefix);
+				}
+				processed = true;
+				break;
 			}
-			if (!processed) {
-				lock_guard<mutex> lock(mtxs[bestIndex]);
-				queues[bestIndex].push_back(prefix);
-			}
-		} else {
-			// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
-			string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
-			prefix_copy += "1";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "2";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "3";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
-			prefix += "D";
-			me(prefix, stackSize + 1, me);
 		}
-	};
-	recurse(prefix, stackSize, recurse);
+		if (!processed) {
+			lock_guard<mutex> lock(mtxs[bestIndex]);
+			queues[bestIndex].push_back(prefix);
+		}
+	} else {
+		// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
+		string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
+		prefix_copy += "1";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "2";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "3";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
+		prefix += "D";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix, stackSize + 1, wordLengthLimit, queues, mtxs);
+	}
 }
 
 }

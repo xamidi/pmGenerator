@@ -6,9 +6,11 @@
 #include "DlFormula.h"
 #include "DlStructure.h"
 
+#include <boost/thread/lock_types.hpp>
+#include <boost/thread/shared_mutex.hpp>
+
 #include <iostream>
 #include <mutex>
-#include <shared_mutex>
 
 using namespace std;
 using namespace xamid::helper;
@@ -128,32 +130,34 @@ unordered_map<string, string>& DlCore::variableMeaningToLabel() {
 // END Fields                                                                                       //
 // ------------------------------------------------------------------------------------------------ //
 
+namespace {
+void recurse_primitivesOfFormula(const shared_ptr<DlFormula>& formula, unordered_set<string>& result) {
+	if (formula->getChildren().empty()) {
+		const string& value = formula->getValue()->value;
+		if (value != DlCore::terminalStr_bot() && value != DlCore::terminalStr_top())
+			result.insert(value);
+	} else
+		for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
+			recurse_primitivesOfFormula(subformula, result);
+}
+}
 unordered_set<string> DlCore::primitivesOfFormula(const shared_ptr<DlFormula>& formula) {
 	unordered_set<string> result;
-	auto recurse = [&](const shared_ptr<DlFormula>& formula, const auto& me) -> void {
-		if (formula->getChildren().empty()) {
-			const string& value = formula->getValue()->value;
-			if (value != terminalStr_bot() && value != terminalStr_top())
-				result.insert(value);
-		} else
-			for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
-				me(subformula, me);
-	};
-	recurse(formula, recurse);
+	recurse_primitivesOfFormula(formula, result);
 	return result;
 }
 
 bool DlCore::tryRegisterVariable(const string& variableName, vector<uint32_t>* optOut_variableNameSequence) {
 	if (dlOperators().count(variableName))
 		return false; // variableName cannot be a variable since it is an operator
-	static shared_mutex mtx; // for thread safety, need to wait until other threads registered their potential variables
+	static boost::shared_mutex mtx; // for thread safety, need to wait until other threads registered their potential variables
 	static uint32_t variablesStateId = 0;
-	shared_lock<shared_mutex> readLock(mtx); // wait until there is no write lock
+	boost::shared_lock<boost::shared_mutex> readLock(mtx); // wait until there is no write lock
 	uint32_t myWriteStateId = variablesStateId; // remember registered variables state ; NOTE: Since readLock released, there is no ongoing registration.
 	map<string, vector<uint32_t>>::const_iterator searchResult = labelToTerminalSymbols_variables().find(variableName);
 	if (searchResult == labelToTerminalSymbols_variables().end()) { // new variable
 		readLock.unlock();
-		unique_lock<shared_mutex> writeLock(mtx); // wait until there are no read and no write locks
+		unique_lock<boost::shared_mutex> writeLock(mtx); // wait until there are no read and no write locks
 		bool stillNew = true;
 		if (variablesStateId != myWriteStateId) { // other threads registered new variables in the meantime => update search result
 			searchResult = labelToTerminalSymbols_variables().find(variableName);
@@ -226,7 +230,7 @@ shared_ptr<DlFormula> DlCore::toBasicDlFormula(const shared_ptr<DlFormula>& form
 		if (!optOut_originals->empty())
 			optOut_originals->clear();
 	} else if (extra) {
-		__originals = make_unique<unordered_map<shared_ptr<DlFormula>, shared_ptr<DlFormula>>>();
+		__originals = unique_ptr<unordered_map<shared_ptr<DlFormula>, shared_ptr<DlFormula>>>(new unordered_map<shared_ptr<DlFormula>, shared_ptr<DlFormula>>());
 		optOut_originals = __originals.get();
 	}
 	shared_ptr<DlFormula> rootNode(new DlFormula(make_shared<String>()));
@@ -396,7 +400,7 @@ bool DlCore::isSchemaOf(const shared_ptr<DlFormula>& potentialSchema, const shar
 bool DlCore::_isSchemaOf(const shared_ptr<DlFormula>& potentialSchema, const shared_ptr<DlFormula>& formula, map<string, shared_ptr<DlFormula>>& substitutions) {
 	const string& potentialSchemaValue = potentialSchema->getValue()->value;
 	if (potentialSchema->getChildren().empty() && (potentialSchemaValue != terminalStr_top() && potentialSchemaValue != terminalStr_bot())) { // try to substitute potentialSchema's variable to formula
-		pair<map<string, shared_ptr<DlFormula>>::iterator, bool> result = substitutions.try_emplace(potentialSchemaValue, formula);
+		pair<map<string, shared_ptr<DlFormula>>::iterator, bool> result = substitutions.emplace(potentialSchemaValue, formula);
 		if (!result.second)
 			return *result.first->second == *formula; // the key was already present => check whether the inserted substitution equals this one
 		else
@@ -425,65 +429,66 @@ bool DlCore::tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_p
 		return false;
 }
 
-bool DlCore::_tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_ptr<DlFormula>& formulaB, map<string, shared_ptr<DlFormula>>& substitutions, bool debug) {
-	// Need a comparison function which also tells where the mismatch occurs. We use substitutions implicitly, without actually building all the substituted formulas.
-	// NOTE: We only want to substitute once within the same node, so we have to remember whether the recursive call's arguments are formulas within a substituted tree,
-	//       i.e. for which of 'lhs' and 'rhs' a substitution has already taken place. It is important to note that not applying a substitution to a side is fine when it
-	//       contains no substitutable leaf. But we must apply one whenever a substitutable leaf occurs for the first time (i.e. when not already within substitution value).
-	auto formulaEquals = [&](const shared_ptr<DlFormula>& lhs, const shared_ptr<DlFormula>& rhs, const auto& me, pair<shared_ptr<DlFormula>, shared_ptr<DlFormula>>& mismatch, bool withinSubstLhs, bool withinSubstRhs) -> bool {
-		if (lhs.get() == rhs.get())
-			return true; // pointer type (here: DlFormula*) comparison
-		string& lhsValue = lhs->getValue()->value;
-		string& rhsValue = rhs->getValue()->value;
-		bool lhsHasSubstitution;
-		shared_ptr<DlFormula> lhsComp;
-		if (withinSubstLhs) {
-			lhsHasSubstitution = false; // avoid applying a substitution on the left-hand side when we already have
-			lhsComp = lhs;
-		} else {
-			const vector<shared_ptr<DlFormula>>& lhsChildren = lhs->getChildren();
-			map<string, shared_ptr<DlFormula>>::iterator lhsSubstIt;
-			lhsHasSubstitution = lhsChildren.empty() && (lhsSubstIt = substitutions.find(lhsValue)) != substitutions.end();
-			lhsComp = lhsHasSubstitution ? lhsSubstIt->second : lhs;
-			withinSubstLhs = lhsHasSubstitution; // remember that we applied a substitution on the left-hand side
-		}
-		bool rhsHasSubstitution;
-		shared_ptr<DlFormula> rhsComp;
-		if (withinSubstRhs) {
-			rhsHasSubstitution = false; // avoid applying a substitution on the right-hand side when we already have
-			rhsComp = rhs;
-		} else {
-			const vector<shared_ptr<DlFormula>>& rhsChildren = rhs->getChildren();
-			map<string, shared_ptr<DlFormula>>::iterator rhsSubstIt;
-			rhsHasSubstitution = rhsChildren.empty() && (rhsSubstIt = substitutions.find(rhsValue)) != substitutions.end();
-			rhsComp = rhsHasSubstitution ? rhsSubstIt->second : rhs;
-			withinSubstRhs = rhsHasSubstitution; // remember that we applied a substitution on the right-hand side
-		}
-		string& lhsCompValue = lhsHasSubstitution ? lhsComp->getValue()->value : lhsValue;
-		string& rhsCompValue = rhsHasSubstitution ? rhsComp->getValue()->value : rhsValue;
-		if (lhsCompValue != rhsCompValue) { // string comparison
-			mismatch = make_pair(lhsComp, rhsComp); // store mismatching formulas
-			if (debug)
-				cout << "Mismatch since " << lhsCompValue << " != " << rhsCompValue << ", for formulas: " << formulaRepresentation_traverse(lhsComp) << " and " << formulaRepresentation_traverse(rhsComp) << "." << endl;
+namespace {
+// Need a comparison function which also tells where the mismatch occurs. We use substitutions implicitly, without actually building all the substituted formulas.
+// NOTE: We only want to substitute once within the same node, so we have to remember whether the recursive call's arguments are formulas within a substituted tree,
+//       i.e. for which of 'lhs' and 'rhs' a substitution has already taken place. It is important to note that not applying a substitution to a side is fine when it
+//       contains no substitutable leaf. But we must apply one whenever a substitutable leaf occurs for the first time (i.e. when not already within substitution value).
+bool formulaEquals(const shared_ptr<DlFormula>& lhs, const shared_ptr<DlFormula>& rhs, pair<shared_ptr<DlFormula>, shared_ptr<DlFormula>>& mismatch, bool withinSubstLhs, bool withinSubstRhs, const map<string, shared_ptr<DlFormula>>& substitutions, const bool debug) {
+	if (lhs.get() == rhs.get())
+		return true; // pointer type (here: DlFormula*) comparison
+	string& lhsValue = lhs->getValue()->value;
+	string& rhsValue = rhs->getValue()->value;
+	bool lhsHasSubstitution;
+	shared_ptr<DlFormula> lhsComp;
+	if (withinSubstLhs) {
+		lhsHasSubstitution = false; // avoid applying a substitution on the left-hand side when we already have
+		lhsComp = lhs;
+	} else {
+		const vector<shared_ptr<DlFormula>>& lhsChildren = lhs->getChildren();
+		map<string, shared_ptr<DlFormula>>::const_iterator lhsSubstIt;
+		lhsHasSubstitution = lhsChildren.empty() && (lhsSubstIt = substitutions.find(lhsValue)) != substitutions.end();
+		lhsComp = lhsHasSubstitution ? lhsSubstIt->second : lhs;
+		withinSubstLhs = lhsHasSubstitution; // remember that we applied a substitution on the left-hand side
+	}
+	bool rhsHasSubstitution;
+	shared_ptr<DlFormula> rhsComp;
+	if (withinSubstRhs) {
+		rhsHasSubstitution = false; // avoid applying a substitution on the right-hand side when we already have
+		rhsComp = rhs;
+	} else {
+		const vector<shared_ptr<DlFormula>>& rhsChildren = rhs->getChildren();
+		map<string, shared_ptr<DlFormula>>::const_iterator rhsSubstIt;
+		rhsHasSubstitution = rhsChildren.empty() && (rhsSubstIt = substitutions.find(rhsValue)) != substitutions.end();
+		rhsComp = rhsHasSubstitution ? rhsSubstIt->second : rhs;
+		withinSubstRhs = rhsHasSubstitution; // remember that we applied a substitution on the right-hand side
+	}
+	string& lhsCompValue = lhsHasSubstitution ? lhsComp->getValue()->value : lhsValue;
+	string& rhsCompValue = rhsHasSubstitution ? rhsComp->getValue()->value : rhsValue;
+	if (lhsCompValue != rhsCompValue) { // string comparison
+		mismatch = make_pair(lhsComp, rhsComp); // store mismatching formulas
+		if (debug)
+			cout << "Mismatch since " << lhsCompValue << " != " << rhsCompValue << ", for formulas: " << DlCore::formulaRepresentation_traverse(lhsComp) << " and " << DlCore::formulaRepresentation_traverse(rhsComp) << "." << endl;
+		return false;
+	}
+	const vector<shared_ptr<DlFormula>>& lhsCompChildren = lhsComp->getChildren();
+	const vector<shared_ptr<DlFormula>>& rhsCompChildren = rhsComp->getChildren();
+	if (lhsCompChildren.size() != rhsCompChildren.size()) // integer comparison
+		throw domain_error("DlCore::_tryUnifyTrees(): Nodes represent the same operator '" + lhs->getValue()->value + "', but differ in arity (" + to_string(lhsCompChildren.size()) + " vs. " + to_string(rhsCompChildren.size()) + ").");
+	for (unsigned i = 0; i < lhsCompChildren.size(); i++)
+		if (!formulaEquals(lhsCompChildren[i], rhsCompChildren[i], mismatch, withinSubstLhs, withinSubstRhs, substitutions, debug)) { // recursive DL-formula comparison
+			// No need to store mismatching formulas here, since that would happen in the recursive call.
 			return false;
 		}
-		const vector<shared_ptr<DlFormula>>& lhsCompChildren = lhsComp->getChildren();
-		const vector<shared_ptr<DlFormula>>& rhsCompChildren = rhsComp->getChildren();
-		if (lhsCompChildren.size() != rhsCompChildren.size()) // integer comparison
-			throw domain_error("DlCore::_tryUnifyTrees(): Nodes represent the same operator '" + lhs->getValue()->value + "', but differ in arity (" + to_string(lhsCompChildren.size()) + " vs. " + to_string(rhsCompChildren.size()) + ").");
-		for (unsigned i = 0; i < lhsCompChildren.size(); i++)
-			if (!me(lhsCompChildren[i], rhsCompChildren[i], me, mismatch, withinSubstLhs, withinSubstRhs)) { // recursive DL-formula comparison
-				// No need to store mismatching formulas here, since that would happen in the recursive call.
-				return false;
-			}
-		return true;
-	};
-
+	return true;
+}
+}
+bool DlCore::_tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_ptr<DlFormula>& formulaB, map<string, shared_ptr<DlFormula>>& substitutions, bool debug) {
 	// Essentially, loop while (*substitute(formulaA, substitutions) != *substitute(formulaB, substitutions)).
 	// But use the substitution in the equals function instead of actually constructing the formulas each time.
 	// Furthermore, the mismatching subformulas are returned when the formulas are not equal.
 	pair<shared_ptr<DlFormula>, shared_ptr<DlFormula>> mismatch;
-	while (!formulaEquals(formulaA, formulaB, formulaEquals, mismatch, false, false)) {
+	while (!formulaEquals(formulaA, formulaB, mismatch, false, false, substitutions, debug)) {
 		const shared_ptr<DlFormula>& mismatchInA = mismatch.first;
 		const shared_ptr<DlFormula>& mismatchInB = mismatch.second;
 		const string& mismatchInAValue = mismatchInA->getValue()->value;
@@ -634,14 +639,11 @@ void DlCore::calculateEmptyMeanings(const shared_ptr<DlFormula>& formula) { // N
 }
 
 void DlCore::clearMeanings(const shared_ptr<DlFormula>& formula) {
-	auto recurse = [](const shared_ptr<DlFormula>& node, const auto& me) -> void {
-		if (!node->meaning().empty()) {
-			node->meaning().clear();
-			for (uint32_t i = 0; i < node->getChildren().size(); i++)
-				me(node->children()[i], me);
-		}
-	};
-	recurse(formula, recurse);
+	if (!formula->meaning().empty()) {
+		formula->meaning().clear();
+		for (uint32_t i = 0; i < formula->getChildren().size(); i++)
+			clearMeanings(formula->children()[i]);
+	}
 }
 
 // NOTE: Supports search trees, so it can be used in DlFormulaStructuralSearchInfo::toSearchTree().

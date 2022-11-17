@@ -2,6 +2,8 @@
 
 #include "Resources.h"
 
+#include <boost/filesystem/operations.hpp>
+
 #include <iomanip> // for setbase
 #include <iostream>
 #include <math.h>
@@ -88,10 +90,10 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 	//                             2^63+1 µs =  292277 yr  0 mo  1 wk  1 d  23 h  52 min  30 s  775.807 ms
 	//        wolframAlphaMode =>  -2^63  µs = -292471 yr -2 mo -2 wk -1 d  -8 h   0 min -54 s -775.808 ms
 	//                             2^63+1 µs =  292471 yr  2 mo  2 wk  1 d   8 h   0 min  54 s  775.807 ms
-	constexpr intmax_t yearUs = chrono::years::period::num * chrono::microseconds::period::den; //     1 yr  = 31556952000000 µs ; NOTE: 31556952 s / yr include leap years, otherwise it would be 60 * 60 * 24 * 365 = 31540000 s / yr.
-	constexpr intmax_t monthUs = chrono::months::period::num * chrono::microseconds::period::den; //   1 mo  =  2629746000000 µs ;       2629746 s / mo include leap years, otherwise it would be 31540000 / 12 = 7885000 / 3 = 2628333.333.. s / mo.
-	constexpr intmax_t weekUs = chrono::weeks::period::num * chrono::microseconds::period::den; //     1 wk  =   604800000000 µs ;       60 * 60 * 24 * 7 = 604800 s / wk, i.e. from here down, the C++ standard's leap years do not influence values.
-	constexpr intmax_t dayUs = chrono::days::period::num * chrono::microseconds::period::den; //       1 d   =    86400000000 µs
+	constexpr intmax_t yearUs = 31556952 * chrono::microseconds::period::den; //   1 yr  = 31556952000000 µs ; NOTE: 31556952 s / yr include leap years, otherwise it would be 60 * 60 * 24 * 365 = 31540000 s / yr.
+	constexpr intmax_t monthUs = 2629746 * chrono::microseconds::period::den; //   1 mo  =  2629746000000 µs ;       2629746 s / mo include leap years, otherwise it would be 31540000 / 12 = 7885000 / 3 = 2628333.333.. s / mo.
+	constexpr intmax_t weekUs = 604800 * chrono::microseconds::period::den; //     1 wk  =   604800000000 µs ;       60 * 60 * 24 * 7 = 604800 s / wk, i.e. from here down, the C++ standard's leap years do not influence values.
+	constexpr intmax_t dayUs = 86400 * chrono::microseconds::period::den; //       1 d   =    86400000000 µs
 	constexpr intmax_t hourUs = chrono::hours::period::num * chrono::microseconds::period::den; //     1 h   =     3600000000 µs
 	constexpr intmax_t minuteUs = chrono::minutes::period::num * chrono::microseconds::period::den; // 1 min =       60000000 µs
 	constexpr intmax_t secondUs = chrono::seconds::period::num * chrono::microseconds::period::den; // 1 s   =        1000000 µs
@@ -206,33 +208,31 @@ string FctHelper::durationStringMs(const chrono::microseconds& dur, bool innerAl
 	return ss.str();
 }
 
-bool FctHelper::writeToFile(const string& file, const string& content, fstream::openmode mode) {
-	return _writeToFile(filesystem::u8path(file), content, mode);
+namespace {
+bool createDir(const string& path) {
+	string::size_type dirMarkerIndex = path.find_last_of("/\\");
+	if (dirMarkerIndex != string::npos) { // If there is a path to another directory given, make sure that the directory exists.
+		string dir = path.substr(0, dirMarkerIndex);
+		if (!boost::filesystem::is_directory(dir)) { // Need to create that directory, but in order to do so, must first ensure that its parent directory exists.
+			if (!createDir(dir))
+				return false;
+			if (!boost::filesystem::create_directories(dir))
+				cerr << "Failed to create directory \"" << dir << "\"." << endl;
+		}
+	}
+	return true;
 }
-
-bool FctHelper::_writeToFile(const filesystem::path& file, const string& content, fstream::openmode mode) {
+}
+bool FctHelper::writeToFile(const string& file, const string& content, fstream::openmode mode) {
 	// 1. Ensure directory exists
-	if (!filesystem::exists(file)) {
-		auto createDir = [](const string& path, const auto& me) -> bool {
-			string::size_type dirMarkerIndex = path.find_last_of("/\\");
-			if (dirMarkerIndex != string::npos) { // If there is a path to another directory given, make sure that the directory exists.
-				string dir = path.substr(0, dirMarkerIndex);
-				if (!filesystem::is_directory(dir)) { // Need to create that directory, but in order to do so, must first ensure that its parent directory exists.
-					if (!me(dir, me))
-						return false;
-					if (!filesystem::create_directories(dir))
-						cerr << "Failed to create directory \"" << dir << "\"." << endl;
-				}
-			}
-			return true;
-		};
-		if (!createDir(file.string(), createDir))
+	if (!boost::filesystem::exists(file)) {
+		if (!createDir(file))
 			return false;
 	}
 	// 2. Save file
 	ofstream fout(file, mode);
 	if (!fout.is_open()) {
-		cerr << "Cannot write to file \"" << file.string() << "\"." << endl;
+		cerr << "Cannot write to file \"" << file << "\"." << endl;
 		return false;
 	}
 	fout << content;
@@ -240,13 +240,9 @@ bool FctHelper::_writeToFile(const filesystem::path& file, const string& content
 }
 
 bool FctHelper::readFile(const string& file, string& out_content, fstream::openmode mode) {
-	return _readFile(filesystem::u8path(file), out_content, mode);
-}
-
-bool FctHelper::_readFile(const filesystem::path& file, string& out_content, fstream::openmode mode) {
 	ifstream fin(file, mode);
 	if (!fin.is_open()) {
-		cerr << "Cannot read from file \"" << file.string() << "\"." << endl;
+		cerr << "Cannot read from file \"" << file << "\"." << endl;
 		return false;
 	}
 	stringstream buffer;

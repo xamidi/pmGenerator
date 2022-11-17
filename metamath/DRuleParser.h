@@ -4,7 +4,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <string_view>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -52,7 +51,7 @@ private:
 #else
 	static std::shared_ptr<nortmann::DlFormula> _parseEnclosedMmPlFormula(const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<nortmann::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
 #endif
-	static std::string_view::iterator _obtainUnaryOperatorSequence(const std::string_view& unaryOperatorSequence, std::vector<nortmann::DlOperator>& unaryOperators);
+	static std::string::const_iterator _obtainUnaryOperatorSequence(const std::string& unaryOperatorSequence, std::vector<nortmann::DlOperator>& unaryOperators);
 };
 
 }

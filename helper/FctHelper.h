@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <map>
 #include <set>
@@ -40,10 +39,7 @@ struct FctHelper {
 
 	static bool writeToFile(const std::string& file, const std::string& content, std::fstream::openmode mode = std::fstream::out | std::fstream::binary);
 	static bool readFile(const std::string& file, std::string& out_content, std::fstream::openmode mode = std::fstream::in | std::fstream::binary);
-private:
-	static bool _writeToFile(const std::filesystem::path& file, const std::string& content, std::fstream::openmode mode = std::fstream::out | std::fstream::binary);
-	static bool _readFile(const std::filesystem::path& file, std::string& out_content, std::fstream::openmode mode = std::fstream::in | std::fstream::binary);
-public:
+
 	static std::wstring utf8toWide(const std::string& in);
 	static std::wstring utf8toWide(const char* in);
 	static std::vector<std::string> stringSplit(const std::string& str, const std::string& sep);
@@ -63,8 +59,8 @@ public:
 		return ss.str();
 	}
 
-	template<typename T, typename U>
-	static std::string vectorStringF(const std::vector<T, U>& v, const auto& f, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
+	template<typename T, typename U, typename Func>
+	static std::string vectorStringF(const std::vector<T, U>& v, const Func& f, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
 		for (uint32_t i = 0; i < v.size(); ++i) {
@@ -89,8 +85,8 @@ public:
 		return ss.str();
 	}
 
-	template<typename T, typename U, typename V, typename W>
-	static std::string mapStringF(const std::map<T, U, V, W>& m, const auto& f, const std::string& leftDelimiter = "{", const std::string& rightDelimiter = "}", const std::string& sep = ", ") {
+	template<typename T, typename U, typename V, typename W, typename Func>
+	static std::string mapStringF(const std::map<T, U, V, W>& m, const Func& f, const std::string& leftDelimiter = "{", const std::string& rightDelimiter = "}", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
 		for (typename std::map<T, U, V, W>::const_iterator it = m.begin(); it != m.end(); ++it) {
