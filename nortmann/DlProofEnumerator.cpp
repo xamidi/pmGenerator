@@ -13,7 +13,6 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
-#include <execution>
 #include <iostream>
 
 using namespace std;

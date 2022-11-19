@@ -2,8 +2,9 @@
 
 #include "../helper/FctHelper.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <iostream>
-#include <regex>
 #include <unordered_set>
 
 using namespace std;
@@ -15,7 +16,7 @@ namespace grammar {
 CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarString) :
 		_elementCounter(0), _startSymbolString(startSymbolString), _grammarString(grammarString) {
 	// 1. Replace "\r\n" with "\n" in the grammar string
-	_grammarString = regex_replace(_grammarString, regex("\\r\\n"), "\n");
+	boost::replace_all(_grammarString, "\r\n", "\n");
 
 	// 2. Build up nonterminals and production rules
 	istringstream reader1(_grammarString);

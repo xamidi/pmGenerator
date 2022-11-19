@@ -13,7 +13,6 @@
 
 #include <boost/algorithm/string.hpp> // for boost::replace_all()
 
-#include <execution>
 #include <iostream>
 
 using namespace std;
