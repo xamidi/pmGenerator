@@ -7,7 +7,9 @@
 #include "DlCore.h"
 #include "DlFormula.h"
 
+#define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
 #include <tbb/concurrent_map.h>
+#include <tbb/concurrent_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
