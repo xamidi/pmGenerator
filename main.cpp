@@ -21,15 +21,16 @@ struct A {
 	}
 } a;
 
-int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, ..., <argN> }
+int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
 	//#cout << "argc = " << argc << ", argv = { " << [&]() { string s; for (int i = 0; i < argc; i++) { if (i) s += ", "; s += string { argv[i] }; } return s; }() << " }" << endl;
 	auto printUsage = [](const string& error = "") {
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
-				"    pmGenerator ( -g <limit> [-u] | -r <pmproofs file> <output file> [-m] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] )+\n"
+				"    pmGenerator ( -g <limit> [-m] [-u] | -r <pmproofs file> <output file> [-m] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] )+\n"
 				"    -g: Generate proof files\n"
-				"        -u: unfiltered (faster, but generates redundant proofs)\n"
+				"        -m: disable memory reduction (distributed formula lookup data, requires more RAM, faster collection, significantly slower filtering)\n"
+				"        -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"    -r: Replacements file creation based on proof files\n"
 				"        -m: disable memory reduction (distributed formula lookup data, requires more RAM)\n"
 				"        -d: print debug information\n"
@@ -61,7 +62,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, 
 	if (argc <= 1)
 		return printUsage();
 	enum class Task {
-		Generate, // get<6> = filtered
+		Generate, // get<6> = filtered, get<7> = memReduction
 		CreateReplacements, // get<6> = debug, get<7> = memReduction
 		ApplyReplacements // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 	};
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, 
 		case 'g':
 			if (i + 1 >= argc)
 				return printUsage("Missing argument for \"-g\".");
-			tasks.emplace_back(Task::Generate, stoi(argv[++i]), "", "", "", "", true, false, false, false);
+			tasks.emplace_back(Task::Generate, stoi(argv[++i]), "", "", "", "", true, true, false, false);
 			break;
 		case 'u':
 			if (tasks.empty() || get<0>(tasks.back()) != Task::Generate)
@@ -82,7 +83,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, 
 			get<6>(tasks.back()) = false; // filtered := false
 			break;
 		case 'm':
-			if (tasks.empty() || get<0>(tasks.back()) != Task::CreateReplacements)
+			if (tasks.empty() || (get<0>(tasks.back()) != Task::Generate && get<0>(tasks.back()) != Task::CreateReplacements))
 				return printUsage("Invalid argument \"-m\".");
 			get<7>(tasks.back()) = false; // memReduction := false
 			break;
@@ -128,7 +129,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, 
 	for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool>& t : tasks)
 		switch (get<0>(t)) {
 		case Task::Generate:
-			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ")\n";
+			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
 			break;
 		case Task::CreateReplacements:
 			ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")\n";
@@ -142,8 +143,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg0>, 
 		for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool>& t : tasks)
 			switch (get<0>(t)) {
 			case Task::Generate:
-				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ")." << endl;
-				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), get<6>(t));
+				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")." << endl;
+				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), get<6>(t), get<7>(t));
 				break;
 			case Task::CreateReplacements:
 				cout << "[Main] Calling createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")." << endl;

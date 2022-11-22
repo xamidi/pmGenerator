@@ -50,7 +50,7 @@ struct DlProofEnumerator {
 	static std::vector<std::pair<std::array<uint32_t, 2>, unsigned>> proofLengthCombinations(uint32_t knownLimit);
 
 	// Data generation
-	static void generateDProofRepresentativeFiles(uint32_t limit = UINT32_MAX, bool redundantSchemasRemoval = true);
+	static void generateDProofRepresentativeFiles(uint32_t limit = UINT32_MAX, bool redundantSchemasRemoval = true, bool memReduction = true);
 
 	// Helper functions
 	static void replaceNodes(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>>& nodeStorage, std::atomic<uint64_t>& nodeReplacementCounter);
