@@ -9,7 +9,9 @@
 
 #include <boost/filesystem/operations.hpp>
 
+#define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
 #include <tbb/concurrent_map.h>
+#include <tbb/concurrent_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
@@ -538,14 +540,10 @@ void DlProofEnumerator::replaceValues(shared_ptr<DlFormula>& formula, tbb::concu
 }
 
 void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter;
-	counter = 0;
-	atomic<uint64_t> conclusionCounter;
-	conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter;
-	redundantCounter = 0;
-	atomic<uint64_t> invalidCounter;
-	invalidCounter = 0;
+	atomic<uint64_t> counter { 0 };
+	atomic<uint64_t> conclusionCounter { 0 };
+	atomic<uint64_t> redundantCounter { 0 };
+	atomic<uint64_t> invalidCounter { 0 };
 	auto process = [&representativeProofs, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
@@ -608,14 +606,10 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared
 }
 
 void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter;
-	counter = 0;
-	atomic<uint64_t> conclusionCounter;
-	conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter;
-	redundantCounter = 0;
-	atomic<uint64_t> invalidCounter;
-	invalidCounter = 0;
+	atomic<uint64_t> counter { 0 };
+	atomic<uint64_t> conclusionCounter { 0 };
+	atomic<uint64_t> redundantCounter { 0 };
+	atomic<uint64_t> invalidCounter { 0 };
 	auto process = [&representativeProofsWithEquivalenceClasses, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
@@ -692,8 +686,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 			const uint32_t formula_sequenceLength = it->second.length();
 			if (formula_sequenceLength == maxLength) {
 				const shared_ptr<DlFormula>& formula = it->first;
-				atomic<bool> redundant;
-				redundant = false;
+				atomic<bool> redundant { false };
 				unsigned formulaLen = DlCore::standardFormulaLength(formula);
 				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::range_type& range) {
 					for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::const_iterator it = range.begin(); it != range.end(); ++it)

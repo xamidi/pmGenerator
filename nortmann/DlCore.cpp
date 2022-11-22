@@ -6,8 +6,10 @@
 #include "DlFormula.h"
 #include "DlStructure.h"
 
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
+#include <tbb/concurrent_map.h>
+#include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_vector.h>
 
 #include <iostream>
 #include <mutex>
@@ -113,16 +115,16 @@ const vector<uint32_t>& DlCore::digits() {
 	static const vector<uint32_t> v = { DlStructure::terminal_0(), DlStructure::terminal_1(), DlStructure::terminal_2(), DlStructure::terminal_3(), DlStructure::terminal_4(), DlStructure::terminal_5(), DlStructure::terminal_6(), DlStructure::terminal_7(), DlStructure::terminal_8(), DlStructure::terminal_9() };
 	return v;
 }
-map<string, vector<uint32_t>>& DlCore::labelToTerminalSymbols_variables() {
-	static map<string, vector<uint32_t>> m { make_pair("a", vector<uint32_t> { digits()[0] }) };
+tbb::concurrent_map<string, vector<uint32_t>>& DlCore::labelToTerminalSymbols_variables() {
+	static tbb::concurrent_map<string, vector<uint32_t>> m { make_pair("a", vector<uint32_t> { digits()[0] }) };
 	return m;
 }
-vector<string>& DlCore::variableToLabel() {
-	static vector<string> v { "a" };
+tbb::concurrent_vector<string>& DlCore::variableToLabel() {
+	static tbb::concurrent_vector<string> v { "a" };
 	return v;
 }
-unordered_map<string, string>& DlCore::variableMeaningToLabel() {
-	static unordered_map<string, string> m { make_pair("0", "a") };
+tbb::concurrent_unordered_map<string, string>& DlCore::variableMeaningToLabel() {
+	static tbb::concurrent_unordered_map<string, string> m { make_pair("0", "a") };
 	return m;
 }
 
@@ -150,22 +152,21 @@ unordered_set<string> DlCore::primitivesOfFormula(const shared_ptr<DlFormula>& f
 bool DlCore::tryRegisterVariable(const string& variableName, vector<uint32_t>* optOut_variableNameSequence) {
 	if (dlOperators().count(variableName))
 		return false; // variableName cannot be a variable since it is an operator
-	static boost::shared_mutex mtx; // for thread safety, need to wait until other threads registered their potential variables
-	static uint32_t variablesStateId = 0;
-	boost::shared_lock<boost::shared_mutex> readLock(mtx); // wait until there is no write lock
-	uint32_t myWriteStateId = variablesStateId; // remember registered variables state ; NOTE: Since readLock released, there is no ongoing registration.
-	map<string, vector<uint32_t>>::const_iterator searchResult = labelToTerminalSymbols_variables().find(variableName);
+	static mutex mtx;
+	static atomic<uint32_t> variablesStateId { 0 };
+	uint32_t myWriteStateId = variablesStateId; // remember registered variables state
+	// NOTE: Since 'variablesStateId' is increased after every modification of 'labelToTerminalSymbols_variables()', it
+	//       is guaranteed to increase in case 'variableName' is not found below but added afterwards by another thread.
+	tbb::concurrent_map<string, vector<uint32_t>>::const_iterator searchResult = labelToTerminalSymbols_variables().find(variableName);
 	if (searchResult == labelToTerminalSymbols_variables().end()) { // new variable
-		readLock.unlock();
-		unique_lock<boost::shared_mutex> writeLock(mtx); // wait until there are no read and no write locks
+		unique_lock<mutex> writeLock(mtx); // to avoid duplicate registrations, need to wait until other threads registered their potential variables
 		bool stillNew = true;
-		if (variablesStateId != myWriteStateId) { // other threads registered new variables in the meantime => update search result
+		if (myWriteStateId != variablesStateId) { // other threads registered new variables in the meantime => update search result
 			searchResult = labelToTerminalSymbols_variables().find(variableName);
 			if (searchResult != labelToTerminalSymbols_variables().end())
 				stillNew = false;
 		}
-		if (stillNew) { // register new variable
-			variablesStateId++;
+		if (stillNew) { // register new variable ; NOTE: myWriteStateId == variablesStateId => ('variableName' new), since ('variableName' added) => myWriteStateId != variablesStateId.
 			//#cout << "tryRegisterVariable(" << variableName << "): new variable [tid:" << this_thread::get_id() << "]" << endl;
 			string name = to_string(labelToTerminalSymbols_variables().size());
 			vector<uint32_t> variableNameSequence;
@@ -205,6 +206,7 @@ bool DlCore::tryRegisterVariable(const string& variableName, vector<uint32_t>* o
 			labelToTerminalSymbols_variables().insert(make_pair(variableName, variableNameSequence));
 			variableToLabel().push_back(variableName);
 			variableMeaningToLabel().insert(make_pair(name, variableName));
+			variablesStateId++;
 			writeLock.unlock();
 			if (optOut_variableNameSequence)
 				*optOut_variableNameSequence = variableNameSequence;
@@ -214,11 +216,8 @@ bool DlCore::tryRegisterVariable(const string& variableName, vector<uint32_t>* o
 			if (optOut_variableNameSequence)
 				*optOut_variableNameSequence = searchResult->second;
 		}
-	} else {
-		readLock.unlock();
-		if (optOut_variableNameSequence)
-			*optOut_variableNameSequence = searchResult->second;
-	}
+	} else if (optOut_variableNameSequence)
+		*optOut_variableNameSequence = searchResult->second;
 	return true;
 }
 
@@ -616,7 +615,7 @@ void DlCore::calculateEmptyMeanings(const shared_ptr<DlFormula>& formula) { // N
 	if (formula->meaning().empty()) {
 		if (formula->getChildren().empty()) {
 			const string& value = formula->getValue()->value;
-			map<string, vector<uint32_t>>::const_iterator itVariable = labelToTerminalSymbols_variables().find(value);
+			tbb::concurrent_map<string, vector<uint32_t>>::const_iterator itVariable = labelToTerminalSymbols_variables().find(value);
 			if (itVariable != labelToTerminalSymbols_variables().end())
 				formula->meaning() = itVariable->second; // recalculate meaning of variable
 			else if (value == terminalStr_bot())

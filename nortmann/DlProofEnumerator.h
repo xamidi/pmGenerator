@@ -4,8 +4,6 @@
 #include "../helper/Hashing.h"
 #include "../helper/ProgressData.h"
 
-#define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
-#include <tbb/concurrent_set.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
 
@@ -16,7 +14,15 @@
 #include <memory>
 #include <thread>
 
+namespace tbb {
+namespace detail { namespace d1 { template<typename T> class tbb_allocator; } }
+namespace detail { namespace d2 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; } }
+using detail::d1::tbb_allocator;
+using detail::d2::concurrent_set;
+}
+
 namespace xamid {
+template<typename Key, typename Compare> using tbb_concurrent_set = tbb::concurrent_set<Key, Compare, tbb::tbb_allocator<Key>>;
 namespace helper { struct String; struct cmpStringGrow; }
 namespace tree { template<typename T> class TreeNode; }
 
@@ -32,7 +38,7 @@ enum class DlProofEnumeratorMode {
 
 struct DlProofEnumerator {
 	// Data loading
-	struct FormulaMemoryReductionData { tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>> nodeStorage; tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>> valueStorage; tbb::concurrent_unordered_set<DlFormula*> alreadyProcessing; std::atomic<uint64_t> nodeReplacementCounter; std::atomic<uint64_t> valueReplacementCounter; FormulaMemoryReductionData() { nodeReplacementCounter = 0; valueReplacementCounter = 0; } };
+	struct FormulaMemoryReductionData { tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>> nodeStorage; tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>> valueStorage; tbb::concurrent_unordered_set<DlFormula*> alreadyProcessing; std::atomic<uint64_t> nodeReplacementCounter { 0 }; std::atomic<uint64_t> valueReplacementCounter { 0 }; };
 	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, uint64_t* optOut_allRepresentativesCount = nullptr, uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
 	static tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr, FormulaMemoryReductionData* const memReductionData = nullptr);
 
@@ -51,7 +57,7 @@ struct DlProofEnumerator {
 	static void replaceValues(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>>& valueStorage, std::atomic<uint64_t>& valueReplacementCounter, tbb::concurrent_unordered_set<DlFormula*>& alreadyProcessing);
 private:
 	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, tbb::concurrent_set<std::string, helper::cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
+	static void _findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, tbb_concurrent_set<std::string, helper::cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
 	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
 
 public:
@@ -114,8 +120,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	std::unique_lock<std::mutex> condLock(mtx);
 	std::condition_variable cond;
 	std::vector<std::thread> threads;
-	std::atomic<bool> incomplete; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
-	incomplete = true;
+	std::atomic<bool> incomplete { true }; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
 	auto worker = [&process, &tinyBound, &queues, &cond, &mtxs, &incomplete](unsigned t) {
 		std::deque<std::string>& queue = queues[t];
 		size_t size = 0;

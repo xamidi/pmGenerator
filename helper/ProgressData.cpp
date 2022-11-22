@@ -20,8 +20,6 @@ ProgressData::ProgressData(unsigned percentageStepSize, uint64_t maximum, bool e
 			steps.push_back(0); // to avoid bound checks and never trigger at final state
 			return steps;
 		}()) {
-	progress = 0;
-	progressState = 0;
 }
 
 ProgressData& ProgressData::operator=(const ProgressData& other) {

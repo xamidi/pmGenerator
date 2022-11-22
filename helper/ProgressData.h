@@ -15,8 +15,8 @@ struct ProgressData {
 	bool maximumEstimated = false;
 	std::chrono::time_point<std::chrono::system_clock> startTime;
 	std::vector<uint64_t> progressSteps;
-	std::atomic<uint64_t> progress;
-	std::atomic<uint64_t> progressState;
+	std::atomic<uint64_t> progress { 0 };
+	std::atomic<uint64_t> progressState { 0 };
 	ProgressData() = default;
 	ProgressData(const ProgressData& other) : percentageStepSize(other.percentageStepSize), maximum(other.maximum), maximumEstimated(other.maximumEstimated), progressSteps(other.progressSteps), progress((uint64_t) other.progress), progressState((uint64_t) other.progressState) { }
 	ProgressData(unsigned percentageStepSize, uint64_t maximum, bool estimated = false);

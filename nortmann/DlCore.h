@@ -9,7 +9,20 @@
 #include <unordered_set>
 #include <vector>
 
+namespace tbb {
+namespace detail { namespace d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; } }
+namespace detail { namespace d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
+using detail::d1::tbb_allocator;
+using detail::d1::cache_aligned_allocator;
+using detail::d1::concurrent_vector;
+using detail::d1::concurrent_unordered_map;
+using detail::d2::concurrent_map;
+}
+
 namespace xamid {
+template<typename T> using tbb_concurrent_vector = tbb::concurrent_vector<T, tbb::cache_aligned_allocator<T>>;
+template<typename Key, typename T> using tbb_concurrent_unordered_map = tbb::concurrent_unordered_map<Key, T, std::hash<Key>, std::equal_to<Key>, tbb::tbb_allocator<std::pair<const Key, T>>>;
+template<typename Key, typename Value> using tbb_concurrent_map = tbb::concurrent_map<Key, Value, std::less<Key>, tbb::tbb_allocator<std::pair<const Key, Value>>>;
 namespace helper { struct String; }
 namespace tree { template<typename T> class TreeNode; }
 namespace grammar { struct CfgGrammar; }
@@ -103,9 +116,9 @@ struct DlCore {
 
 	// Shared grammar and variable information (this is handy e.g. for proofs, so that translations of formulas between proofs are easy)
 	static const std::vector<uint32_t>& digits();
-	static std::map<std::string, std::vector<uint32_t>>& labelToTerminalSymbols_variables();
-	static std::vector<std::string>& variableToLabel();
-	static std::unordered_map<std::string, std::string>& variableMeaningToLabel();
+	static tbb_concurrent_map<std::string, std::vector<uint32_t>>& labelToTerminalSymbols_variables();
+	static tbb_concurrent_vector<std::string>& variableToLabel();
+	static tbb_concurrent_unordered_map<std::string, std::string>& variableMeaningToLabel();
 
 	// Formula properties
 	static std::unordered_set<std::string> primitivesOfFormula(const std::shared_ptr<DlFormula>& formula); // a set (unordered, no duplicates)

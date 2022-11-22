@@ -7,6 +7,7 @@
 #include "../nortmann/DlProofEnumerator.h"
 #include "DRuleParser.h"
 
+#define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
 #include <tbb/concurrent_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
@@ -42,10 +43,8 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	// NOTE: A tbb::concurrent_set<string, cmpStringGrow> inside would be preferable, but it has no reverse iterators in order to directly address the last element (which is required later on),
 	//       i.e. prev(set.end()) would crash and set.rbegin() does not exist: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_set_cls/iterators.html
 	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual> formulasToCheck;
-	atomic<uint64_t> conclusionCounter;
-	conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter;
-	redundantCounter = 0;
+	atomic<uint64_t> conclusionCounter { 0 };
+	atomic<uint64_t> redundantCounter { 0 };
 	unique_ptr<DlProofEnumerator::FormulaMemoryReductionData> _memReductionData = memReduction ? unique_ptr<DlProofEnumerator::FormulaMemoryReductionData>(new DlProofEnumerator::FormulaMemoryReductionData()) : nullptr;
 	DlProofEnumerator::FormulaMemoryReductionData* const memReductionData = _memReductionData.get();
 	mutex mtx_set;
@@ -99,8 +98,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	}
 
 	// 3. Consider formulas from mmsolitaire's D-proofs in case there are suboptimal proofs used despite better ones are already known.
-	atomic<uint64_t> inputConclusionCounter;
-	inputConclusionCounter = 0;
+	atomic<uint64_t> inputConclusionCounter { 0 };
 	tbb::parallel_for(formulasToCheck.range(), [&representativeProofs, &inputConclusionCounter](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::range_type& range) {
 		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& currentBestDProof = *it->second.begin();
@@ -134,14 +132,10 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	//       but just use A as a key for search (which is fast). [The results may be less due to the schema-filtered generation process, i.e. there might be an overlooked proof for a proper schema of A.]
 	//       If a proof β for A can be found, just emplace Dαβ for B without verifying that B has not been proven yet. If a proof of B is already contained, Dαβ will be ignored.
 //#define EXTRA_SCHEMA_LOOKUP // Issue: Not using schema search barely gives extra results, but using it takes very long (so that generating them permanently via DlProofEnumerator would be a better option).
-	atomic<uint64_t> extraCheckCounter;
-	extraCheckCounter = 0;
-	atomic<uint64_t> extraSchemaCheckCounter;
-	extraSchemaCheckCounter = 0;
-	atomic<uint64_t> extraParseCounter;
-	extraParseCounter = 0;
-	atomic<uint64_t> extraProofCounter;
-	extraProofCounter = 0;
+	atomic<uint64_t> extraCheckCounter { 0 };
+	atomic<uint64_t> extraSchemaCheckCounter { 0 };
+	atomic<uint64_t> extraParseCounter { 0 };
+	atomic<uint64_t> extraProofCounter { 0 };
 #ifdef EXTRA_SCHEMA_LOOKUP
 	ProgressData extraProgress(allRepresentatives.size() > 27 ? 1 : allRepresentatives.size() > 25 ? 2 : 5, allRepresentativesCount);
 	extraProgress.setStartTime();
@@ -160,8 +154,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 #ifdef EXTRA_SCHEMA_LOOKUP
 				string dProof_antecedent; // proof β for A
 				auto setAntecedentDProof = [&](const string& dProof) { dProof_antecedent = dProof; }; // use to avoid error "cannot bind rvalue reference of type '[...]basic_string<char>&&' to lvalue of type 'const string' {aka 'const [...]basic_string<char>'}"
-				atomic<bool> schemaHit;
-				schemaHit = false;
+				atomic<bool> schemaHit { false };
 				if (directHit)
 					dProof_antecedent = searchResult->second;
 				else { // NOTE: Not searching for the best schema, but only for any proven schema of A.
@@ -232,8 +225,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	// 6. Search for shorter proofs.
 	tbb::concurrent_map<string, string, cmpStringShrink> shorteningReplacements;
 	tbb::concurrent_map<string, string, cmpStringShrink> stylingReplacements;
-	atomic<uint64_t> schemaCheckCounter;
-	schemaCheckCounter = 0;
+	atomic<uint64_t> schemaCheckCounter { 0 };
 	mutex mtx_cout;
 	tbb::parallel_for(formulasToCheck.range(), [&debug, &formulasByStandardLength, &shorteningReplacements, &stylingReplacements, &schemaCheckCounter, &mtx_cout](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::range_type& range) {
 		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
