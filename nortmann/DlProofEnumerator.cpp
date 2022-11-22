@@ -261,12 +261,12 @@ tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFo
 	return representativeProofs;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemasRemoval) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemasRemoval, bool memReduction) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
 	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << "]" << endl;
+	cout << strtok(ctime(&time), "\n") << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << (memReduction ? "" : ", no memory reduction") << "]" << endl;
 	string filePrefix = "data/dProofs";
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
@@ -306,7 +306,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	}
 	if (start > limit) {
 		time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator skipped. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << "]" << endl;
+		cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator skipped. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << (memReduction ? "" : ", no memory reduction") << "]" << endl;
 		return;
 	}
 
@@ -318,14 +318,13 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering. To find the conclusions, parse all loaded D-proofs.
 	startTime = chrono::steady_clock::now();
-#define GEN_PAR_REDUCE_MEM 1
-#if GEN_PAR_REDUCE_MEM
 	FormulaMemoryReductionData memReductionData;
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs = parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &memReductionData);
-	cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
-#else
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs = parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
-#endif
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs;
+	if (memReduction) {
+		representativeProofs = parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &memReductionData);
+		cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
+	} else
+		representativeProofs = parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
 	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total parse & insertion duration." << endl;
 	// e.g. 15:    160.42 ms                        total parse & insertion duration.
 	//      17:    516.98 ms                        total parse & insertion duration.
@@ -390,26 +389,26 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 		const unsigned knownLimit = wordLengthLimit - 2;
 		startTime = chrono::steady_clock::now();
-#if GEN_PAR_REDUCE_MEM
-		_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &memReductionData, &stack, &knownLimit, &allRepresentatives);
-		cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
-		// e.g. 25:   831 MB memory commit size ; nodeReplacements:   806328, valueReplacements:  345001 ; at "[...] total parse & insertion duration."
-		//           2892 MB memory commit size ; nodeReplacements:  3796756, valueReplacements: 1103491 ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
-		//      27:  2601 MB memory commit size ; nodeReplacements:  2373851, valueReplacements: 1011151 ; at "[...] total parse & insertion duration."
-		//           9748 MB memory commit size ; nodeReplacements: 11348932, valueReplacements: 3265546 ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
-		//      29:  8663 MB memory commit size ; nodeReplacements:  7036815, valueReplacements: 2986586 ; at "[...] total parse & insertion duration."
-		//          32190 MB memory commit size ; nodeReplacements: 34154357, valueReplacements: 9736481 ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
-		// NOTE: When [Windows 7] Task Manager shows e.g. "811.644 K", it means roughly 811644 * 1024 bytes = 831123456 B ≈ 831 MB. (It uses prefixes according to JEDEC memory standards, in contrast to SI prefixes.)
-		//       Due to 32190 MB ≈ 29.98 GiB, results for word length limit 29 can still be computed without page faults on a 32 GiB RAM machine.
-#else
-		_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, nullptr, &stack, &knownLimit, &allRepresentatives);
-		// e.g. 25:  1578 MB memory commit size ;  1578 / 831   ≈ 1.89892                                ; at "[...] total parse & insertion duration."
-		//           5974 MB memory commit size ;  5974 / 2892  ≈ 2.06570                                ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
-		//      27:  5254 MB memory commit size ;  5254 / 2601  ≈ 2.01999                                ; at "[...] total parse & insertion duration."
-		//          19937 MB memory commit size ; 19937 / 9748  ≈ 2.04524                                ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
-		//      29: 17627 MB memory commit size ; 17627 / 8663  ≈ 2.03475                                ; at "[...] total parse & insertion duration."
-		//          67375 MB memory commit size ; 67375 / 32190 ≈ 2.09304                                ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
-#endif
+		if (memReduction) {
+			_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &memReductionData, &stack, &knownLimit, &allRepresentatives);
+			cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
+			// e.g. 25:   831 MB memory commit size ; nodeReplacements:   806328, valueReplacements:  345001 ; at "[...] total parse & insertion duration."
+			//           2892 MB memory commit size ; nodeReplacements:  3796756, valueReplacements: 1103491 ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
+			//      27:  2601 MB memory commit size ; nodeReplacements:  2373851, valueReplacements: 1011151 ; at "[...] total parse & insertion duration."
+			//           9748 MB memory commit size ; nodeReplacements: 11348932, valueReplacements: 3265546 ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
+			//      29:  8663 MB memory commit size ; nodeReplacements:  7036815, valueReplacements: 2986586 ; at "[...] total parse & insertion duration."
+			//          32190 MB memory commit size ; nodeReplacements: 34154357, valueReplacements: 9736481 ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
+			// NOTE: When [Windows 7] Task Manager shows e.g. "811.644 K", it means roughly 811644 * 1024 bytes = 831123456 B ≈ 831 MB. (It uses prefixes according to JEDEC memory standards, in contrast to SI prefixes.)
+			//       Due to 32190 MB ≈ 29.98 GiB, results for word length limit 29 can still be computed without page faults on a 32 GiB RAM machine.
+		} else {
+			_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, nullptr, &stack, &knownLimit, &allRepresentatives);
+			// e.g. 25:  1578 MB memory commit size ;  1578 / 831   ≈ 1.89892                                ; at "[...] total parse & insertion duration."
+			//           5974 MB memory commit size ;  5974 / 2892  ≈ 2.06570                                ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
+			//      27:  5254 MB memory commit size ;  5254 / 2601  ≈ 2.01999                                ; at "[...] total parse & insertion duration."
+			//          19937 MB memory commit size ; 19937 / 9748  ≈ 2.04524                                ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
+			//      29: 17627 MB memory commit size ; 17627 / 8663  ≈ 2.03475                                ; at "[...] total parse & insertion duration."
+			//          67375 MB memory commit size ; 67375 / 32190 ≈ 2.09304                                ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
+		}
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to collect " << representativeCounter << " D-proofs of length " << wordLengthLimit << ". [iterated " << counter << " condensed detachment proof strings]" << endl;
 		// e.g. 17:    1631.72 ms (        1 s 631.72 ms) taken to collect    6649 [...]
 		//      19:    5883.22 ms (        5 s 883.22 ms) taken to collect   19416 [...]
@@ -462,8 +461,8 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			//       For illustration, a 1600 MHz CL9 RAM (thus 800 MHz signal frequency), by 800 MHz = 0.8 / ns = 1 / (1.25 ns), has a latency to
 			//       read of around 9 * 1.25 ns = 11.25 ns, but the designated hard drive has one above 1.3 ms, i.e. more than 116000 times as much.
 			//       Given that every single formula could potentially lead to several page faults, these latencies may add up sequentially.
-			//       Memory requirements depending on GEN_PAR_REDUCE_MEM are illustrated below the _findProvenFormulas() call.
-			//       All measurements of given durations took place in GEN_PAR_REDUCE_MEM mode without page faults, compiled without
+			//       Memory requirements depending on 'memReduction' are illustrated below the _findProvenFormulas() call.
+			//       All measurements of given durations took place in 'memReduction' mode without page faults, compiled without
 			//       CPU-specific compiler flags (i.e. compiled by GCC 11.2.0 with default flags "-march=x86-64 -mtune=generic").
 			//       Notably, using "-march=native" (which implies "-mtune=native") did not result in any apparent performance improvement
 			//       for these Ivy Bridge processors under Windows 7, but building and running on Linux Mint 20.3 – compiled by GCC 10.3.0
@@ -506,7 +505,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
 	}
 	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << "]" << endl;
+	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemasRemoval ? "" : ", unfiltered") << (memReduction ? "" : ", no memory reduction") << "]" << endl;
 }
 
 // NOTE: Requires 'formula' with meanings.
