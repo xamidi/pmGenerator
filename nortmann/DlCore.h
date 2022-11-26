@@ -148,6 +148,15 @@ struct DlCore {
 
 	static unsigned standardFormulaLength(const std::shared_ptr<DlFormula>& formula);
 
+	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński), with custom translations for missing standard operator letters.
+	// - standard:  { \and -> K, \or -> A, \nand -> D, \nor -> X, \imply -> C, \implied -> B, \equiv -> E, \xor -> J, \not -> N, \nece -> L, \poss -> M, \top -> V, \bot -> O }
+	// - custom:    { \nimply -> F, \nimplied -> G, \com -> S, \app -> U, \obli -> Z, \perm -> P }
+	// - Bocheński: { \nimply -> L, \nimplied -> M } instead of { \nimply -> F, \nimplied -> G }, and (custom) { \nece -> H, \poss -> I } instead of { \nece -> L, \poss -> M }
+	// Performance-oriented variant that does not rename variables and does not support user-defined translations. Generates invalid expressions when variable names
+	// interfere with operator symbols, i.e. in order to generate parsable expressions, variable names should not contain a character of an operator symbol.
+	// In order to support variable names of lengths greater 1, all consecutive variable names are separated by '.', e.g. x1\implyx2 -> "Cx1.x2".
+	static std::string toPolishNotation_noRename(const std::shared_ptr<DlFormula>& f, bool prioritizeBochenski = false);
+
 	// Calculate the substitution's representation based on formulaRepresentation_traverse().
 	static std::string substitutionRepresentation_traverse(const std::map<std::string, std::shared_ptr<DlFormula>>& substitutions);
 

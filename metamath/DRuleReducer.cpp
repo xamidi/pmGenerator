@@ -43,7 +43,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	}
 	// NOTE: A tbb::concurrent_set<string, cmpStringGrow> inside would be preferable, but it has no reverse iterators in order to directly address the last element (which is required later on),
 	//       i.e. prev(set.end()) would crash and set.rbegin() does not exist: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_set_cls/iterators.html
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual> formulasToCheck;
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual> formulasToCheck;
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
 	unique_ptr<DlProofEnumerator::FormulaMemoryReductionData> _memReductionData = memReduction ? make_unique<DlProofEnumerator::FormulaMemoryReductionData>() : nullptr;
@@ -58,7 +58,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 			DlProofEnumerator::replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
 			DlCore::clearMeanings(conclusion);
 		}
-		pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = formulasToCheck.emplace(conclusion, set<string, cmpStringGrow> { });
+		pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = formulasToCheck.emplace(conclusion, set<string, cmpStringGrow> { });
 		{
 			lock_guard<mutex> lock(mtx_set);
 			emplaceResult.first->second.insert(s);
@@ -89,7 +89,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		return;
 	}
 	ProgressData parseProgress(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount);
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs = DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress, memReductionData);
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs = DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress, memReductionData);
 	if (debug) {
 		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proofs in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
 		startTime = chrono::steady_clock::now();
@@ -97,10 +97,10 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 
 	// 3. Consider formulas from mmsolitaire's D-proofs in case there are suboptimal proofs used despite better ones are already known.
 	atomic<uint64_t> inputConclusionCounter = 0;
-	tbb::parallel_for(formulasToCheck.range(), [&representativeProofs, &inputConclusionCounter](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(formulasToCheck.range(), [&representativeProofs, &inputConclusionCounter](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& currentBestDProof = *it->second.begin();
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(it->first, currentBestDProof);
+			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(it->first, currentBestDProof);
 			if (emplaceResult.second)
 				inputConclusionCounter++;
 		}
@@ -112,8 +112,8 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 
 	// 4. Introduce a way to iterate formulas only up to a certain standard length (to greatly improve schema searching).
 	tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const shared_ptr<DlFormula>& formula = it->first;
 			formulasByStandardLength[DlCore::standardFormulaLength(formula)].emplace_back(&formula, it->second);
 		}
@@ -150,17 +150,17 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 #ifdef EXTRA_SCHEMA_LOOKUP
 	ProgressData extraProgress(allRepresentatives.size() > 27 ? 1 : allRepresentatives.size() > 25 ? 2 : 5, allRepresentativesCount);
 	extraProgress.setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &iterateFormulasOfStandardLengthUpTo, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &extraProgress, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
+	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &iterateFormulasOfStandardLengthUpTo, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &extraProgress, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
 #else
-	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &iterateFormulasOfStandardLengthUpTo, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
+	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &iterateFormulasOfStandardLengthUpTo, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
 #endif
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const shared_ptr<DlFormula>& conditional = it->first;
 			if (conditional->getValue()->value == DlCore::terminalStr_imply()) { // actually a conditional, i.e. A\implyB
 				extraCheckCounter++;
 				const shared_ptr<DlFormula>& antecedent = conditional->getChildren()[0]; // A
 				// NOTE: Since the antecedent is the first part of its conditional, its variables are good for searching in 'representativeProofs' (i.e. they start from "0").
-				tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator searchResult = representativeProofs.find(antecedent);
+				tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator searchResult = representativeProofs.find(antecedent);
 				bool directHit = searchResult != representativeProofs.end(); // whether there is a proof with A being the literal consequent
 #ifdef EXTRA_SCHEMA_LOOKUP
 				string dProof_antecedent; // proof β for A
@@ -196,7 +196,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 						DlProofEnumerator::replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
 						DlCore::clearMeanings(conclusion);
 					}
-					pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, dProof);
+					pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, dProof);
 					if (emplaceResult.second) { // a proof for the conclusion was not already known
 						extraProofCounter++;
 						const shared_ptr<DlFormula>& formula = emplaceResult.first->first; // NOTE: It is crucial that the stored address (which remains valid) is used.
@@ -230,8 +230,8 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	tbb::concurrent_map<string, string, cmpStringShrink> stylingReplacements;
 	atomic<uint64_t> schemaCheckCounter = 0;
 	mutex mtx_cout;
-	tbb::parallel_for(formulasToCheck.range(), [&debug, &iterateFormulasOfStandardLengthUpTo, &shorteningReplacements, &stylingReplacements, &schemaCheckCounter, &mtx_cout](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(formulasToCheck.range(), [&debug, &iterateFormulasOfStandardLengthUpTo, &shorteningReplacements, &stylingReplacements, &schemaCheckCounter, &mtx_cout](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const shared_ptr<DlFormula>& formula = it->first;
 			const set<string, cmpStringGrow>& dProofs = it->second;
 			const string& currentWorstDProof = *dProofs.rbegin(); // NOTE: Using set<string, cmpStringGrow> instead of tbb::concurrent_set<string, cmpStringGrow>, avoids doing *next(dProofs.begin(), dProofs.size() - 1) each time.
