@@ -29,8 +29,14 @@ namespace tree { template<typename T> class TreeNode; }
 namespace nortmann {
 
 typedef tree::TreeNode<helper::String> DlFormula;
-struct dlFormulaHash;
 struct dlFormulaEqual;
+
+// Improved alternative to 'dlFormulaHash' intended to hash formulas that only have numerical variable names. Uses Polish notation strings as keys of formulas.
+// Avoids collisions using unordered_set<shared_ptr<DlFormula>, dlNumFormulaHash, dlFormulaEqual> and unordered_map<shared_ptr<DlFormula>, _Tp, dlNumFormulaHash, dlFormulaEqual>,
+// given that formulas cannot contain '.' or upper-case letters in {A, ..., Z} \ {H, I, Q, R, T, W, Y}, and all primitives being represented by non-empty strings.
+struct dlNumFormulaHash {
+	size_t operator()(const std::shared_ptr<DlFormula>& f) const;
+};
 
 enum class DlProofEnumeratorMode {
 	Generic, Naive
@@ -40,7 +46,7 @@ struct DlProofEnumerator {
 	// Data loading
 	struct FormulaMemoryReductionData { tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>> nodeStorage; tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>> valueStorage; tbb::concurrent_unordered_set<DlFormula*> alreadyProcessing; std::atomic<uint64_t> nodeReplacementCounter { 0 }; std::atomic<uint64_t> valueReplacementCounter { 0 }; };
 	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, uint64_t* optOut_allRepresentativesCount = nullptr, uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
-	static tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr, FormulaMemoryReductionData* const memReductionData = nullptr);
+	static tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr, FormulaMemoryReductionData* const memReductionData = nullptr);
 
 	// Basic functionality
 	static const std::vector<const std::vector<std::string>*>& builtinRepresentatives();
@@ -56,9 +62,9 @@ struct DlProofEnumerator {
 	static void replaceNodes(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>>& nodeStorage, std::atomic<uint64_t>& nodeReplacementCounter);
 	static void replaceValues(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>>& valueStorage, std::atomic<uint64_t>& valueReplacementCounter, tbb::concurrent_unordered_set<DlFormula*>& alreadyProcessing);
 private:
-	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, tbb_concurrent_set<std::string, helper::cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlFormulaHash, dlFormulaEqual>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
+	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
+	static void _findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, tbb_concurrent_set<std::string, helper::cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
+	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
 
 public:
 	// Iterates condensed detachment strings for PL-proofs in D-notation, using knowledge of all representative proofs of length n or lower, which must be passed via 'allRepresentatives'.

@@ -583,6 +583,42 @@ void DlCore::traverseLeftToRightInOrder(const shared_ptr<DlFormula>& formula, co
 	}
 }
 
+namespace {
+string recurse_toPolishNotation_noRename(const shared_ptr<DlFormula>& node, bool& startsWithVar, bool& endsWithVar, const unordered_map<string, string>& operatorNames) {
+	auto valToString = [&](const string& s, bool& isVar) -> string {
+		// 1. Operator names
+		unordered_map<string, string>::const_iterator searchResult = operatorNames.find(s);
+		if (searchResult != operatorNames.end()) {
+			isVar = false;
+			return searchResult->second;
+		}
+
+		// 2. Variable names
+		isVar = true;
+		return s;
+	};
+	string str = valToString(node->getValue()->value, startsWithVar);
+	bool prevEndsWithVar = startsWithVar;
+	for (uint32_t i = 0; i < node->getChildren().size(); i++) {
+		bool childStartsWithVar, childEndsWithVar;
+		string tmp = recurse_toPolishNotation_noRename(node->getChildren()[i], childStartsWithVar, childEndsWithVar, operatorNames);
+		str += prevEndsWithVar && childStartsWithVar ? "." + tmp : tmp;
+		prevEndsWithVar = childEndsWithVar;
+	}
+	endsWithVar = prevEndsWithVar;
+	return str;
+}
+}
+string DlCore::toPolishNotation_noRename(const shared_ptr<DlFormula>& f, bool prioritizeBochenski) {
+	// NOTE: In Bocheński notation \nimply and \nimplied are L and M, but in Łukasiewicz notation those are already taken by \nece and \poss, respectively.
+	static const unordered_map<string, string> operatorNames_luk = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "F" }, { terminalStr_nimplied(), "G" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "L" }, { terminalStr_poss(), "M" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	static const unordered_map<string, string> operatorNames_boc = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "L" }, { terminalStr_nimplied(), "M" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "H" }, { terminalStr_poss(), "I" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	const unordered_map<string, string>& operatorNames = prioritizeBochenski ? operatorNames_boc : operatorNames_luk;
+
+	bool x, y;
+	return recurse_toPolishNotation_noRename(f, x, y, operatorNames);
+}
+
 string DlCore::substitutionRepresentation_traverse(const map<string, shared_ptr<DlFormula>>& substitutions) {
 	return FctHelper::mapStringF(substitutions, [](const pair<string, shared_ptr<DlFormula>>& pair) { return "\u3008" + pair.first + ", " + formulaRepresentation_traverse(pair.second) + "\u3009"; }, { }, { });
 }

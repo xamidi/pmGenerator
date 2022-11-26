@@ -24,6 +24,13 @@ using namespace xamid::metamath;
 namespace xamid {
 namespace nortmann {
 
+size_t dlNumFormulaHash::operator()(const shared_ptr<DlFormula>& f) const {
+	hash<string> stringHash;
+	// NOTE: While a representation such as dlFormulaHash::representativeString() is faster to compute (since there are no translations on individual values),
+	//       it is slower to use as a key since it results in longer sequences.
+	return stringHash.operator()(DlCore::toPolishNotation_noRename(f));
+}
+
 const vector<const vector<string>*>& DlProofEnumerator::builtinRepresentatives() {
 	static const vector<const vector<string>*> _builtinRepresentatives = { &Resources::dProofRepresentatives1, &Resources::dProofRepresentatives3, &Resources::dProofRepresentatives5, &Resources::dProofRepresentatives7, &Resources::dProofRepresentatives9, &Resources::dProofRepresentatives11, &Resources::dProofRepresentatives13, &Resources::dProofRepresentatives15 };
 	return _builtinRepresentatives;
@@ -227,8 +234,8 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	return true;
 }
 
-tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, FormulaMemoryReductionData* const memReductionData) {
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs;
+tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, FormulaMemoryReductionData* const memReductionData) {
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs;
 	if (progressData)
 		progressData->setStartTime();
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) { // FASTEST: Parse each string individually and without translation to DlProof objects.
@@ -323,7 +330,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering. To find the conclusions, parse all loaded D-proofs.
 	startTime = chrono::steady_clock::now();
 	FormulaMemoryReductionData memReductionData;
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual> representativeProofs;
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs;
 	if (memReduction) {
 		representativeProofs = parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &memReductionData);
 		cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
@@ -538,7 +545,7 @@ void DlProofEnumerator::replaceValues(shared_ptr<DlFormula>& formula, tbb::concu
 		replaceValues(formula->children()[i], valueStorage, valueReplacementCounter, alreadyProcessing);
 }
 
-void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
+void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
 	atomic<uint64_t> counter { 0 };
 	atomic<uint64_t> conclusionCounter { 0 };
 	atomic<uint64_t> redundantCounter { 0 };
@@ -554,7 +561,7 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared
 				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
 				DlCore::clearMeanings(conclusion);
 			}
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, sequence);
+			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, sequence);
 			if (!emplaceResult.second) { // a proof for the conclusion is already known
 				redundantCounter++;
 				string& storedSequence = emplaceResult.first->second;
@@ -604,7 +611,7 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared
 		*optOut_invalidCounter = invalidCounter;
 }
 
-void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
+void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
 	atomic<uint64_t> counter { 0 };
 	atomic<uint64_t> conclusionCounter { 0 };
 	atomic<uint64_t> redundantCounter { 0 };
@@ -620,7 +627,7 @@ void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurren
 				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
 				DlCore::clearMeanings(conclusion);
 			}
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofsWithEquivalenceClasses.emplace(conclusion, tbb::concurrent_set<string, cmpStringGrow> { });
+			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofsWithEquivalenceClasses.emplace(conclusion, tbb::concurrent_set<string, cmpStringGrow> { });
 			emplaceResult.first->second.insert(sequence);
 			if (!emplaceResult.second) // a proof for the conclusion is already known
 				redundantCounter++;
@@ -666,22 +673,22 @@ void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurren
 		*optOut_invalidCounter = invalidCounter;
 }
 
-void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
+void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
 	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 	tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const shared_ptr<DlFormula>& formula = it->first;
 			formulasByStandardLength[DlCore::standardFormulaLength(formula)].push_back(&formula);
 		}
 	});
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	tbb::concurrent_unordered_map<const shared_ptr<DlFormula>*, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator> toErase;
+	tbb::concurrent_unordered_map<const shared_ptr<DlFormula>*, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator> toErase;
 	if (progressData)
 		progressData->setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &formulasByStandardLength, &toErase](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &formulasByStandardLength, &toErase](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
+		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const uint32_t formula_sequenceLength = it->second.length();
 			if (formula_sequenceLength == maxLength) {
 				const shared_ptr<DlFormula>& formula = it->first;
@@ -721,7 +728,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	redundantCounter += toErase.size();
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
 	//#startTime = chrono::steady_clock::now();
-	for (const pair<const shared_ptr<DlFormula>* const, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlFormulaHash, dlFormulaEqual>::const_iterator>& p : toErase)
+	for (const pair<const shared_ptr<DlFormula>* const, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator>& p : toErase)
 		representativeProofs.unsafe_erase(p.second);
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
