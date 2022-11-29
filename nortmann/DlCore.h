@@ -1,6 +1,8 @@
 #ifndef XAMID_NORTMANN_DLCORE_H
 #define XAMID_NORTMANN_DLCORE_H
 
+#include <tbb/version.h>
+
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -11,12 +13,17 @@
 
 namespace tbb {
 namespace detail { namespace d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; } }
-namespace detail { namespace d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
 using detail::d1::tbb_allocator;
 using detail::d1::cache_aligned_allocator;
 using detail::d1::concurrent_vector;
 using detail::d1::concurrent_unordered_map;
+#if TBB_VERSION_MAJOR >= 2021 && TBB_VERSION_MINOR >= 4
+namespace detail { namespace d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
 using detail::d2::concurrent_map;
+#else
+namespace detail { namespace d1 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
+using detail::d1::concurrent_map;
+#endif
 }
 
 namespace xamid {
