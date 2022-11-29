@@ -4,6 +4,7 @@
 #include "../helper/Hashing.h"
 #include "../helper/ProgressData.h"
 
+#include <tbb/version.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
 
@@ -16,9 +17,14 @@
 
 namespace tbb {
 namespace detail::d1 { template<typename T> class tbb_allocator; }
-namespace detail::d2 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; }
 using detail::d1::tbb_allocator;
+#if TBB_VERSION_MAJOR >= 2021 && TBB_VERSION_MINOR >= 4
+namespace detail::d2 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; }
 using detail::d2::concurrent_set;
+#else
+namespace detail::d1 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; }
+using detail::d1::concurrent_set;
+#endif
 }
 
 namespace xamid {
