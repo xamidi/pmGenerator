@@ -3,6 +3,7 @@
 #include "../helper/FctHelper.h"
 #include "../tree/TreeNode.h"
 #include "../grammar/CfgGrammar.h"
+#include "../metamath/DRuleParser.h"
 #include "DlFormula.h"
 #include "DlStructure.h"
 
@@ -18,6 +19,7 @@ using namespace std;
 using namespace xamid::helper;
 using namespace xamid::tree;
 using namespace xamid::grammar;
+using namespace xamid::metamath;
 
 namespace xamid {
 namespace nortmann {
@@ -109,6 +111,125 @@ const string& DlCore::terminalStr_bot() {
 const unordered_map<string, DlOperator>& DlCore::dlOperators() {
 	static const unordered_map<string, DlOperator> o = { { terminalStr_and(), DlOperator::And }, { terminalStr_or(), DlOperator::Or }, { terminalStr_nand(), DlOperator::Nand }, { terminalStr_nor(), DlOperator::Nor }, { terminalStr_imply(), DlOperator::Imply }, { terminalStr_implied(), DlOperator::Implied }, { terminalStr_nimply(), DlOperator::Nimply }, { terminalStr_nimplied(), DlOperator::Nimplied }, { terminalStr_equiv(), DlOperator::Equiv }, { terminalStr_xor(), DlOperator::Xor }, { terminalStr_com(), DlOperator::Com }, { terminalStr_app(), DlOperator::App }, { terminalStr_not(), DlOperator::Not }, { terminalStr_nece(), DlOperator::Nece }, { terminalStr_poss(), DlOperator::Poss }, { terminalStr_obli(), DlOperator::Obli }, { terminalStr_perm(), DlOperator::Perm }, { terminalStr_top(), DlOperator::Top }, { terminalStr_bot(), DlOperator::Bot } };
 	return o;
+}
+
+unsigned DlCore::dlOperatorArity(DlOperator op) {
+	switch (op) {
+	case DlOperator::Top:
+	case DlOperator::Bot:
+		return 0;
+	case DlOperator::Not:
+	case DlOperator::Nece:
+	case DlOperator::Poss:
+	case DlOperator::Obli:
+	case DlOperator::Perm:
+		return 1;
+	case DlOperator::And:
+	case DlOperator::Or:
+	case DlOperator::Nand:
+	case DlOperator::Nor:
+	case DlOperator::Imply:
+	case DlOperator::Implied:
+	case DlOperator::Nimply:
+	case DlOperator::Nimplied:
+	case DlOperator::Equiv:
+	case DlOperator::Xor:
+	case DlOperator::Com:
+	case DlOperator::App:
+		return 2;
+	default:
+		throw domain_error("DlCore::dlOperatorArity(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+	}
+}
+
+const string& DlCore::dlOperatorToString(DlOperator op) {
+	switch (op) {
+	case DlOperator::And:
+		return terminalStr_and();
+	case DlOperator::Or:
+		return terminalStr_or();
+	case DlOperator::Nand:
+		return terminalStr_nand();
+	case DlOperator::Nor:
+		return terminalStr_nor();
+	case DlOperator::Imply:
+		return terminalStr_imply();
+	case DlOperator::Implied:
+		return terminalStr_implied();
+	case DlOperator::Nimply:
+		return terminalStr_nimply();
+	case DlOperator::Nimplied:
+		return terminalStr_nimplied();
+	case DlOperator::Equiv:
+		return terminalStr_equiv();
+	case DlOperator::Xor:
+		return terminalStr_xor();
+	case DlOperator::Com:
+		return terminalStr_com();
+	case DlOperator::App:
+		return terminalStr_app();
+	case DlOperator::Not:
+		return terminalStr_not();
+	case DlOperator::Nece:
+		return terminalStr_nece();
+	case DlOperator::Poss:
+		return terminalStr_poss();
+	case DlOperator::Obli:
+		return terminalStr_obli();
+	case DlOperator::Perm:
+		return terminalStr_perm();
+	case DlOperator::Top:
+		return terminalStr_top();
+	case DlOperator::Bot:
+		return terminalStr_bot();
+	default:
+		throw domain_error("DlCore::dlOperatorToString(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+	}
+}
+
+const shared_ptr<String>& DlCore::obtainDefiniteOpSymbol(DlOperator op) {
+	switch (op) {
+	case DlOperator::And:
+		return DRuleParser::_and();
+	case DlOperator::Or:
+		return DRuleParser::_or();
+	case DlOperator::Nand:
+		return DRuleParser::_nand();
+	case DlOperator::Nor:
+		return DRuleParser::_nor();
+	case DlOperator::Imply:
+		return DRuleParser::_imply();
+	case DlOperator::Implied:
+		return DRuleParser::_implied();
+	case DlOperator::Nimply:
+		return DRuleParser::_nimply();
+	case DlOperator::Nimplied:
+		return DRuleParser::_nimplied();
+	case DlOperator::Equiv:
+		return DRuleParser::_equiv();
+	case DlOperator::Xor:
+		return DRuleParser::_xor();
+	case DlOperator::Com:
+		return DRuleParser::_com();
+	case DlOperator::App:
+		return DRuleParser::_app();
+	case DlOperator::Not:
+		return DRuleParser::_not();
+	case DlOperator::Nece:
+		return DRuleParser::_nece();
+	case DlOperator::Poss:
+		return DRuleParser::_poss();
+	case DlOperator::Obli:
+		return DRuleParser::_obli();
+	case DlOperator::Perm:
+		return DRuleParser::_perm();
+	case DlOperator::Top:
+		return DRuleParser::_top();
+	case DlOperator::Bot:
+		return DRuleParser::_bot();
+	default:
+		throw domain_error("DlCore::obtainDefiniteOpSymbol(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+	}
 }
 
 const vector<uint32_t>& DlCore::digits() {
@@ -617,6 +738,74 @@ string DlCore::toPolishNotation_noRename(const shared_ptr<DlFormula>& f, bool pr
 
 	bool x, y;
 	return recurse_toPolishNotation_noRename(f, x, y, operatorNames);
+}
+
+bool DlCore::fromPolishNotation_noRename(shared_ptr<DlFormula>& output, const string& input, bool prioritizeBochenski, bool debug) {
+	static tbb::concurrent_unordered_map<string, shared_ptr<String>> vars;
+	auto obtainDefiniteVarSymbol = [](const string& s) -> const shared_ptr<String>& { // i.e. make_shared<String>(s), but definite for each variable name s
+		tbb::concurrent_unordered_map<string, shared_ptr<String>>::const_iterator searchResult = vars.find(s);
+		return searchResult == vars.end() ? vars.emplace(s, make_shared<String>(s)).first->second : searchResult->second;
+	};
+	static const unordered_map<char, DlOperator> operators_luk = { { 'K', DlOperator::And }, { 'A', DlOperator::Or }, { 'D', DlOperator::Nand }, { 'X', DlOperator::Nor }, { 'C', DlOperator::Imply }, { 'B', DlOperator::Implied }, { 'F', DlOperator::Nimply }, { 'G', DlOperator::Nimplied }, { 'E', DlOperator::Equiv }, { 'J', DlOperator::Xor }, { 'S', DlOperator::Com }, { 'U', DlOperator::App }, { 'N', DlOperator::Not }, { 'L', DlOperator::Nece }, { 'M', DlOperator::Poss }, { 'Z', DlOperator::Obli }, { 'P', DlOperator::Perm }, { 'V', DlOperator::Top }, { 'O', DlOperator::Bot } };
+	static const unordered_map<char, DlOperator> operators_boc = { { 'K', DlOperator::And }, { 'A', DlOperator::Or }, { 'D', DlOperator::Nand }, { 'X', DlOperator::Nor }, { 'C', DlOperator::Imply }, { 'B', DlOperator::Implied }, { 'L', DlOperator::Nimply }, { 'M', DlOperator::Nimplied }, { 'E', DlOperator::Equiv }, { 'J', DlOperator::Xor }, { 'S', DlOperator::Com }, { 'U', DlOperator::App }, { 'N', DlOperator::Not }, { 'H', DlOperator::Nece }, { 'I', DlOperator::Poss }, { 'Z', DlOperator::Obli }, { 'P', DlOperator::Perm }, { 'V', DlOperator::Top }, { 'O', DlOperator::Bot } };
+	const unordered_map<char, DlOperator>& operators = prioritizeBochenski ? operators_boc : operators_luk;
+	deque<shared_ptr<DlFormula>> stack;
+	string::size_type varLast = string::npos;
+	for (int64_t i = (int64_t) input.length() - 1; i >= 0; i--) {
+		char c = input[i];
+		if (c == '.') { // separator of variables
+			if (varLast == string::npos) {
+				if (debug)
+					cerr << "Parse error: Separator '.' does not precede a variable at index " << i << "." << endl;
+				return false;
+			}
+			stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(input.substr(i + 1, varLast - i)))); // register completed variable
+			varLast = string::npos;
+		} else {
+			unordered_map<char, DlOperator>::const_iterator searchResult = operators.find(c);
+			if (searchResult == operators.end()) {
+				if (varLast == string::npos)
+					varLast = i;
+			} else { // NOTE: It is assumed that all operators are addressed by 'operators', everything else will be treated as a variable.
+				if (varLast != string::npos) {
+					stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(input.substr(i + 1, varLast - i)))); // first register completed variable
+					varLast = string::npos;
+				}
+				DlOperator op = searchResult->second;
+				unsigned arity = dlOperatorArity(op);
+				if (stack.size() < arity) {
+					if (debug)
+						cerr << "Parse error: Missing variable for '" << string { c } << "' (alias " << dlOperatorToString(op) << ") at index " << i << "." << endl;
+					return false;
+				}
+				switch (arity) {
+				case 0:
+					stack.push_back(make_shared<DlFormula>(obtainDefiniteOpSymbol(op)));
+					break;
+				case 1:
+					stack.back() = make_shared<DlFormula>(obtainDefiniteOpSymbol(op), vector<shared_ptr<DlFormula>> { stack.back() });
+					break;
+				case 2: {
+					shared_ptr<DlFormula> term = make_shared<DlFormula>(obtainDefiniteOpSymbol(op), vector<shared_ptr<DlFormula>> { stack.back(), stack[stack.size() - 2] });
+					stack.pop_back();
+					stack.back() = term;
+					break;
+				}
+				default:
+					throw logic_error("DlCore::fromPolishNotation(): Impossible arity (" + to_string(arity) + ") for " + dlOperatorToString(op) + ".");
+				}
+			}
+		}
+	}
+	if (varLast != string::npos) // still need to register variable
+		stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(input)));
+	if (stack.size() != 1) {
+		if (debug)
+			cerr << "Parse error: Missing or extra variables resulted in non-singleton stack " << FctHelper::dequeString(stack) << "." << endl;
+		return false;
+	}
+	output = stack[0];
+	return true;
 }
 
 string DlCore::substitutionRepresentation_traverse(const map<string, shared_ptr<DlFormula>>& substitutions) {

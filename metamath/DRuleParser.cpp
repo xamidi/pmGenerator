@@ -103,16 +103,72 @@ const shared_ptr<String>& DRuleParser::_or() {
 	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_or());
 	return _;
 }
+const shared_ptr<String>& DRuleParser::_nand() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_nand());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_nor() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_nor());
+	return _;
+}
 const shared_ptr<String>& DRuleParser::_imply() {
 	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_imply());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_implied() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_implied());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_nimply() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_nimply());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_nimplied() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_nimplied());
 	return _;
 }
 const shared_ptr<String>& DRuleParser::_equiv() {
 	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_equiv());
 	return _;
 }
+const shared_ptr<String>& DRuleParser::_xor() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_xor());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_com() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_com());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_app() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_app());
+	return _;
+}
 const shared_ptr<String>& DRuleParser::_not() {
 	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_not());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_nece() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_nece());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_poss() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_poss());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_obli() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_obli());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_perm() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_perm());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_top() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_top());
+	return _;
+}
+const shared_ptr<String>& DRuleParser::_bot() {
+	static const shared_ptr<String> _ = make_shared<String>(DlCore::terminalStr_bot());
 	return _;
 }
 

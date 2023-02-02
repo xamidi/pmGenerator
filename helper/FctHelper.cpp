@@ -31,6 +31,11 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 		return a < b;
 }
 
+unsigned FctHelper::digitsNum_uint32(uint32_t n) {
+	static constexpr uint32_t MaxTable[9] = { 10u, 100u, 1000u, 10000u, 100000u, 1000000u, 10000000u, 100000000u, 1000000000u };  // to_string(numeric_limits<uint32_t>::max()) = "4294967295" has length 10
+	return 1 + (upper_bound(MaxTable, MaxTable + 9, n) - MaxTable);
+}
+
 unsigned FctHelper::digitsNum_uint64(uint64_t n) {
 	static constexpr uint64_t MaxTable[19] = { 10uLL, 100uLL, 1000uLL, 10000uLL, 100000uLL, 1000000uLL, 10000000uLL, 100000000uLL, 1000000000uLL, 10000000000uLL, 100000000000uLL, 1000000000000uLL, 10000000000000uLL, 100000000000000uLL, 1000000000000000uLL, 10000000000000000uLL, 100000000000000000uLL, 1000000000000000000uLL, 10000000000000000000uLL };  // to_string(numeric_limits<uint64_t>::max()) = "18446744073709551615" has length 20
 	return 1 + (upper_bound(MaxTable, MaxTable + 19, n) - MaxTable);
@@ -208,27 +213,26 @@ string FctHelper::durationStringMs(const chrono::microseconds& dur, bool innerAl
 	return ss.str();
 }
 
-namespace {
-bool createDir(const string& path) {
+bool FctHelper::ensureDirExists(const string& path) {
 	string::size_type dirMarkerIndex = path.find_last_of("/\\");
 	if (dirMarkerIndex != string::npos) { // If there is a path to another directory given, make sure that the directory exists.
 		string dir = path.substr(0, dirMarkerIndex);
 		if (!boost::filesystem::is_directory(dir)) { // Need to create that directory, but in order to do so, must first ensure that its parent directory exists.
-			if (!createDir(dir))
+			if (!ensureDirExists(dir))
 				return false;
-			if (!boost::filesystem::create_directories(dir))
+			if (!boost::filesystem::create_directories(dir)) {
 				cerr << "Failed to create directory \"" << dir << "\"." << endl;
+				return false;
+			}
 		}
 	}
 	return true;
 }
-}
+
 bool FctHelper::writeToFile(const string& file, const string& content, fstream::openmode mode) {
 	// 1. Ensure directory exists
-	if (!boost::filesystem::exists(file)) {
-		if (!createDir(file))
-			return false;
-	}
+	if (!boost::filesystem::exists(file) && !ensureDirExists(file))
+		return false;
 	// 2. Save file
 	ofstream fout(file, mode);
 	if (!fout.is_open()) {

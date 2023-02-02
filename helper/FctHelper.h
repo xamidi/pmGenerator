@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <deque>
 #include <fstream>
 #include <map>
 #include <set>
@@ -24,7 +25,8 @@ struct cmpStringShrink {
 };
 
 struct FctHelper {
-	// Function to quickly calculate to_string(n).length()
+	// Functions to quickly calculate to_string(n).length()
+	static unsigned digitsNum_uint32(uint32_t n);
 	static unsigned digitsNum_uint64(uint64_t n);
 
 	// To round 'x' to precisely 'n' digits after the decimal separator
@@ -36,6 +38,9 @@ struct FctHelper {
 
 	// Creates string "[amount of milliseconds]" + 'msId', and additionally appends " ([formatted duration from years to milliseconds])" if the duration is at least 1 second.
 	static std::string durationStringMs(const std::chrono::microseconds& dur, bool innerAlign = false, unsigned round = 2, bool showMonths = false, bool showWeeks = false, bool wolframAlphaMode = false, const std::string& yrId = " yr", const std::string& moId = " mo", const std::string& wkId = " wk", const std::string& dId = " d", const std::string& hId = " h", const std::string& minId = " min", const std::string& sId = " s", const std::string& msId = " ms");
+
+	// Ensures existing directories of a path, e.g. may create one folder "data" for path "data/file", but may create two folders "data" and "data/dir" for path "data/dir/".
+	static bool ensureDirExists(const std::string& path);
 
 	static bool writeToFile(const std::string& file, const std::string& content, std::fstream::openmode mode = std::fstream::out | std::fstream::binary);
 	static bool readFile(const std::string& file, std::string& out_content, std::fstream::openmode mode = std::fstream::in | std::fstream::binary);
@@ -113,6 +118,19 @@ struct FctHelper {
 		std::stringstream ss;
 		ss << leftDelimiter;
 		for (typename std::set<T, U, V>::const_iterator it = v.begin(); it != v.end(); ++it) {
+			if (it != v.begin())
+				ss << sep;
+			ss << *it;
+		}
+		ss << rightDelimiter;
+		return ss.str();
+	}
+
+	template<typename T, typename U>
+	static std::string dequeString(const std::deque<T, U>& v, const std::string& leftDelimiter = "(", const std::string& rightDelimiter = ")", const std::string& sep = ", ") {
+		std::stringstream ss;
+		ss << leftDelimiter;
+		for (typename std::deque<T, U>::const_iterator it = v.begin(); it != v.end(); ++it) {
 			if (it != v.begin())
 				ss << sep;
 			ss << *it;

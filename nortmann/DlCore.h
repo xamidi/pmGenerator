@@ -120,6 +120,9 @@ struct DlCore {
 	static const std::string& terminalStr_top();
 	static const std::string& terminalStr_bot();
 	static const std::unordered_map<std::string, DlOperator>& dlOperators();
+	static unsigned dlOperatorArity(DlOperator op);
+	static const std::string& dlOperatorToString(DlOperator op);
+	static const std::shared_ptr<helper::String>& obtainDefiniteOpSymbol(DlOperator op);
 
 	// Shared grammar and variable information (this is handy e.g. for proofs, so that translations of formulas between proofs are easy)
 	static const std::vector<uint32_t>& digits();
@@ -164,6 +167,9 @@ struct DlCore {
 	// interfere with operator symbols, i.e. in order to generate parsable expressions, variable names should not contain a character of an operator symbol.
 	// In order to support variable names of lengths greater 1, all consecutive variable names are separated by '.', e.g. x1\implyx2 -> "Cx1.x2".
 	static std::string toPolishNotation_noRename(const std::shared_ptr<DlFormula>& f, bool prioritizeBochenski = false);
+
+	// (Performance-oriented) inverse of toPolishNotation_noRename(). Assigns DRuleParser's globally definite symbols to operators, and its own globally definite symbols to variables.
+	static bool fromPolishNotation_noRename(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = true);
 
 	// Calculate the substitution's representation based on formulaRepresentation_traverse().
 	static std::string substitutionRepresentation_traverse(const std::map<std::string, std::shared_ptr<DlFormula>>& substitutions);
