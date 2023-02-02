@@ -14,16 +14,33 @@
 namespace xamid {
 namespace helper { struct String; }
 namespace tree { template<typename T> class TreeNode; }
-namespace nortmann { typedef tree::TreeNode<helper::String> DlFormula; enum class DlOperator; }
+namespace nortmann { typedef tree::TreeNode<helper::String> DlFormula; enum class DlOperator; struct DlCore; }
 
 namespace metamath {
 
 class DRuleParser {
+	friend struct nortmann::DlCore;
+
+	// Unique pointer for each operator terminal. Accessible via DlCore::obtainDefiniteOpSymbol().
 	static const std::shared_ptr<helper::String>& _and();
 	static const std::shared_ptr<helper::String>& _or();
+	static const std::shared_ptr<helper::String>& _nand();
+	static const std::shared_ptr<helper::String>& _nor();
 	static const std::shared_ptr<helper::String>& _imply();
+	static const std::shared_ptr<helper::String>& _implied();
+	static const std::shared_ptr<helper::String>& _nimply();
+	static const std::shared_ptr<helper::String>& _nimplied();
 	static const std::shared_ptr<helper::String>& _equiv();
+	static const std::shared_ptr<helper::String>& _xor();
+	static const std::shared_ptr<helper::String>& _com();
+	static const std::shared_ptr<helper::String>& _app();
 	static const std::shared_ptr<helper::String>& _not();
+	static const std::shared_ptr<helper::String>& _nece();
+	static const std::shared_ptr<helper::String>& _poss();
+	static const std::shared_ptr<helper::String>& _obli();
+	static const std::shared_ptr<helper::String>& _perm();
+	static const std::shared_ptr<helper::String>& _top();
+	static const std::shared_ptr<helper::String>& _bot();
 
 	static std::shared_ptr<nortmann::DlFormula> _ax1(const std::shared_ptr<nortmann::DlFormula>& psi, const std::shared_ptr<nortmann::DlFormula>& phi);
 	static std::shared_ptr<nortmann::DlFormula> _ax2(const std::shared_ptr<nortmann::DlFormula>& psi, const std::shared_ptr<nortmann::DlFormula>& phi, const std::shared_ptr<nortmann::DlFormula>& chi);

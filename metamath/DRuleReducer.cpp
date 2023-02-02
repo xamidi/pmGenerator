@@ -24,7 +24,7 @@ using namespace xamid::nortmann;
 namespace xamid {
 namespace metamath {
 
-void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, bool memReduction, bool debug) {
+void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, const string& inputFilePrefix, bool memReduction, bool withConclusions, bool debug) {
 	// 1. Load and parse mmsolitaire's D-proofs.
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<pair<string, string>> dProofsInFile;
@@ -74,24 +74,24 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	}
 
 	// 2. Load and parse generated D-proofs.
-	string filePrefix = "data/dProofs";
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
+	vector<vector<string>> allConclusions; // TODO: Need ability to use representativeProofs_byString variant and parse conclusions on-the-fly in order to save RAM for huge generator files.
 	uint64_t allRepresentativesCount;
 	uint32_t start;
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, &allRepresentativesCount, &start, debug)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, inputFilePrefix)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	filePostfix = "-unfiltered" + to_string(start) + "+.txt";
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, &allRepresentativesCount, &start, debug, filePrefix, filePostfix, false)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, inputFilePrefix, filePostfix, false)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	ProgressData parseProgress(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount);
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs = DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress, memReductionData);
+	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs = withConclusions ? DlProofEnumerator::parseAndConnectDProofConclusions(allRepresentatives, allConclusions, &parseProgress, memReductionData) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress, memReductionData);
 	if (debug) {
-		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proofs in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
+		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proof" << (withConclusions ? " conclusion" : "") << "s in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
