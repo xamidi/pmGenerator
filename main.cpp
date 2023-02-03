@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
-				"    pmGenerator ( -g <limit> [-u] [-m] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-m] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+\n"
+				"    pmGenerator ( -g <limit> [-u] [-m] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-m] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+\n"
 				"    -g: Generate proof files\n"
 				"        -u: unfiltered (significantly faster, but generates redundant proofs), leads to formulas being stored as strings rather than tree structures (vastly reduced RAM usage) ; deprecates -m\n"
 				"        -m: disable memory reduction (distributed formula lookup data, requires more RAM, faster collection, significantly slower filtering)\n"
@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				"        -o: customize output file path prefix ; default: \"data/dProofs-withoutConclusions/dProofs\" or \"data/dProofs-withConclusions/dProofs\"\n"
 				"        -d: print debug information\n"
 				"    -p: Print conclusion length plot data\n"
+				"        -i: customize input file path prefix ; requires files with conclusions ; default: \"data/dProofs-withConclusions/dProofs\"\n"
 				"        -s: measure symbolic length (in contrast to conclusion representation length)\n"
 				"        -t: table arrangement, one data point per row\n"
 				"        -x: upper horizontal limit\n"
@@ -85,7 +86,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = memReduction, get<8> = withConclusions
 		ApplyReplacements, // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 		FileConversion, // get<2> = inputFilePrefix, get<3> = outputFilePrefix, get<6> = debug, get<7> ? createGeneratorFilesWithConclusions(...) : createGeneratorFilesWithoutConclusions(...)
-		ConclusionLengthPlot // get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
+		ConclusionLengthPlot // get<2> = inputFilePrefix, get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
 	};
 	vector<tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>> tasks;
 
@@ -121,7 +122,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				get<4>(tasks.back()) = "data/dProofs-withoutConclusions/dProofs"; // get<4> = inputFilePrefix
 			break;
 		case 'i':
-			if (tasks.empty() || (get<0>(tasks.back()) != Task::FileConversion && get<0>(tasks.back()) != Task::CreateReplacements))
+			if (tasks.empty() || (get<0>(tasks.back()) != Task::FileConversion && get<0>(tasks.back()) != Task::CreateReplacements && get<0>(tasks.back()) != Task::ConclusionLengthPlot))
 				return printUsage("Invalid argument \"-i\".");
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-i\".");
@@ -182,7 +183,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			get<3>(tasks.back()) = argv[++i]; // get<3> = outputFilePrefix, or get<3> = mout
 			break;
 		case 'p':
-			tasks.emplace_back(Task::ConclusionLengthPlot, 0, "", "", "", "", false, false, false, false, -1, -1);
+			tasks.emplace_back(Task::ConclusionLengthPlot, 0, "data/dProofs-withConclusions/dProofs", "", "", "", false, false, false, false, -1, -1);
 			break;
 		case 't':
 			if (tasks.empty() || get<0>(tasks.back()) != Task::ConclusionLengthPlot)
@@ -236,7 +237,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				ss << ++index << ". createGeneratorFilesWithoutConclusions(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<6>(t)) << ")\n";
 			break;
 		case Task::ConclusionLengthPlot:
-			ss << ++index << ". printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")\n";
+			ss << ++index << ". printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", \"" << get<2>(t) << "\", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")\n";
 			break;
 		}
 	cout << "Tasks:\n" << ss.str() << endl;
@@ -265,16 +266,16 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				}
 				break;
 			case Task::ConclusionLengthPlot:
-				cout << "[Main] Calling printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")." << endl;
+				cout << "[Main] Calling printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", \"" << get<2>(t) << "\", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")." << endl;
 				if (get<3>(t).empty())
-					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), nullptr, get<6>(t));
+					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), get<2>(t), nullptr, get<6>(t));
 				else {
 					string path = get<3>(t);
 					FctHelper::ensureDirExists(path);
 					ofstream fout(filesystem::u8path(path), fstream::out | fstream::binary);
 					if (!fout.is_open())
 						throw invalid_argument("Cannot write to file \"" + string(path) + "\".");
-					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), &fout, get<6>(t));
+					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), get<2>(t), &fout, get<6>(t));
 				}
 				break;
 			}
