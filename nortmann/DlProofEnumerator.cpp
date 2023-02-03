@@ -830,14 +830,14 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& inp
 	}
 }
 
-void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength, bool table, int64_t cutX, int64_t cutY, ostream* mout, bool debug) {
+void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength, bool table, int64_t cutX, int64_t cutY, const string& inputFilePrefix, ostream* mout, bool debug) {
 	ostream& _mout = mout ? *mout : cout;
 	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 	vector<vector<string>> allRepresentatives;
 	vector<vector<string>> allConclusions;
 	uint64_t allRepresentativesCount;
 	uint32_t firstMissingIndex;
-	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &firstMissingIndex, debug, "data/dProofs-withConclusions/dProofs")) {
+	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &firstMissingIndex, debug, inputFilePrefix)) {
 		cerr << "Failed to load generated D-proof data after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl; //
 		return;
 	}

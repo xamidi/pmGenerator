@@ -82,8 +82,8 @@ struct DlProofEnumerator {
 	static void createGeneratorFilesWithConclusions(const std::string& inputFilePrefix = "data/dProofs-withoutConclusions/dProofs", const std::string& outputFilePrefix = "data/dProofs-withConclusions/dProofs", bool debug = false);
 	static void createGeneratorFilesWithoutConclusions(const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", const std::string& outputFilePrefix = "data/dProofs-withoutConclusions/dProofs", bool debug = false);
 
-	// Data representation
-	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, int64_t cutX = -1, int64_t cutY = -1, std::ostream* mout = nullptr, bool debug = false);
+	// Data representation ; input files with conclusions are required
+	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, int64_t cutX = -1, int64_t cutY = -1, const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", std::ostream* mout = nullptr, bool debug = false);
 
 	// Helper functions
 	static void replaceNodes(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>>& nodeStorage, std::atomic<uint64_t>& nodeReplacementCounter);
