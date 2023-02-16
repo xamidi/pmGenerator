@@ -3,7 +3,6 @@
 #include "../helper/FctHelper.h"
 #include "../tree/TreeNode.h"
 #include "../nortmann/DlCore.h"
-#include "../nortmann/DlFormula.h"
 #include "../nortmann/DlProofEnumerator.h"
 #include "DRuleParser.h"
 
@@ -23,7 +22,7 @@ using namespace xamid::nortmann;
 namespace xamid {
 namespace metamath {
 
-void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, const string& inputFilePrefix, bool memReduction, bool withConclusions, bool debug) {
+void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, const string& inputFilePrefix, bool withConclusions, bool debug) {
 	// 1. Load and parse mmsolitaire's D-proofs.
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<pair<string, string>> dProofsInFile;
@@ -42,24 +41,16 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	}
 	// NOTE: A tbb::concurrent_set<string, cmpStringGrow> inside would be preferable, but it has no reverse iterators in order to directly address the last element (which is required later on),
 	//       i.e. prev(set.end()) would crash and set.rbegin() does not exist: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_set_cls/iterators.html
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual> formulasToCheck;
+	tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>> formulasToCheck;
 	atomic<uint64_t> conclusionCounter { 0 };
 	atomic<uint64_t> redundantCounter { 0 };
-	unique_ptr<DlProofEnumerator::FormulaMemoryReductionData> _memReductionData = memReduction ? unique_ptr<DlProofEnumerator::FormulaMemoryReductionData>(new DlProofEnumerator::FormulaMemoryReductionData()) : nullptr;
-	DlProofEnumerator::FormulaMemoryReductionData* const memReductionData = _memReductionData.get();
 	mutex mtx_set;
-	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(knownDProofs.begin(), knownDProofs.end()), [&formulasToCheck, &conclusionCounter, &redundantCounter, &memReductionData, &mtx_set](tbb::blocked_range<vector<string>::const_iterator>& range) {
+	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(knownDProofs.begin(), knownDProofs.end()), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](tbb::blocked_range<vector<string>::const_iterator>& range) {
 		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& s = *it;
 			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
 			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				DlProofEnumerator::replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				DlProofEnumerator::replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = formulasToCheck.emplace(conclusion, set<string, cmpStringGrow> { });
+			pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
 			{
 				lock_guard<mutex> lock(mtx_set);
 				emplaceResult.first->second.insert(s);
@@ -78,7 +69,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	// 2. Load and parse generated D-proofs.
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
-	vector<vector<string>> allConclusions; // TODO: Need ability to use representativeProofs_byString variant and parse conclusions on-the-fly in order to save RAM for huge generator files.
+	vector<vector<string>> allConclusions; // TODO: Need ability to parse conclusions on-the-fly in order to save RAM for huge generator files.
 	uint64_t allRepresentativesCount;
 	uint32_t start;
 	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, inputFilePrefix)) {
@@ -91,7 +82,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		return;
 	}
 	ProgressData parseProgress(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount);
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs = withConclusions ? DlProofEnumerator::parseAndConnectDProofConclusions(allRepresentatives, allConclusions, &parseProgress, memReductionData) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress, memReductionData);
+	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? DlProofEnumerator::connectDProofConclusions(allRepresentatives, allConclusions, &parseProgress) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress);
 	if (debug) {
 		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proof" << (withConclusions ? " conclusion" : "") << "s in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
 		startTime = chrono::steady_clock::now();
@@ -99,10 +90,10 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 
 	// 3. Consider formulas from mmsolitaire's D-proofs in case there are suboptimal proofs used despite better ones are already known.
 	atomic<uint64_t> inputConclusionCounter { 0 };
-	tbb::parallel_for(formulasToCheck.range(), [&representativeProofs, &inputConclusionCounter](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(formulasToCheck.range(), [&representativeProofs, &inputConclusionCounter](tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& currentBestDProof = *it->second.begin();
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(it->first, currentBestDProof);
+			pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(it->first, currentBestDProof);
 			if (emplaceResult.second)
 				inputConclusionCounter++;
 		}
@@ -113,17 +104,19 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	}
 
 	// 4. Introduce a way to iterate formulas only up to a certain standard length (to greatly improve schema searching).
-	tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const shared_ptr<DlFormula>& formula = it->first;
-			formulasByStandardLength[DlCore::standardFormulaLength(formula)].emplace_back(&formula, it->second);
+	tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>> formulasByStandardLength;
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, string>::iterator it = range.begin(); it != range.end(); ++it) {
+			const string& formula = it->first;
+
+			// Store (pointer to formula -> representative proof) pair w.r.t. symbolic length of the formula.
+			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].emplace_back(&formula, &it->second);
 		}
 	});
 	if (debug) {
 		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 		cout << "|representativeProofs| = " << representativeProofs.size() << ", |formulasByStandardLength| = " << formulasByStandardLength.size() << endl;
-		//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
+		//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -131,94 +124,62 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	// NOTE: While iterating all proofs α of A\implyB, do not look for schemas [which would take too long – similarly long as DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength()]
 	//       but just use A as a key for search (which is fast). [The results may be less due to the schema-filtered generation process, i.e. there might be an overlooked proof for a proper schema of A.]
 	//       If a proof β for A can be found, just emplace Dαβ for B without verifying that B has not been proven yet. If a proof of B is already contained, Dαβ will be ignored.
-//#define EXTRA_SCHEMA_LOOKUP // Issue: Not using schema search barely gives extra results, but using it takes very long (so that generating them permanently via DlProofEnumerator would be a better option).
+	//       Issue: Not using schema search barely gives extra results, but using it takes very long (so that generating them permanently via DlProofEnumerator is a better option).
 	atomic<uint64_t> extraCheckCounter { 0 };
-	atomic<uint64_t> extraSchemaCheckCounter { 0 };
 	atomic<uint64_t> extraParseCounter { 0 };
 	atomic<uint64_t> extraProofCounter { 0 };
-#ifdef EXTRA_SCHEMA_LOOKUP
-	ProgressData extraProgress(allRepresentatives.size() > 27 ? 1 : allRepresentatives.size() > 25 ? 2 : 5, allRepresentativesCount);
-	extraProgress.setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &extraProgress, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-#else
-	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &extraCheckCounter, &extraSchemaCheckCounter, &extraParseCounter, &extraProofCounter, &memReductionData](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-#endif
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const shared_ptr<DlFormula>& conditional = it->first;
-			if (conditional->getValue()->value == DlCore::terminalStr_imply()) { // actually a conditional, i.e. A\implyB
+	atomic<uint64_t> improvedProofCounter { 0 };
+	tbb::parallel_for(representativeProofs.range(), [&representativeProofs, &formulasByStandardLength, &extraCheckCounter, &extraParseCounter, &extraProofCounter, &improvedProofCounter](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const string& conditional = it->first;
+			if (conditional[0] == 'C') { // actually a conditional, i.e. A\implyB
 				extraCheckCounter++;
-				const shared_ptr<DlFormula>& antecedent = conditional->getChildren()[0]; // A
+
+				// 5.1 Determine antecedent of the conditional.
+				string::size_type finalIndex = DlCore::traverseFormulas_polishNotation_noRename_numVars(conditional, 1);
+				if (conditional.begin() + finalIndex == conditional.end())
+					throw logic_error("Failed to determine bounds of antecedent of conditional \"" + conditional + "\"");
+				const string antecedent = conditional.substr(1, finalIndex); // A
 				// NOTE: Since the antecedent is the first part of its conditional, its variables are good for searching in 'representativeProofs' (i.e. they start from "0").
-				tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator searchResult = representativeProofs.find(antecedent);
-				bool directHit = searchResult != representativeProofs.end(); // whether there is a proof with A being the literal consequent
-#ifdef EXTRA_SCHEMA_LOOKUP
-				string dProof_antecedent; // proof β for A
-				auto setAntecedentDProof = [&](const string& dProof) { dProof_antecedent = dProof; }; // use to avoid error "cannot bind rvalue reference of type '[...]basic_string<char>&&' to lvalue of type 'const string' {aka 'const [...]basic_string<char>'}"
-				atomic<bool> schemaHit { false };
-				if (directHit)
-					dProof_antecedent = searchResult->second;
-				else { // NOTE: Not searching for the best schema, but only for any proven schema of A.
-					unsigned formulaLen = DlCore::standardFormulaLength(antecedent);
-					mutex mtx;
-					tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &schemaHit, &extraSchemaCheckCounter, &antecedent, &setAntecedentDProof, &mtx](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>::range_type& range) {
-						for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>::const_iterator it = range.begin(); it != range.end(); ++it)
-							if (schemaHit)
-								return;
-							else if (it->first <= formulaLen)
-								for (const pair<const shared_ptr<DlFormula>*, string>& p : it->second) {
-									extraSchemaCheckCounter++;
-									if (DlCore::isSchemaOf(*p.first, antecedent)) { // found a schema of A
-										schemaHit = true;
-										lock_guard<mutex> lock(mtx);
-										setAntecedentDProof(p.second);
-									}
-									if (schemaHit)
-										return;
-								}
-					});
-				}
-				if (directHit || schemaHit) {
-					string dProof = "D" + it->second + dProof_antecedent; // proof Dαβ for B
-#else
-				if (directHit) {
+				//#{ static mutex mtx_cout; lock_guard<mutex> lock(mtx_cout); cout << "### antecedent: " << antecedent << ", conditional: " << conditional << endl; }
+
+				tbb::concurrent_unordered_map<string, string>::const_iterator searchResult = representativeProofs.find(antecedent);
+				if (searchResult != representativeProofs.end()) { // whether there is a proof with A being the literal consequent
+
+					// 5.2 Emplace conditional with its proof (in case there is a proof for antecedent).
 					string dProof = "D" + it->second + searchResult->second; // proof Dαβ for B
-#endif
 					extraParseCounter++;
 					// NOTE: If parsing took too long, we could clone B and substitute its variables to start from "0". But parsing isn't an issue here at all.
 					vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
 					shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-					if (memReductionData) {
-						DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-						DlProofEnumerator::replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-						DlProofEnumerator::replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-						DlCore::clearMeanings(conclusion);
-					}
-					pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, dProof);
+					pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
+
+					// 5.3 Update the structure for efficient iteration
 					if (emplaceResult.second) { // a proof for the conclusion was not already known
 						extraProofCounter++;
-						const shared_ptr<DlFormula>& formula = emplaceResult.first->first; // NOTE: It is crucial that the stored address (which remains valid) is used.
-						formulasByStandardLength[DlCore::standardFormulaLength(formula)].emplace_back(&formula, dProof); // also the structure for efficient iteration requires to be updated
+						const string& formula = emplaceResult.first->first; // NOTE: It is crucial that the stored address (which remains valid) is used.
+
+						// Store (pointer to formula -> representative proof) pair w.r.t. symbolic length of the formula.
+						formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].emplace_back(&formula, &emplaceResult.first->second);
+					} else { // NOTE: Usually never happens.
+						static mutex mtx_modify;
+						lock_guard<mutex> lock(mtx_modify);
+						if (dProof.length() < emplaceResult.first->second.length() || (dProof.length() == emplaceResult.first->second.length() && dProof < emplaceResult.first->second)) {
+							improvedProofCounter++;
+							//#{ static mutex mtx_cout; lock_guard<mutex> lock(mtx_cout); cerr << "Found better D-proof ; new: " << dProof << " (length " << dProof.length() << ") ; old: " << emplaceResult.first->second << " (length " << emplaceResult.first->second.length() << ") ; formula: " << emplaceResult.first->first << endl; }
+
+							// Overwrite stored D-proof (which is also referenced by 'formulasByStandardLength').
+							emplaceResult.first->second = dProof;
+						}
 					}
-					//#{ static mutex mtx_cout; lock_guard<mutex> lock(mtx_cout); cerr << (directHit ? "Direct hit!" : "Schema hit!") << " ; So far checked " << extraCheckCounter << " conditionals (using " << extraSchemaCheckCounter << " schema checks), parsed " << extraParseCounter << " candidates, and found " << extraProofCounter << " new D-proofs from existing combinations." << endl; }
+					//#{ static mutex mtx_cout; lock_guard<mutex> lock(mtx_cout); cerr << "Direct hit! ; So far checked " << extraCheckCounter << " conditionals, parsed " << extraParseCounter << " candidates, and found " << extraProofCounter << " new and " << improvedProofCounter << " improved D-proofs from existing combinations. ; proof: " << dProof << " (length " << dProof.length() << ") ; formula: " << emplaceResult.first->first << endl; }
 				}
 			}
-#ifdef EXTRA_SCHEMA_LOOKUP
-			// Show progress
-			if (extraProgress.nextStep()) {
-				uint64_t percentage;
-				string progress;
-				string etc;
-				if (extraProgress.nextState(percentage, progress, etc)) {
-					time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-					cout << strtok(ctime(&time), "\n") << ": Extra checked " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
-				}
-			}
-#endif
 		}
 	});
 	// NOTE: Doesn't seem to generate much, e.g. 27: 13366.48 ms taken to check 1733457 conditionals, parse 3 candidates, and load 3 extra D-proofs from existing combinations.
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to check " << extraCheckCounter << " conditionals (using " << extraSchemaCheckCounter << " schema checks), parse " << extraParseCounter << " candidates, and load " << extraProofCounter << " new D-proofs from existing combinations." << endl;
+		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to check " << extraCheckCounter << " conditionals, parse " << extraParseCounter << " candidates, and load " << extraProofCounter << " new and " << improvedProofCounter << " improved D-proofs from existing combinations." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -227,31 +188,31 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	tbb::concurrent_map<string, string, cmpStringShrink> stylingReplacements;
 	atomic<uint64_t> schemaCheckCounter { 0 };
 	mutex mtx_cout;
-	tbb::parallel_for(formulasToCheck.range(), [&debug, &formulasByStandardLength, &shorteningReplacements, &stylingReplacements, &schemaCheckCounter, &mtx_cout](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const shared_ptr<DlFormula>& formula = it->first;
+	tbb::parallel_for(formulasToCheck.range(), [&debug, &formulasByStandardLength, &shorteningReplacements, &stylingReplacements, &schemaCheckCounter, &mtx_cout](tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const string& formula = it->first;
 			const set<string, cmpStringGrow>& dProofs = it->second;
 			const string& currentWorstDProof = *dProofs.rbegin(); // NOTE: Using set<string, cmpStringGrow> instead of tbb::concurrent_set<string, cmpStringGrow>, avoids doing *next(dProofs.begin(), dProofs.size() - 1) each time.
 			//#if (dProofs.size() > 1) { lock_guard<mutex> lock(mtx_cout); cout << "currentWorstDProof = " << currentWorstDProof << ", dProofs = " << FctHelper::setString(dProofs) << endl; }
 			const unsigned currentWorstLength = currentWorstDProof.length();
 			mutex mtx_best;
 			bool bad = false;
-			shared_ptr<DlFormula> bestSchema;
+			string bestSchema;
 			string bestDProof;
 			mutex mtx_alt;
 			bool alt = false;
 			set<string, cmpStringGrow> alternativeDProofs;
-			unsigned formulaLen = DlCore::standardFormulaLength(formula);
-			tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &schemaCheckCounter, &formula, &currentWorstDProof, &currentWorstLength, &mtx_best, &bad, &bestSchema, &bestDProof, &mtx_alt, &alt, &alternativeDProofs](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>::range_type& range) {
-				for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const shared_ptr<DlFormula>*, string>>>::const_iterator it = range.begin(); it != range.end(); ++it)
+			unsigned formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+			tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &schemaCheckCounter, &formula, &currentWorstDProof, &currentWorstLength, &mtx_best, &bad, &bestSchema, &bestDProof, &mtx_alt, &alt, &alternativeDProofs](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>::range_type& range) {
+				for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>::const_iterator it = range.begin(); it != range.end(); ++it)
 					// NOTE: No abort checks, since it is possible that multiple schemas with different proof sizes of the same formula are stored representatives.
 					if (it->first <= formulaLen)
-						for (const pair<const shared_ptr<DlFormula>*, string>& p : it->second) {
-							const string& dProof = p.second;
+						for (const pair<const string*, string*>& p : it->second) {
+							const string& dProof = *p.second;
 							if (dProof.length() <= currentWorstLength) {
-								const shared_ptr<DlFormula>& potentialSchema = *p.first;
+								const string& potentialSchema = *p.first;
 								schemaCheckCounter++;
-								if (DlCore::isSchemaOf(potentialSchema, formula)) { // found a schema
+								if (DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) { // found a schema
 									{
 										lock_guard<mutex> lock(mtx_best);
 										if ((!bad || bestDProof.length() > dProof.length()) && dProof.length() < currentWorstLength) {
@@ -306,7 +267,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 						return ss.str();
 					};
 					if (bad)
-						cout << "[NOTE] Found shorter proof \"" << bestDProof << "\" (length " << bestDProof.length() << ") for { " << setStr(dProofs, bestDProof.length(), true, true, bestDProof) << " }, best schema: " << DlCore::formulaRepresentation_traverse(bestSchema) << endl;
+						cout << "[NOTE] Found shorter proof \"" << bestDProof << "\" (length " << bestDProof.length() << ") for { " << setStr(dProofs, bestDProof.length(), true, true, bestDProof) << " }, best schema: " << bestSchema << endl;
 					if (!bad || hasMereAlternatives) // NOTE: !bad => bestDProof.length() == 0, thus printing longer proofs prints them all.
 						cout << "[NOTE] Found alternative proof " + bestAlternative + " for { " << setStr(dProofs, bestDProof.length(), !bad, false, bestAlternative) << " }." << endl;
 				}

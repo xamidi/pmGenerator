@@ -539,6 +539,88 @@ bool DlCore::_isSchemaOf(const shared_ptr<DlFormula>& potentialSchema, const sha
 	return true;
 }
 
+bool DlCore::isSchemaOf_polishNotation_noRename_numVars(const string& potentialSchema, const string& formula, map<size_t, string>* optOut_substitutions) {
+	map<size_t, string> substitutions;
+	string::size_type formulaIndex = 0;
+	unsigned varNum = 0;
+	bool prevVar = false;
+	auto readSubstitutedFormula = [&]() -> bool {
+		if (prevVar) { // read previous variable first
+			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex); // NOTE: Also traverses potential '.' that do not occur in 'potentialSchema'.
+			string substitutedFormula = formula.substr(formulaIndex, finalIndex - formulaIndex + 1);
+			formulaIndex += substitutedFormula.length();
+			pair<map<size_t, string>::iterator, bool> emplaceResult = substitutions.emplace(varNum, substitutedFormula);
+			if (!emplaceResult.second && emplaceResult.first->second != substitutedFormula)
+				return false;
+			varNum = 0;
+			prevVar = false;
+		}
+		return true;
+	};
+	for (char c : potentialSchema)
+		switch (c) {
+		default:
+			if (formulaIndex >= formula.length())
+				return false;
+			if (!readSubstitutedFormula())
+				return false;
+			if (formula[formulaIndex++] != c)
+				return false;
+			break;
+		case '.': // NOTE: A schema may contain a '.' without a concrete formula of it containing a corresponding '.'.
+			if (!readSubstitutedFormula())
+				return false;
+			if (formula[formulaIndex] == '.')
+				formulaIndex++;
+			break;
+		case '0':
+			varNum = 10 * varNum;
+			prevVar = true;
+			break;
+		case '1':
+			varNum = 10 * varNum + 1;
+			prevVar = true;
+			break;
+		case '2':
+			varNum = 10 * varNum + 2;
+			prevVar = true;
+			break;
+		case '3':
+			varNum = 10 * varNum + 3;
+			prevVar = true;
+			break;
+		case '4':
+			varNum = 10 * varNum + 4;
+			prevVar = true;
+			break;
+		case '5':
+			varNum = 10 * varNum + 5;
+			prevVar = true;
+			break;
+		case '6':
+			varNum = 10 * varNum + 6;
+			prevVar = true;
+			break;
+		case '7':
+			varNum = 10 * varNum + 7;
+			prevVar = true;
+			break;
+		case '8':
+			varNum = 10 * varNum + 8;
+			prevVar = true;
+			break;
+		case '9':
+			varNum = 10 * varNum + 9;
+			prevVar = true;
+			break;
+		}
+	if (!readSubstitutedFormula())
+		return false;
+	if (optOut_substitutions)
+		*optOut_substitutions = substitutions;
+	return true;
+}
+
 bool DlCore::tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_ptr<DlFormula>& formulaB, map<string, shared_ptr<DlFormula>>* optOut_substitutions, bool debug) {
 	map<string, shared_ptr<DlFormula>> substitutions;
 	if (_tryUnifyTrees(formulaA, formulaB, substitutions, debug)) {
@@ -808,6 +890,176 @@ bool DlCore::fromPolishNotation_noRename(shared_ptr<DlFormula>& output, const st
 	return true;
 }
 
+size_t DlCore::symbolicLen_polishNotation_noRename_numVars(const string& formula) {
+	size_t repLen = formula.length(); // formula representation length
+	size_t substract = 0;
+	bool atVar = false;
+	for (char c : formula)
+		switch (c) {
+		default:
+			if (atVar)
+				atVar = false;
+			break;
+		case '.':
+			substract++;
+			if (atVar)
+				atVar = false;
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if (atVar)
+				substract++;
+			else
+				atVar = true;
+			break;
+		}
+	return repLen - substract;
+}
+
+size_t DlCore::standardLen_polishNotation_noRename_numVars(const string& formula) {
+	size_t repLen = formula.length(); // formula representation length
+	size_t add = 0;
+	size_t substract = 0;
+	bool atVar = false;
+	for (char c : formula)
+		switch (c) {
+		default:
+			if (atVar)
+				atVar = false;
+			break;
+		case '.':
+			substract++;
+			if (atVar)
+				atVar = false;
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if (atVar)
+				substract++;
+			else
+				atVar = true;
+			break;
+		case 'K':
+		case 'A':
+		case 'D':
+		case 'X':
+		case 'C':
+		case 'B':
+		case 'F':
+		case 'G':
+		case 'E':
+		case 'J':
+		case 'S':
+		case 'U':
+			if (atVar)
+				atVar = false;
+			add += 2;
+			break;
+		}
+	return repLen - substract + add;
+}
+
+string::size_type DlCore::traverseFormulas_polishNotation_noRename_numVars(const string& formula, string::size_type startIndex, string::size_type formulasToTraverse) {
+	bool prevVar = false;
+	string::const_iterator strIt;
+	for (strIt = formula.begin() + startIndex; strIt != formula.end(); ++strIt) {
+		char c = *strIt;
+		switch (c) {
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			prevVar = true; // indicate that possibly we've just completed the formula but don't know it yet
+			break;
+		case '.': // implies 'prevVar' == true
+			if (formulasToTraverse == 1) { // end at previous variable
+				strIt = prev(strIt);
+				formulasToTraverse = 0;
+				break;
+			}
+			formulasToTraverse--; // completed previous (sub-)formula with a variable
+			prevVar = false;
+			break;
+		case 'V':
+		case 'O':
+			if (formulasToTraverse == 1 && prevVar) { // end at previous variable
+				strIt = prev(strIt);
+				formulasToTraverse = 0;
+				break;
+			}
+			if (prevVar)
+				formulasToTraverse -= 2; // completed previous (sub-)formula with a variable, and completed this (sub-)formula (which is a nullary operator)
+			else
+				formulasToTraverse--; // completed this (sub-)formula (which ends with a nullary operator)
+			prevVar = false;
+			break;
+		case 'N':
+		case 'L':
+		case 'M':
+		case 'Z':
+		case 'P':
+			if (formulasToTraverse == 1 && prevVar) { // end at previous variable
+				strIt = prev(strIt);
+				formulasToTraverse = 0;
+				break;
+			}
+			if (prevVar)
+				formulasToTraverse--; // completed previous (sub-)formula with a variable
+			prevVar = false;
+			break;
+		case 'K':
+		case 'A':
+		case 'D':
+		case 'X':
+		case 'C':
+		case 'B':
+		case 'F':
+		case 'G':
+		case 'E':
+		case 'J':
+		case 'S':
+		case 'U':
+			if (formulasToTraverse == 1 && prevVar) { // end at previous variable
+				strIt = prev(strIt);
+				formulasToTraverse = 0;
+				break;
+			}
+			if (!prevVar)
+				formulasToTraverse++; // need to read an extra subformula ; otherwise: completed previous (sub-)formula with a variable, and need to read an extra subformula
+			prevVar = false;
+			break;
+		default:
+			throw domain_error("Unknown Łukasiewicz operator '" + string { c } + "'.");
+		}
+		if (!formulasToTraverse) {
+			break;
+		}
+	}
+	return distance(formula.cbegin(), strIt);
+}
+
 string DlCore::substitutionRepresentation_traverse(const map<string, shared_ptr<DlFormula>>& substitutions) {
 	return FctHelper::mapStringF(substitutions, [](const pair<string, shared_ptr<DlFormula>>& pair) { return "\u3008" + pair.first + ", " + formulaRepresentation_traverse(pair.second) + "\u3009"; }, { }, { });
 }
@@ -859,14 +1111,6 @@ void DlCore::calculateEmptyMeanings(const shared_ptr<DlFormula>& formula) { // N
 				calculateEmptyMeanings(subformula);
 			recalculateMeaningUsingMeaningOfChildren(formula);
 		}
-	}
-}
-
-void DlCore::clearMeanings(const shared_ptr<DlFormula>& formula) {
-	if (!formula->meaning().empty()) {
-		formula->meaning().clear();
-		for (uint32_t i = 0; i < formula->getChildren().size(); i++)
-			clearMeanings(formula->children()[i]);
 	}
 }
 

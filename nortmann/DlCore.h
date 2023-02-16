@@ -7,6 +7,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -143,6 +144,8 @@ struct DlCore {
 
 	// Determine whether 'potentialSchema' can be substituted to 'formula', and for which substitution. Note that substitution entries contain references to nodes of 'formula'.
 	static bool isSchemaOf(const std::shared_ptr<DlFormula>& potentialSchema, const std::shared_ptr<DlFormula>& formula, std::map<std::string, std::shared_ptr<DlFormula>>* optOut_substitutions = nullptr);
+	// Variant where inputs are given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
+	static bool isSchemaOf_polishNotation_noRename_numVars(const std::string& potentialSchema, const std::string& formula, std::map<size_t, std::string>* optOut_substitutions = nullptr);
 
 	// Determines whether there exists a unifier for the given formulas, i.e. a substitution that results in the same substituted formula for both of the given formulas.
 	// Essentially applies Robinson's unification algorithm, but modified such that the substituted formulas are not constructed but implicitly compared.
@@ -159,7 +162,7 @@ struct DlCore {
 
 	static unsigned standardFormulaLength(const std::shared_ptr<DlFormula>& formula);
 
-	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński), with custom translations for missing standard operator letters.
+	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński).
 	// - standard:  { \and -> K, \or -> A, \nand -> D, \nor -> X, \imply -> C, \implied -> B, \equiv -> E, \xor -> J, \not -> N, \nece -> L, \poss -> M, \top -> V, \bot -> O }
 	// - custom:    { \nimply -> F, \nimplied -> G, \com -> S, \app -> U, \obli -> Z, \perm -> P }
 	// - Bocheński: { \nimply -> L, \nimplied -> M } instead of { \nimply -> F, \nimplied -> G }, and (custom) { \nece -> H, \poss -> I } instead of { \nece -> L, \poss -> M }
@@ -170,6 +173,16 @@ struct DlCore {
 
 	// (Performance-oriented) inverse of toPolishNotation_noRename(). Assigns DRuleParser's globally definite symbols to operators, and its own globally definite symbols to variables.
 	static bool fromPolishNotation_noRename(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = true);
+
+	// Calculate the formula's symbolic length (i.e. the amount of nodes of its syntax tree), where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(),
+	// and all variable names consist of only numerical characters.
+	static size_t symbolicLen_polishNotation_noRename_numVars(const std::string& formula);
+
+	// Calculate the formula's standard length, where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
+	static size_t standardLen_polishNotation_noRename_numVars(const std::string& formula);
+
+	// Traverse the given amount of (sub-)formulas of the given formula in Łukasiewicz-format provided by toPolishNotation_noRename(), and return the index of the final character.
+	static std::string::size_type traverseFormulas_polishNotation_noRename_numVars(const std::string& formula, std::string::size_type startIndex = 0, std::string::size_type formulasToTraverse = 1);
 
 	// Calculate the substitution's representation based on formulaRepresentation_traverse().
 	static std::string substitutionRepresentation_traverse(const std::map<std::string, std::shared_ptr<DlFormula>>& substitutions);
@@ -183,8 +196,6 @@ struct DlCore {
 	// Calculates all the meanings in a formula such that no meaning of a node represents an expression (ψ) for a DL-formula ψ.
 	// The meaning of a parent node surrounds a child's meaning by parentheses only if necessary to describe the same tree / formula, using our order of operations with left first bracketing.
 	static void calculateEmptyMeanings(const std::shared_ptr<DlFormula>& formula);
-
-	static void clearMeanings(const std::shared_ptr<DlFormula>& formula);
 
 	// Recalculates only the meaning of the root node, based on its value and the meaning of its children.
 	static void recalculateMeaningUsingMeaningOfChildren(const std::shared_ptr<DlFormula>& destinationNode); // CAUTION: Same as for reduceFormulaMeaning_modifying().
