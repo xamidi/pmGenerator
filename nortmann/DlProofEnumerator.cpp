@@ -365,7 +365,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 	return representativeProofs;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32_t distributedNodesAmount, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/2dd795c56b83f890689c40947df0ac96777f7ee4
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32_t distributedNodesAmount, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/1d05f2a646563061162be9ad0db68946499ac867
 	if (distributedNodesAmount > 1 && redundantSchemaRemoval) { // TODO: Utilize 'distributedNodesAmount'.
 		cerr << "Disabled redundant schema filtering due to multi-node computation." << endl;
 		redundantSchemaRemoval = false;
