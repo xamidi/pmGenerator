@@ -27,14 +27,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
-				"    pmGenerator ( -g <limit> [-u] [-m] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-m] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+\n"
+				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+\n"
 				"    -g: Generate proof files\n"
-				"        -u: unfiltered (significantly faster, but generates redundant proofs), leads to formulas being stored as strings rather than tree structures (vastly reduced RAM usage) ; deprecates -m\n"
-				"        -m: disable memory reduction (distributed formula lookup data, requires more RAM, faster collection, significantly slower filtering)\n"
+				"        -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"        -c: proof files without conclusions, requires additional parsing\n"
 				"    -r: Replacements file creation based on proof files\n"
 				"        -i: customize input file path prefix ; default: \"data/dProofs-withConclusions/dProofs\"\n"
-				"        -m: disable memory reduction (distributed formula lookup data, requires more RAM)\n"
 				"        -c: proof files without conclusions, requires additional parsing ; sets default input file path prefix to \"data/dProofs-withoutConclusions/dProofs\"\n"
 				"        -d: print debug information\n"
 				"    -a: Apply replacements file\n"
@@ -55,7 +53,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				"        -o: print to given output file\n"
 				"        -d: print debug information\n"
 				"Examples:\n"
-				"    pmGenerator -g 19\n"
+				"    pmGenerator -g -1\n"
 				"    pmGenerator -r \"data/pmproofs.txt\" \"data/pmproofs-reducer.txt\" -i \"data/dProofs\" -c -d\n"
 				"    pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
 				"    pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
@@ -70,8 +68,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-modifiedOnly.txt -w", " ");
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w", " ");
 		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt", " ");
-		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 31 -u", " ");
-		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-old.txt data/pmproofs-reducer_TEST.txt -d", " ");
+		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-old.txt data/pmproofs-reducer_TEST.txt -d", " ");
+		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-unified.txt data/pmproofs-reducer_TEST3.txt -d", " ");
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly-noWrap.txt -s", " ");
 		argc = customCmd.size();
 		argv = new char*[customCmd.size()];
@@ -82,8 +80,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	if (argc <= 1)
 		return printUsage();
 	enum class Task {
-		Generate, // get<6> = redundantSchemaRemoval, get<7> = memReduction, get<8> = withConclusions, get<9> : whether -i was called
-		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = memReduction, get<8> = withConclusions
+		Generate, // get<6> = redundantSchemaRemoval, get<7> = withConclusions, get<8> : whether -i was called
+		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = withConclusions
 		ApplyReplacements, // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 		FileConversion, // get<2> = inputFilePrefix, get<3> = outputFilePrefix, get<6> = debug, get<7> ? createGeneratorFilesWithConclusions(...) : createGeneratorFilesWithoutConclusions(...)
 		ConclusionLengthPlot // get<2> = inputFilePrefix, get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
@@ -98,7 +96,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-g\".");
 			try {
-				tasks.emplace_back(Task::Generate, stoi(argv[++i]), "", "", "", "", true, true, true, false, 0, 0);
+				tasks.emplace_back(Task::Generate, stoi(argv[++i]), "", "", "", "", true, true, false, false, 0, 0);
 			} catch (exception& e) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-g\".");
 			}
@@ -107,18 +105,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			if (tasks.empty() || get<0>(tasks.back()) != Task::Generate)
 				return printUsage("Invalid argument \"-u\".");
 			get<6>(tasks.back()) = false; // redundantSchemaRemoval := false
-			get<7>(tasks.back()) = false; // memReduction := false (since -u deprecates -m)
-			break;
-		case 'm':
-			if (tasks.empty() || (get<0>(tasks.back()) != Task::Generate && get<0>(tasks.back()) != Task::CreateReplacements))
-				return printUsage("Invalid argument \"-m\".");
-			get<7>(tasks.back()) = false; // memReduction := false
 			break;
 		case 'c':
 			if (tasks.empty() || (get<0>(tasks.back()) != Task::Generate && get<0>(tasks.back()) != Task::CreateReplacements))
 				return printUsage("Invalid argument \"-c\".");
-			get<8>(tasks.back()) = false; // withConclusions := false
-			if (get<0>(tasks.back()) == Task::CreateReplacements && !get<9>(tasks.back()))
+			get<7>(tasks.back()) = false; // withConclusions := false
+			if (get<0>(tasks.back()) == Task::CreateReplacements && !get<8>(tasks.back()))
 				get<4>(tasks.back()) = "data/dProofs-withoutConclusions/dProofs"; // get<4> = inputFilePrefix
 			break;
 		case 'i':
@@ -128,14 +120,14 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Missing parameter for \"-i\".");
 			if (get<0>(tasks.back()) == Task::CreateReplacements) {
 				get<4>(tasks.back()) = argv[++i]; // get<4> = inputFilePrefix
-				get<9>(tasks.back()) = true; // get<9> : whether -i was called
+				get<8>(tasks.back()) = true; // get<8> : whether -i was called
 			} else
 				get<2>(tasks.back()) = argv[++i]; // get<2> = inputFilePrefix
 			break;
 		case 'r':
 			if (i + 2 >= argc)
 				return printUsage("Missing parameter for \"-r\".");
-			tasks.emplace_back(Task::CreateReplacements, 0, argv[i + 1], argv[i + 2], "data/dProofs-withConclusions/dProofs", "", false, true, true, false, 0, 0);
+			tasks.emplace_back(Task::CreateReplacements, 0, argv[i + 1], argv[i + 2], "data/dProofs-withConclusions/dProofs", "", false, true, false, false, 0, 0);
 			i += 2;
 			break;
 		case 'd':
@@ -222,10 +214,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
 		switch (get<0>(t)) {
 		case Task::Generate:
-			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ")\n";
+			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
 			break;
 		case Task::CreateReplacements:
-			ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<6>(t)) << ")\n";
+			ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")\n";
 			break;
 		case Task::ApplyReplacements:
 			ss << ++index << ". applyReplacements(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", \"" << get<5>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<9>(t)) << ", " << bstr(get<6>(t)) << ")\n";
@@ -245,12 +237,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
 			switch (get<0>(t)) {
 			case Task::Generate:
-				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ")." << endl;
-				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), 1, get<6>(t), get<7>(t), get<8>(t));
+				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")." << endl;
+				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), 1, get<6>(t), get<7>(t));
 				break;
 			case Task::CreateReplacements:
-				cout << "[Main] Calling createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<6>(t)) << ")." << endl;
-				DRuleReducer::createReplacementsFile(get<2>(t), get<3>(t), get<4>(t), get<7>(t), get<8>(t), get<6>(t));
+				cout << "[Main] Calling createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")." << endl;
+				DRuleReducer::createReplacementsFile(get<2>(t), get<3>(t), get<4>(t), get<7>(t), get<6>(t));
 				break;
 			case Task::ApplyReplacements:
 				cout << "[Main] Calling applyReplacements(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", \"" << get<5>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<9>(t)) << ", " << bstr(get<6>(t)) << ")." << endl;

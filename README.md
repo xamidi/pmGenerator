@@ -8,14 +8,12 @@ Exemplary generated results are available at [xamidi/mmsolitaire](https://github
 Some aspects of this tool were explicated in a [proposal](https://groups.google.com/g/metamath/c/v0p86y5b-m0) at the Metamath mailing list.
 
 #### Usage
-    pmGenerator ( -g <limit> [-u] [-m] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-m] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+
+    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+
     -g: Generate proof files
-        -u: unfiltered (significantly faster, but generates redundant proofs), leads to formulas being stored as strings rather than tree structures (vastly reduced RAM usage) ; deprecates -m
-        -m: disable memory reduction (distributed formula lookup data, requires more RAM, faster collection, significantly slower filtering)
+        -u: unfiltered (significantly faster, but generates redundant proofs)
         -c: proof files without conclusions, requires additional parsing
     -r: Replacements file creation based on proof files
         -i: customize input file path prefix ; default: "data/dProofs-withConclusions/dProofs"
-        -m: disable memory reduction (distributed formula lookup data, requires more RAM)
         -c: proof files without conclusions, requires additional parsing ; sets default input file path prefix to "data/dProofs-withoutConclusions/dProofs"
         -d: print debug information
     -a: Apply replacements file
@@ -37,7 +35,7 @@ Some aspects of this tool were explicated in a [proposal](https://groups.google.
         -d: print debug information
 
 #### Examples
-    pmGenerator -g 19
+    pmGenerator -g -1
     pmGenerator -r "data/pmproofs.txt" "data/pmproofs-reducer.txt" -i "data/dProofs" -c -d
     pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d

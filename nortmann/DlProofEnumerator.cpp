@@ -9,7 +9,6 @@
 
 #define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1 // TODO Temporary, for low tbb version ("libtbb-dev is already the newest version (2020.1-2)" on Linux Mint 20.3)
 #include <tbb/concurrent_map.h>
-#include <tbb/concurrent_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
@@ -22,13 +21,6 @@ using namespace xamid::metamath;
 
 namespace xamid {
 namespace nortmann {
-
-size_t dlNumFormulaHash::operator()(const shared_ptr<DlFormula>& f) const {
-	hash<string> stringHash;
-	// NOTE: While a representation such as dlFormulaHash::representativeString() is faster to compute (since there are no translations on individual values),
-	//       it is slower to use as a key since it results in longer sequences.
-	return stringHash.operator()(DlCore::toPolishNotation_noRename(f));
-}
 
 const vector<const vector<string>*>& DlProofEnumerator::builtinRepresentatives() {
 	static const vector<const vector<string>*> _builtinRepresentatives = { &Resources::dProofRepresentatives1, &Resources::dProofRepresentatives3, &Resources::dProofRepresentatives5, &Resources::dProofRepresentatives7, &Resources::dProofRepresentatives9, &Resources::dProofRepresentatives11, &Resources::dProofRepresentatives13, &Resources::dProofRepresentatives15 };
@@ -279,7 +271,7 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	return true;
 }
 
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives_byString(const vector<string>& representatives, ProgressData* const progressData) {
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<string>& representatives, ProgressData* const progressData) {
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	if (progressData)
 		progressData->setStartTime();
@@ -305,7 +297,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	return representativeProofs;
 }
 
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives_byString(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData) {
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData) {
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	if (progressData)
 		progressData->setStartTime();
@@ -334,42 +326,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	return representativeProofs;
 }
 
-tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, FormulaMemoryReductionData* const memReductionData) {
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs;
-	if (progressData)
-		progressData->setStartTime();
-	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) { // FASTEST: Parse each string individually and without translation to DlProof objects.
-		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
-		for_each(execution::par, representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end(), [&progressData, &representativeProofs, &memReductionData](const string& s) {
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			// NOTE: Definitely stores, since that is how the input files were constructed.
-			representativeProofs.emplace(conclusion, s);
-
-			// Show progress if requested
-			if (progressData) {
-				if (progressData->nextStep()) {
-					uint64_t percentage;
-					string progress;
-					string etc;
-					if (progressData->nextState(percentage, progress, etc)) {
-						time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-						cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
-					}
-				}
-			}
-		}); // NOTE: Requires __has_include(<tbb/tbb.h>) to use parallel execution.
-	}
-	return representativeProofs;
-}
-
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofConclusions_byString(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData) {
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofConclusions(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData) {
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	if (progressData)
 		progressData->setStartTime();
@@ -401,60 +358,16 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 	return representativeProofs;
 }
 
-tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> DlProofEnumerator::parseAndConnectDProofConclusions(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData, FormulaMemoryReductionData* const memReductionData) {
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs;
-	if (progressData)
-		progressData->setStartTime();
-	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) {
-		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
-		if (representativesOfWordLengthLimit.empty())
-			continue;
-		const vector<string>& conclusionsOfWordLengthLimit = allConclusions[wordLengthLimit];
-		if (representativesOfWordLengthLimit.size() != conclusionsOfWordLengthLimit.size())
-			throw invalid_argument("allRepresentatives[" + to_string(wordLengthLimit) + "].size() = " + to_string(representativesOfWordLengthLimit.size()) + " != " + to_string(conclusionsOfWordLengthLimit.size()) + " = allConclusions[" + to_string(wordLengthLimit) + "].size()");
-		tbb::parallel_for(size_t(0), representativesOfWordLengthLimit.size(), [&progressData, &representativeProofs, &representativesOfWordLengthLimit, &conclusionsOfWordLengthLimit, &memReductionData] (size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
-			shared_ptr<DlFormula> conclusion;
-			DlCore::fromPolishNotation_noRename(conclusion, conclusionsOfWordLengthLimit[i]);
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			// NOTE: Definitely stores, since that is how the input files were constructed.
-			representativeProofs.emplace(conclusion, representativesOfWordLengthLimit[i]);
-
-			// Show progress if requested
-			if (progressData) {
-				if (progressData->nextStep()) {
-					uint64_t percentage;
-					string progress;
-					string etc;
-					if (progressData->nextState(percentage, progress, etc)) {
-						time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-						cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proof conclusions. [" << progress << "] (" << etc << ")" << endl;
-					}
-				}
-			}
-		}); // NOTE: Requires __has_include(<tbb/tbb.h>) to use parallel execution.
-	}
-	return representativeProofs;
-}
-
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32_t distributedNodesAmount, bool redundantSchemaRemoval, bool memReduction, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32_t distributedNodesAmount, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/d39fc5165932fa48499f52f9da30543288863aa0
 	if (distributedNodesAmount > 1 && redundantSchemaRemoval) { // TODO: Utilize 'distributedNodesAmount'.
 		cerr << "Disabled redundant schema filtering due to multi-node computation." << endl;
 		redundantSchemaRemoval = false;
-	}
-	if (!redundantSchemaRemoval && memReduction) {
-		cerr << "Disabled memory reduction, since without redundant schema filtering, formulas are stored as strings rather than tree structures – which are only required for schema checks." << endl;
-		memReduction = false;
 	}
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
 	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (memReduction || !redundantSchemaRemoval ? "" : ", no memory reduction") << "]" << endl;
+	cout << strtok(ctime(&time), "\n") << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
 	string filePrefix = withConclusions ? "data/dProofs-withConclusions/dProofs" : "data/dProofs-withoutConclusions/dProofs";
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
@@ -463,16 +376,17 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 	uint32_t start;
 	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix))
 		return;
-	// e.g., for up to 'data/dProofs27.txt' present:
-	//   0.07 ms taken to load built-in representatives.
-	//   0.47 ms taken to read 5221 condensed detachment proofs from data/dProofs17.txt. [tid:4]
-	//   1.51 ms taken to read 15275 condensed detachment proofs from data/dProofs19.txt. [tid:5]
-	//   4.14 ms taken to read 44206 condensed detachment proofs from data/dProofs21.txt. [tid:6]
-	//  20.14 ms taken to read 129885 condensed detachment proofs from data/dProofs23.txt. [tid:7]
-	//  66.17 ms taken to read 385789 condensed detachment proofs from data/dProofs25.txt. [tid:8]
-	// 201.04 ms taken to read 1149058 condensed detachment proofs from data/dProofs27.txt. [tid:9]
-	// 204.85 ms total read duration.
-	// Loaded 14 representative collections of sizes:
+	// e.g., for up to 'data/dProofs29.txt' present:
+	//   0.07 ms taken to load built-in representatives.                                             | [with conclusions]    0.30 ms [...] detachment proofs and conclusions from [...]
+	//   0.09 ms taken to read    5221 condensed detachment proofs from data/dProofs17.txt. [tid:2]  |                       0.55 ms [...] detachment proofs and conclusions from [...]
+	//   0.19 ms taken to read   15275 condensed detachment proofs from data/dProofs19.txt. [tid:3]  |                       0.72 ms [...] detachment proofs and conclusions from [...]
+	//   4.04 ms taken to read   44206 condensed detachment proofs from data/dProofs21.txt. [tid:4]  |                       8.09 ms [...] detachment proofs and conclusions from [...]
+	//  16.71 ms taken to read  129885 condensed detachment proofs from data/dProofs23.txt. [tid:5]  |                      62.56 ms [...] detachment proofs and conclusions from [...]
+	//  66.17 ms taken to read  385789 condensed detachment proofs from data/dProofs25.txt. [tid:6]  |                     213.14 ms [...] detachment proofs and conclusions from [...]
+	// 201.04 ms taken to read 1149058 condensed detachment proofs from data/dProofs27.txt. [tid:7]  |                     683.21 ms [...] detachment proofs and conclusions from [...]
+	// 743.53 ms taken to read 3449251 condensed detachment proofs from data/dProofs29.txt. [tid:8]  |                    2312.06 ms [...] detachment proofs and conclusions from [...]
+	// 755.49 ms total read duration.                                                                |                    2338.89 ms (2 s 338.89 ms) total read duration.
+	// Loaded 15 representative collections of sizes:
 	//  1 :       3
 	//  3 :       6
 	//  5 :      12
@@ -487,7 +401,8 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 	// 23 :  129885
 	// 25 :  385789
 	// 27 : 1149058
-	// 1732327 representatives in total.
+	// 29 : 3449251
+	// 5181578 representatives in total.
 	if (!redundantSchemaRemoval) {
 		filePostfix = "-unfiltered" + to_string(start) + "+.txt";
 		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix, false))
@@ -495,7 +410,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 	}
 	if (start > limit) {
 		time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator skipped. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (memReduction || !redundantSchemaRemoval ? "" : ", no memory reduction") << "]" << endl;
+		cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator skipped. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
 		return;
 	}
 
@@ -507,31 +422,17 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering. To find the conclusions, parse all loaded D-proofs.
 	startTime = chrono::steady_clock::now();
-	FormulaMemoryReductionData memReductionData;
-	tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual> representativeProofs;
-	tbb::concurrent_unordered_map<string, string> representativeProofs_byString;
-	if (redundantSchemaRemoval) {
-		if (memReduction) {
-			representativeProofs = withConclusions ? parseAndConnectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr, &memReductionData) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &memReductionData);
-			cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
-		} else
-			representativeProofs = withConclusions ? parseAndConnectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total parse & insertion duration." << endl;
-		// e.g. 15:    160.42 ms                        total parse & insertion duration.  | [with conclusions]    24.40 ms                  total parse & insertion duration.
-		//      17:    489.34 ms                        total parse & insertion duration.  |                       72.88 ms                  total parse & insertion duration.
-		//      19:   1596.06 ms (       1 s 596.06 ms) total parse & insertion duration.  |                      203.42 ms                  total parse & insertion duration.
-		//      21:   5467.97 ms (       5 s 467.97 ms) total parse & insertion duration.  |                      598.92 ms                  total parse & insertion duration.
-		//      23:  18656.43 ms (      18 s 656.43 ms) total parse & insertion duration.  |                     1941.38 ms ( 1 s 941.38 ms) total parse & insertion duration.
-		//      25:  64588.01 ms (1 min  4 s 588.01 ms) total parse & insertion duration.  |                     6464.29 ms ( 6 s 464.29 ms) total parse & insertion duration.
-		//      27: 225168.29 ms (3 min 45 s 168.29 ms) total parse & insertion duration.  |                    21757.79 ms (21 s 757.79 ms) total parse & insertion duration.
-	} else {
-		representativeProofs_byString = withConclusions ? connectDProofConclusions_byString(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives_byString(allRepresentatives, showProgress ? &parseProgress : nullptr);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << endl;
-		// e.g. 23:  17861.15 ms (       17 s 861.15 ms) total parse, conversion & insertion duration.  | [with conclusions]  32.84 ms total insertion duration.
-		//      25:  61647.44 ms ( 1 min  1 s 647.44 ms) total parse, conversion & insertion duration.  |                     93.01 ms total insertion duration.
-		//      27: 213272.64 ms ( 3 min 33 s 272.64 ms) total parse, conversion & insertion duration.  |                    293.06 ms total insertion duration.
-		//      29: 741236.66 ms (12 min 21 s 236.66 ms) total parse, conversion & insertion duration.  |                    877.29 ms total insertion duration.
-	}
+	tbb::concurrent_unordered_map<string, string> representativeProofs;
+	representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << endl;
+	// e.g. 15:    165.82 ms                         total parse, conversion & insertion duration.  | [with conclusions]   1.06 ms total insertion duration.
+	//      17:    482.36 ms                         total parse, conversion & insertion duration.  |                      2.07 ms total insertion duration.
+	//      19:   1550.04 ms (        1 s 550.04 ms) total parse, conversion & insertion duration.  |                      4.81 ms total insertion duration.
+	//      21:   5136.59 ms (        5 s 136.59 ms) total parse, conversion & insertion duration.  |                     12.96 ms total insertion duration.
+	//      23:  17861.15 ms (       17 s 861.15 ms) total parse, conversion & insertion duration.  |                     32.84 ms total insertion duration.
+	//      25:  61647.44 ms ( 1 min  1 s 647.44 ms) total parse, conversion & insertion duration.  |                     93.01 ms total insertion duration.
+	//      27: 213272.64 ms ( 3 min 33 s 272.64 ms) total parse, conversion & insertion duration.  |                    293.06 ms total insertion duration.
+	//      29: 741236.66 ms (12 min 21 s 236.66 ms) total parse, conversion & insertion duration.  |                    877.29 ms total insertion duration.
 
 	// 4. Compute and store new representatives indefinitely.
 	for (uint32_t wordLengthLimit = start; wordLengthLimit <= limit; wordLengthLimit += 2) {
@@ -588,37 +489,15 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 		const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 		const unsigned knownLimit = wordLengthLimit - 2;
 		startTime = chrono::steady_clock::now();
-		if (redundantSchemaRemoval) {
-			if (memReduction) {
-				_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &memReductionData, &stack, &knownLimit, &allRepresentatives);
-				cout << "nodeReplacements: " << memReductionData.nodeReplacementCounter << ", valueReplacements: " << memReductionData.valueReplacementCounter << endl;
-				// e.g. 25:   831 MB memory commit size ; nodeReplacements:   806328, valueReplacements:  345001 ; at "[...] total parse & insertion duration."
-				//           2892 MB memory commit size ; nodeReplacements:  3796756, valueReplacements: 1103491 ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
-				//      27:  2601 MB memory commit size ; nodeReplacements:  2373851, valueReplacements: 1011151 ; at "[...] total parse & insertion duration."
-				//           9748 MB memory commit size ; nodeReplacements: 11348932, valueReplacements: 3265546 ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
-				//      29:  8663 MB memory commit size ; nodeReplacements:  7036815, valueReplacements: 2986586 ; at "[...] total parse & insertion duration."
-				//          32190 MB memory commit size ; nodeReplacements: 34154357, valueReplacements: 9736481 ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
-				// NOTE: When [Windows 7] Task Manager shows e.g. "811.644 K", it means roughly 811644 * 1024 bytes = 831123456 B ≈ 831 MB. (It uses prefixes according to JEDEC memory standards, in contrast to SI prefixes.)
-				//       Due to 32190 MB ≈ 29.98 GiB, results for word length limit 29 can still be computed without page faults on a 32 GiB RAM machine.
-			} else {
-				_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, nullptr, &stack, &knownLimit, &allRepresentatives);
-				// e.g. 25:  1578 MB memory commit size ;  1578 / 831   ≈ 1.89892                                ; at "[...] total parse & insertion duration."
-				//           5974 MB memory commit size ;  5974 / 2892  ≈ 2.06570                                ; at "[...] taken to collect 490604 D-proofs of length 25. [iterated 2709186 condensed detachment proof strings]"
-				//      27:  5254 MB memory commit size ;  5254 / 2601  ≈ 2.01999                                ; at "[...] total parse & insertion duration."
-				//          19937 MB memory commit size ; 19937 / 9748  ≈ 2.04524                                ; at "[...] taken to collect 1459555 D-proofs of length 27. [iterated 8320672 condensed detachment proof strings]"
-				//      29: 17627 MB memory commit size ; 17627 / 8663  ≈ 2.03475                                ; at "[...] total parse & insertion duration."
-				//          67375 MB memory commit size ; 67375 / 32190 ≈ 2.09304                                ; at "[...] taken to collect 4375266 D-proofs of length 29. [iterated 25589216 condensed detachment proof strings]"
-			}
-		} else
-			_findProvenFormulas_byString(representativeProofs_byString, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives);
+		_findProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Generic, showProgress ? &findProgress : nullptr, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives);
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to collect " << representativeCounter << " D-proofs of length " << wordLengthLimit << ". [iterated " << counter << " condensed detachment proof strings]" << endl;
 		// e.g. 17:    1631.72 ms (        1 s 631.72 ms) taken to collect    6649 [...]
-		//      19:    5883.22 ms (        5 s 883.22 ms) taken to collect   19416 [...]
-		//      21:   21007.67 ms (       21 s   7.67 ms) taken to collect   56321 [...]
-		//      23:   75916.37 ms ( 1 min 15 s 916.37 ms) taken to collect  165223 [...]
-		//      25:  268873.93 ms ( 4 min 28 s 873.93 ms) taken to collect  490604 [...]
-		//      27:  957299.91 ms (15 min 57 s 299.91 ms) taken to collect 1459555 [...]
-		//      29: 3378071.50 ms (56 min 18 s  71.50 ms) taken to collect 4375266 [...]
+		//      19:    5586.94 ms (        5 s 586.94 ms) taken to collect   19416 [...] ;    5586.94 /   1631.72 ≈ 3.42396
+		//      21:   20238.31 ms (       20 s 238.31 ms) taken to collect   56321 [...] ;   20238.31 /   5586.94 ≈ 3.62243
+		//      23:   72496.97 ms ( 1 min 12 s 496.97 ms) taken to collect  165223 [...] ;   72496.97 /  20238.31 ≈ 3.58217
+		//      25:  258267.65 ms ( 4 min 18 s 267.65 ms) taken to collect  490604 [...] ;  258267.65 /  72496.97 ≈ 3.56246
+		//      27:  916905.86 ms (15 min 16 s 905.86 ms) taken to collect 1459555 [...] ;  916905.86 / 258267.65 ≈ 3.55022
+		//      29: 3187900.65 ms (53 min  7 s 900.65 ms) taken to collect 4375266 [...] ; 3187900.65 / 916905.86 ≈ 3.47680
 
 		// 4.3 Update iteration progress information.
 		(redundantSchemaRemoval ? iterationCounts : iterationCounts_builtin).emplace(wordLengthLimit, counter);
@@ -633,42 +512,22 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 		//       'dProofs25-unfiltered17+.txt' and 'dProofs27-unfiltered17+.txt' are 19.969.715 and 70.423.275 bytes in size (i.e. 768066 and 2515117 D-proofs), respectively.          [2515117 / 768066 ≈ 3.27461 ; 768066 / 385789 ≈ 1.99090 ; 2515117 / 1149058 ≈ 2.18885]
 		//       Where one enters the unfiltered strategy makes quite a difference, e.g.
 		//       'dProofs25-unfiltered25+.txt' and 'dProofs27-unfiltered25+.txt' are 12.755.703 and 47.068.055 bytes is size (i.e. 490604 and 1681002 D-proofs), respectively, and      [1681002 / 490604 ≈ 3.42639 ; 490604 / 385789 ≈ 1.27169 ; 1681002 / 1149058 ≈ 1.46294]
-		//       generating 'dProofs17.txt', ..., 'dProofs23.txt' doesn't take long. But while generating 'dProofs25.txt' and 'dProofs27.txt' take several hours and over a day on an average PC,
-		//       respectively, generating 'dProofs25-unfiltered25+.txt' and 'dProofs27-unfiltered25+.txt' only take around 5 and 20 minutes, respectively. But the latter also take more RAM, so
-		//       a good choice really boils down to what the space and time constraints are. For example, on a machine with only 32 GiB of RAM, the only way to use all proof representatives up
-		//       to length 29 without page faults (apart from transferring the file) is to generate 'dProofs29.txt', which takes several weeks.
+		//       generating 'dProofs17.txt', ..., 'dProofs23.txt' doesn't take long. But while generating 'dProofs25.txt' and 'dProofs27.txt' take several hours and over a day on an average PC, respectively, generating
+		//       'dProofs25-unfiltered25+.txt' and 'dProofs27-unfiltered25+.txt' only take around 5 and 20 minutes, respectively. But the latter also take more memory, so a good choice really boils down to space and time constraints.
+		//       For instance, on a machine with limited RAM, the only way to use all proof representatives up to a certain length without page faults may be to generate 'dProofs<n>.txt' for <n> sufficiently high. For example,
+		//       loading up to 'dProofs31-unfiltered17+.txt' (39157358 representatives) requires ≈19.95 GiB of memory, whereas loading up to 'dProofs31-unfiltered31+.txt' (18375771 representatives) requires only ≈9.84 GiB.
 		if (redundantSchemaRemoval) {
 			startTime = chrono::steady_clock::now();
 			uint64_t oldRepresentativeCounter = representativeCounter;
 			// TODO: Performance should be improved significantly if possible. Can we define a schema tree database structure to reduce the amount of schema checks?
 			_removeRedundantConclusionsForProofsOfMaxLength(wordLengthLimit, representativeProofs, showProgress ? &removalProgress : nullptr, representativeCounter, redundantCounter);
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to detect " << oldRepresentativeCounter - representativeCounter << " conclusions for which there are more general variants proven in lower or equal amounts of steps." << endl;
-			// e.g. 17:      1440.11 ms (                 1 s 440.11 ms) taken to detect   1428 conclusions [...]
-			//      19:     15274.82 ms (                15 s 274.82 ms) taken to detect   4141 conclusions [...]
-			//      21:    165695.51 ms (          2 min 45 s 695.51 ms) taken to detect  12115 conclusions [...]
-			//      23:   1572083.47 ms (         26 min 12 s  83.47 ms) taken to detect  35338 conclusions [...]
-			//      25:  15072757.24 ms (     4 h 11 min 12 s 757.24 ms) taken to detect 104815 conclusions [...]
-			//      27: 144893608.98 ms (1 d 16 h 14 min 53 s 608.98 ms) taken to detect 310497 conclusions [...]
-			// NOTE: It is essential for performance to have a sufficient amount of RAM in order to avoid page faults.
-			//       For example, a less optimized variant of the algorithm with an expected duration of around a week
-			//       for word length limit 27 resulted in a commit size of 19586820 KiB, i.e. ≈18.68 GiB for the process
-			//       on a machine with only 16 GiB of RAM. The task ran from 10th August, and at 10th September still had
-			//       not completed this phase. The CPU utilized was an Intel Core i7-3610QM (4 cores, 8 threads). The mostly
-			//       around 3000 to 5000 page faults per second resulted in constantly reading from a Samsung SSD 870 EVO 1TB
-			//       hard drive (in full full performance mode) at around 120 to 200 MB/s.
-			//       For comparison, the current algorithm requires a memory commit size of only ≈9.08 GiB and completed this phase on
-			//       the same machine in only 1 d 22 h 40 min 16 s 422.05 ms. The durations above were recorded from a machine with an
-			//       Intel Core i7-3770 (also 4 cores, 8 threads) of similar but slightly better performance. [details: https://www.cpubenchmark.net/compare/Intel-i7-3770-vs-Intel-i7-3610QM/896vs891]
-			//       Both machines used 1600 MHz DDR3 RAM, the slower 16 GiB CL11, the faster 32 GiB CL9. [16 GiB ≈ 17.18 GB, 32 GiB  ≈ 34.36 GB]
-			//       For illustration, a 1600 MHz CL9 RAM (thus 800 MHz signal frequency), by 800 MHz = 0.8 / ns = 1 / (1.25 ns), has a latency to
-			//       read of around 9 * 1.25 ns = 11.25 ns, but the designated hard drive has one above 1.3 ms, i.e. more than 116000 times as much.
-			//       Given that every single formula could potentially lead to several page faults, these latencies may add up sequentially.
-			//       Memory requirements depending on 'memReduction' are illustrated below the _findProvenFormulas() call.
-			//       All measurements of given durations took place in 'memReduction' mode without page faults, compiled without
-			//       CPU-specific compiler flags (i.e. compiled by GCC 11.2.0 with default flags "-march=x86-64 -mtune=generic").
-			//       Notably, using "-march=native" (which implies "-mtune=native") did not result in any apparent performance improvement
-			//       for these Ivy Bridge processors under Windows 7, but building and running on Linux Mint 20.3 – compiled by GCC 10.3.0
-			//       with the same general-purpose default flags – resulted in around 11% reduced runtimes.
+			// e.g. 17:     1440.11 ms (                1 s 440.11 ms) taken to detect   1428 conclusions [...]
+			//      19:    13487.20 ms (               13 s 487.20 ms) taken to detect   4141 conclusions [...] ;    13487.20 /     1440.11 ≈ 9.36540
+			//      21:   120905.65 ms (         2 min      905.65 ms) taken to detect  12115 conclusions [...] ;   120905.65 /    13487.20 ≈ 8.96447
+			//      23:  1136294.46 ms (        18 min 56 s 294.46 ms) taken to detect  35338 conclusions [...] ;  1136294.46 /   120905.65 ≈ 9.39819
+			//      25: 10569544.36 ms (    2 h 56 min  9 s 544.36 ms) taken to detect 104815 conclusions [...] ; 10569544.36 /  1136294.46 ≈ 9.30177
+			//      27: 96153314.21 ms (1 d 2 h 42 min 33 s 314.21 ms) taken to detect 310497 conclusions [...] ; 96153314.21 / 10569544.36 ≈ 9.09721
 
 			// 4.5 Update removal progress information.
 			removalCounts.emplace(wordLengthLimit, oldRepresentativeCounter - representativeCounter);
@@ -680,46 +539,29 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 		map<unsigned, unsigned> amountPerLength;
 		set<string, cmpStringGrow> newRepresentativeSequences;
 		map<string, string, cmpStringGrow> newContent;
-		if (redundantSchemaRemoval) {
-			if (withConclusions)
-				for (const pair<const shared_ptr<DlFormula>, string>& p : representativeProofs) {
-					size_t len = p.second.length();
-					if (len == wordLengthLimit)
-						newContent.emplace(p.second, DlCore::toPolishNotation_noRename(p.first));
-					amountPerLength[len]++;
-				}
-			else
-				for (const pair<const shared_ptr<DlFormula>, string>& p : representativeProofs) {
-					size_t len = p.second.length();
-					if (len == wordLengthLimit)
-						newRepresentativeSequences.insert(p.second);
-					amountPerLength[len]++;
-				}
-		} else {
-			if (withConclusions)
-				for (const pair<const string, string>& p : representativeProofs_byString) {
-					size_t len = p.second.length();
-					if (len == wordLengthLimit)
-						newContent.emplace(p.second, p.first);
-					amountPerLength[len]++;
-				}
-			else
-				for (const pair<const string, string>& p : representativeProofs_byString) {
-					size_t len = p.second.length();
-					if (len == wordLengthLimit)
-						newRepresentativeSequences.insert(p.second);
-					amountPerLength[len]++;
-				}
-		}
+		if (withConclusions)
+			for (const pair<const string, string>& p : representativeProofs) {
+				size_t len = p.second.length();
+				if (len == wordLengthLimit)
+					newContent.emplace(p.second, p.first);
+				amountPerLength[len]++;
+			}
+		else
+			for (const pair<const string, string>& p : representativeProofs) {
+				size_t len = p.second.length();
+				if (len == wordLengthLimit)
+					newRepresentativeSequences.insert(p.second);
+				amountPerLength[len]++;
+			}
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to filter and order new representative proofs." << endl;
 		cout << "Found " << representativeCounter << " representative, " << redundantCounter << " redundant, and " << invalidCounter << " invalid condensed detachment proof strings." << endl;
 		cout << "lengths up to " << wordLengthLimit << " ; amounts per length: " << FctHelper::mapString(amountPerLength) << " ; " << (withConclusions ? newContent.size() : newRepresentativeSequences.size()) << " new representative proofs (" << redundantCounter << " redundant, " << invalidCounter << " invalid)" << endl;
-		// e.g. 17:    5221 new representative proofs (  14809 redundant,   11358 invalid)
-		//      19:   15275 new representative proofs (  44743 redundant,   34889 invalid)
-		//      21:   44206 new representative proofs ( 134493 redundant,  111693 invalid)
-		//      23:  129885 new representative proofs ( 409159 redundant,  346997 invalid)
-		//      25:  385789 new representative proofs (1243007 redundant, 1080390 invalid)
-		//      27: 1149058 new representative proofs (3778453 redundant, 3393161 invalid)
+		// e.g. 17:    5221 representative,   14809 redundant, and   11358 invalid condensed detachment proof strings
+		//      19:   15275 representative,   44743 redundant, and   34889 invalid condensed detachment proof strings
+		//      21:   44206 representative,  134493 redundant, and  111693 invalid condensed detachment proof strings
+		//      23:  129885 representative,  409159 redundant, and  346997 invalid condensed detachment proof strings
+		//      25:  385789 representative, 1243007 redundant, and 1080390 invalid condensed detachment proof strings
+		//      27: 1149058 representative, 3778453 redundant, and 3393161 invalid condensed detachment proof strings
 
 		// 4.7 Store information for current run. Note that 'allRepresentatives' (unlike 'allConclusions') must be updated since it is used for D-proof generation.
 		allRepresentatives.push_back( { });
@@ -739,7 +581,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
 	}
 	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (memReduction || !redundantSchemaRemoval ? "" : ", no memory reduction") << "]" << endl;
+	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
 }
 
 void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputFilePrefix, const string& outputFilePrefix, bool debug) {
@@ -769,7 +611,7 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputF
 		ProgressData parseProgress(wordLengthLimit >= 27 ? 5 : wordLengthLimit >= 25 ? 10 : 20, representativesOfWordLengthLimit.size());
 		if (debug)
 			startTime = chrono::steady_clock::now();
-		tbb::concurrent_unordered_map<string, string> representativeProofs = parseDProofRepresentatives_byString(representativesOfWordLengthLimit, wordLengthLimit > 15 ? &parseProgress : nullptr);
+		tbb::concurrent_unordered_map<string, string> representativeProofs = parseDProofRepresentatives(representativesOfWordLengthLimit, wordLengthLimit > 15 ? &parseProgress : nullptr);
 		map<string, string, cmpStringGrow> result;
 		for (const pair<const string, string>& p : representativeProofs)
 			result.emplace(p.second, p.first);
@@ -840,42 +682,11 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 		size_t totalLen = 0;
 		//#size_t index = 0;
 		for (const string& conclusion : conclusions) {
-			size_t repLen = conclusion.length(); // formula representation length
-			size_t substract = 0;
-			if (measureSymbolicLength) {
-				bool atVar = false;
-				for (char c : conclusion)
-					switch (c) {
-					default:
-						if (atVar)
-							atVar = false;
-						break;
-					case '.':
-						substract++;
-						if (atVar)
-							atVar = false;
-						break;
-					case '0':
-					case '1':
-					case '2':
-					case '3':
-					case '4':
-					case '5':
-					case '6':
-					case '7':
-					case '8':
-					case '9':
-						if (atVar)
-							substract++;
-						else
-							atVar = true;
-					}
-			}
-			size_t len = repLen - substract; // formula symbolic length (i.e. amount of nodes in syntax tree) in case 'measureSymbolicLength' is true
+			size_t len = measureSymbolicLength ? DlCore::symbolicLen_polishNotation_noRename_numVars(conclusion) : conclusion.length(); // formula symbolic length (i.e. amount of nodes in syntax tree) in case 'measureSymbolicLength' is true ; formula representation length, otherwise
 			allAmounts[len]++;
 			totalLen += len;
 			//#if (conclusion == "C0CCNC1C2.3NC4C5C6C7C8C9CCC10C11.12C10.11CC10C11.12C10.12CC1.2C1.3")
-			//#	_mout << wordLengthLimit << ": " << allRepresentatives[wordLengthLimit][index] << ":" << conclusion << ", repLen = " << repLen << ", len = " << len << endl;
+			//#	_mout << wordLengthLimit << ": " << allRepresentatives[wordLengthLimit][index] << ":" << conclusion << ", formula representation length: " << conclusion.length() << ", len = " << len << endl;
 			//#index++;
 		}
 		_mout << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is " << totalLen << "/" << conclusions.size() << " ≈ " << FctHelper::round((double) totalLen / conclusions.size(), 2) << "." << endl;
@@ -996,39 +807,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 	}
 }
 
-// NOTE: Requires 'formula' with meanings.
-void DlProofEnumerator::replaceNodes(shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<vector<uint32_t>, shared_ptr<DlFormula>, myhash<vector<uint32_t>>>& nodeStorage, atomic<uint64_t>& nodeReplacementCounter) {
-	auto recurse = [&](shared_ptr<DlFormula>& node, const auto& me) -> void {
-		pair<tbb::concurrent_unordered_map<vector<uint32_t>, shared_ptr<DlFormula>, myhash<vector<uint32_t>>>::iterator, bool> emplaceResult = nodeStorage.emplace(node->meaning(), node);
-		if (!emplaceResult.second) {
-			if (node != emplaceResult.first->second) {
-				node = emplaceResult.first->second;
-				nodeReplacementCounter++;
-			}
-		} else // node was used to initialize a fresh key => node wasn't already registered => try register children
-			for (uint32_t i = 0; i < node->getChildren().size(); i++)
-				me(node->children()[i], me);
-	};
-	recurse(formula, recurse);
-}
-
-void DlProofEnumerator::replaceValues(shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<string, shared_ptr<String>>& valueStorage, atomic<uint64_t>& valueReplacementCounter, tbb::concurrent_unordered_set<DlFormula*>& alreadyProcessing) {
-	auto recurse = [&](shared_ptr<DlFormula>& node, const auto& me) -> void {
-		if (!alreadyProcessing.emplace(node.get()).second)
-			return; // avoid duplicated handlings
-		shared_ptr<String>& val = node->value();
-		pair<tbb::concurrent_unordered_map<string, shared_ptr<String>>::iterator, bool> emplaceResult = valueStorage.emplace(val->value, val);
-		if (!emplaceResult.second && val != emplaceResult.first->second) {
-			val = emplaceResult.first->second;
-			valueReplacementCounter++;
-		}
-		for (uint32_t i = 0; i < node->getChildren().size(); i++)
-			me(node->children()[i], me);
-	};
-	recurse(formula, recurse);
-}
-
-void DlProofEnumerator::_findProvenFormulas_byString(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
+void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
 	atomic<uint64_t> counter = 0;
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
@@ -1088,170 +867,42 @@ void DlProofEnumerator::_findProvenFormulas_byString(tbb::concurrent_unordered_m
 		*optOut_invalidCounter = invalidCounter;
 }
 
-void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter = 0;
-	atomic<uint64_t> conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter = 0;
-	atomic<uint64_t> invalidCounter = 0;
-	auto process = [&representativeProofs, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
-		counter++;
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
-		if (!(rawParseData = DRuleParser::parseDProof_raw(sequence)).empty()) {
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofs.emplace(conclusion, sequence);
-			if (!emplaceResult.second) { // a proof for the conclusion is already known
-				redundantCounter++;
-				string& storedSequence = emplaceResult.first->second;
-				if (storedSequence.length() > sequence.length())
-					storedSequence = sequence; // use the shorter proof
-				else if (storedSequence.length() == sequence.length() && storedSequence > sequence)
-					storedSequence = sequence; // use the "preceding" proof
-			} else
-				conclusionCounter++;
-		} else
-			invalidCounter++;
-
-		// Show progress if requested
-		if (progressData) {
-			if (progressData->nextStep()) {
-				uint64_t percentage;
-				string progress;
-				string etc;
-				if (progressData->nextState(percentage, progress, etc)) {
-					time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-					cout << strtok(ctime(&time), "\n") << ": Iterated " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
-				}
-			}
-		}
-	};
-	switch (mode) {
-	case DlProofEnumeratorMode::Generic:
-		if (!genIn_stack || !genIn_n || !genIn_allRepresentativesLookup)
-			throw invalid_argument("Parameters missing for DlProofEnumeratorMode::Generic.");
-		if (progressData)
-			progressData->setStartTime();
-		processCondensedDetachmentPlProofs_generic(*genIn_stack, wordLengthLimit, *genIn_n, *genIn_allRepresentativesLookup, process);
-		break;
-	case DlProofEnumeratorMode::Naive:
-		if (progressData)
-			progressData->setStartTime();
-		processCondensedDetachmentPlProofs_naive(wordLengthLimit, process);
-		break;
-	}
-	if (optOut_counter)
-		*optOut_counter = counter;
-	if (optOut_conclusionCounter)
-		*optOut_conclusionCounter = conclusionCounter;
-	if (optOut_redundantCounter)
-		*optOut_redundantCounter = redundantCounter;
-	if (optOut_invalidCounter)
-		*optOut_invalidCounter = invalidCounter;
-}
-
-void DlProofEnumerator::_findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter = 0;
-	atomic<uint64_t> conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter = 0;
-	atomic<uint64_t> invalidCounter = 0;
-	auto process = [&representativeProofsWithEquivalenceClasses, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter, &memReductionData](string& sequence) {
-		counter++;
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
-		if (!(rawParseData = DRuleParser::parseDProof_raw(sequence)).empty()) {
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-			if (memReductionData) {
-				DlCore::calculateEmptyMeanings(conclusion); // NOTE: May register new variables, which is thread-safe via DlCore::tryRegisterVariable().
-				replaceNodes(conclusion, memReductionData->nodeStorage, memReductionData->nodeReplacementCounter);
-				replaceValues(conclusion, memReductionData->valueStorage, memReductionData->valueReplacementCounter, memReductionData->alreadyProcessing);
-				DlCore::clearMeanings(conclusion);
-			}
-			pair<tbb::concurrent_unordered_map<shared_ptr<DlFormula>, tbb::concurrent_set<string, cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>::iterator, bool> emplaceResult = representativeProofsWithEquivalenceClasses.emplace(conclusion, tbb::concurrent_set<string, cmpStringGrow> { });
-			emplaceResult.first->second.insert(sequence);
-			if (!emplaceResult.second) // a proof for the conclusion is already known
-				redundantCounter++;
-			else
-				conclusionCounter++;
-		} else
-			invalidCounter++;
-
-		// Show progress if requested
-		if (progressData) {
-			if (progressData->nextStep()) {
-				uint64_t percentage;
-				string progress;
-				string etc;
-				if (progressData->nextState(percentage, progress, etc)) {
-					time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-					cout << strtok(ctime(&time), "\n") << ": Iterated " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
-				}
-			}
-		}
-	};
-	switch (mode) {
-	case DlProofEnumeratorMode::Generic:
-		if (!genIn_stack || !genIn_n || !genIn_allRepresentativesLookup)
-			throw invalid_argument("Parameters missing for DlProofEnumeratorMode::Generic.");
-		if (progressData)
-			progressData->setStartTime();
-		processCondensedDetachmentPlProofs_generic(*genIn_stack, wordLengthLimit, *genIn_n, *genIn_allRepresentativesLookup, process);
-		break;
-	case DlProofEnumeratorMode::Naive:
-		if (progressData)
-			progressData->setStartTime();
-		processCondensedDetachmentPlProofs_naive(wordLengthLimit, process);
-		break;
-	}
-	if (optOut_counter)
-		*optOut_counter = counter;
-	if (optOut_conclusionCounter)
-		*optOut_conclusionCounter = conclusionCounter;
-	if (optOut_redundantCounter)
-		*optOut_redundantCounter = redundantCounter;
-	if (optOut_invalidCounter)
-		*optOut_invalidCounter = invalidCounter;
-}
-
-void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
+void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
 	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
-	tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const shared_ptr<DlFormula>& formula = it->first;
-			formulasByStandardLength[DlCore::standardFormulaLength(formula)].push_back(&formula);
+	tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>> formulasByStandardLength;
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const string& formula = it->first;
+			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
 		}
 	});
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
-	//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
+	//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
 	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const unsigned upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::range_type& range) {
-			for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const shared_ptr<DlFormula>*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>::range_type& range) {
+			for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
 				if (done)
 					return;
 				else if (it->first <= upperBound)
-					for (const shared_ptr<DlFormula>* const f : it->second) {
+					for (const string* const f : it->second) {
 						func(*f);
 						if (done)
 							return;
 					}
 		});
 	};
-	tbb::concurrent_unordered_map<const shared_ptr<DlFormula>*, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator> toErase;
+	tbb::concurrent_unordered_map<const string*, tbb::concurrent_unordered_map<string, string>::const_iterator> toErase;
 	if (progressData)
 		progressData->setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::range_type& range) {
-		for (tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const uint32_t formula_sequenceLength = it->second.length();
 			if (formula_sequenceLength == maxLength) {
-				const shared_ptr<DlFormula>& formula = it->first;
+				const string& formula = it->first;
 				atomic<bool> redundant = false;
-				unsigned formulaLen = DlCore::standardFormulaLength(formula);
-				iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const shared_ptr<DlFormula>& potentialSchema) {
-					if (formula != potentialSchema && DlCore::isSchemaOf(potentialSchema, formula)) // formula redundant
+				unsigned formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+				iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const string& potentialSchema) {
+					if (formula != potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) // formula redundant
 						redundant = true;
 				});
 				if (redundant) {
@@ -1277,7 +928,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	redundantCounter += toErase.size();
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
 	//#startTime = chrono::steady_clock::now();
-	for (const pair<const shared_ptr<DlFormula>* const, tbb::concurrent_unordered_map<shared_ptr<DlFormula>, string, dlNumFormulaHash, dlFormulaEqual>::const_iterator>& p : toErase)
+	for (const pair<const string* const, tbb::concurrent_unordered_map<string, string>::const_iterator>& p : toErase)
 		representativeProofs.unsafe_erase(p.second);
 	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }

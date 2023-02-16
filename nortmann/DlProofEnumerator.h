@@ -1,48 +1,18 @@
 #ifndef XAMID_NORTMANN_DLPROOFENUMERATOR_H
 #define XAMID_NORTMANN_DLPROOFENUMERATOR_H
 
-#include "../helper/Hashing.h"
 #include "../helper/ProgressData.h"
 
 #include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_unordered_set.h>
-#include <tbb/version.h>
 
 #include <array>
 #include <condition_variable>
 #include <deque>
 #include <map>
-#include <memory>
 #include <thread>
 
-namespace tbb {
-namespace detail::d1 { template<typename T> class tbb_allocator; }
-using detail::d1::tbb_allocator;
-#if TBB_VERSION_MAJOR >= 2021 && TBB_VERSION_MINOR >= 4
-namespace detail::d2 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; }
-using detail::d2::concurrent_set;
-#else
-namespace detail::d1 { template<typename Key, typename Compare, typename Allocator> class concurrent_set; }
-using detail::d1::concurrent_set;
-#endif
-}
-
 namespace xamid {
-template<typename Key, typename Compare> using tbb_concurrent_set = tbb::concurrent_set<Key, Compare, tbb::tbb_allocator<Key>>;
-namespace helper { struct String; struct cmpStringGrow; }
-namespace tree { template<typename T> class TreeNode; }
-
 namespace nortmann {
-
-typedef tree::TreeNode<helper::String> DlFormula;
-struct dlFormulaEqual;
-
-// Improved alternative to 'dlFormulaHash' intended to hash formulas that only have numerical variable names. Uses Polish notation strings as keys of formulas.
-// Avoids collisions using unordered_set<shared_ptr<DlFormula>, dlNumFormulaHash, dlFormulaEqual> and unordered_map<shared_ptr<DlFormula>, _Tp, dlNumFormulaHash, dlFormulaEqual>,
-// given that formulas cannot contain '.' or upper-case letters in {A, ..., Z} \ {H, I, Q, R, T, W, Y}, and all primitives being represented by non-empty strings.
-struct dlNumFormulaHash {
-	size_t operator()(const std::shared_ptr<DlFormula>& f) const;
-};
 
 enum class DlProofEnumeratorMode {
 	Generic, Naive
@@ -50,13 +20,10 @@ enum class DlProofEnumeratorMode {
 
 struct DlProofEnumerator {
 	// Data loading
-	struct FormulaMemoryReductionData { tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>> nodeStorage; tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>> valueStorage; tbb::concurrent_unordered_set<DlFormula*> alreadyProcessing; std::atomic<uint64_t> nodeReplacementCounter = 0; std::atomic<uint64_t> valueReplacementCounter = 0; };
 	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, uint64_t* optOut_allRepresentativesCount = nullptr, uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
-	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives_byString(const std::vector<std::string>& representatives, helper::ProgressData* const progressData = nullptr);
-	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives_byString(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr);
-	static tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr, FormulaMemoryReductionData* const memReductionData = nullptr);
-	static tbb::concurrent_unordered_map<std::string, std::string> connectDProofConclusions_byString(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr);
-	static tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual> parseAndConnectDProofConclusions(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr, FormulaMemoryReductionData* const memReductionData = nullptr);
+	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::string>& representatives, helper::ProgressData* const progressData = nullptr);
+	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr);
+	static tbb::concurrent_unordered_map<std::string, std::string> connectDProofConclusions(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr);
 
 	// Basic functionality
 	static const std::vector<const std::vector<std::string>*>& builtinRepresentatives();
@@ -66,15 +33,13 @@ struct DlProofEnumerator {
 	static bool readRepresentativesLookupVectorFromFiles_par(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, unsigned concurrencyCount = std::thread::hardware_concurrency(), const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
 	static std::vector<std::pair<std::array<uint32_t, 2>, unsigned>> proofLengthCombinations(uint32_t knownLimit);
 
-	// Data generation ; 'redundantSchemaRemoval' is only relevant in case 'distributedNodesAmount' <= 1 since redundant schema removal is disabled for multi-node computations, and 'memReduction' is only
-	// relevant in case 'redundantSchemaRemoval' = true, since without redundant schema filtering, formulas are stored as strings rather than tree structures – which are only required for schema checks.
-	// Space-demanding tree structures are used in case of redundant schema removal because they are required for efficient schema checks.
+	// Data generation ; 'redundantSchemaRemoval' is only relevant in case 'distributedNodesAmount' <= 1 since redundant schema removal is disabled for multi-node computations.
 	// Summarized, this function is able to generate D-proofs without redundant conclusions ('dProofs<k>.txt')_{k<=n} using shared-memory parallelism only (where time and memory quickly become
 	// limiting factors), and subsequently it can generate D-proofs with redundant conclusions ('dProofs<m>-unfiltered<n+1>+.txt')_{m>n} using both shared-memory and distributed-memory parallelism.
 	// The earlier one begins to generate D-proofs with redundant conclusions, the larger resulting files 'dProofs<m>-unfiltered<n+1>+.txt' become (with an exponential growth).
 	// 'dProofs1.txt', 'dProofs3.txt', ..., 'dProofs15.txt' are built-in, and 'dProofs17.txt', ..., 'dProofs29.txt' are available at https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withConclusions
 	// and https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withoutConclusions (150'170'911 bytes compressed into 'dProofs17-29.7z' of 1'005'537 bytes), so it is recommended to choose n >= 29.
-	static void generateDProofRepresentativeFiles(uint32_t limit = UINT32_MAX, uint32_t distributedNodesAmount = 1, bool redundantSchemaRemoval = true, bool memReduction = true, bool withConclusions = true);
+	static void generateDProofRepresentativeFiles(uint32_t limit = UINT32_MAX, uint32_t distributedNodesAmount = 1, bool redundantSchemaRemoval = true, bool withConclusions = true);
 	// To create generator files with conclusions from those without, or vice versa. Generator files with conclusions are around four times bigger, with an increasing factor for increasing
 	// proof lengths, e.g. for 'dProofs17.txt' there is a factor (369412 bytes)/(93977 bytes) ≈ 3.93, and for 'dProofs29.txt' there is a factor (516720692 bytes)/(103477529 bytes) ≈ 4.99.
 	// Furthermore, files with conclusions have much higher entropy, thus can be compressed worse. For example, { 'dProofs17.txt', ..., 'dProofs29.txt' } can be compressed via LZMA to around
@@ -86,13 +51,9 @@ struct DlProofEnumerator {
 	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, int64_t cutX = -1, int64_t cutY = -1, const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", std::ostream* mout = nullptr, bool debug = false);
 
 	// Helper functions
-	static void replaceNodes(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::vector<uint32_t>, std::shared_ptr<DlFormula>, helper::myhash<std::vector<uint32_t>>>& nodeStorage, std::atomic<uint64_t>& nodeReplacementCounter);
-	static void replaceValues(std::shared_ptr<DlFormula>& formula, tbb::concurrent_unordered_map<std::string, std::shared_ptr<helper::String>>& valueStorage, std::atomic<uint64_t>& valueReplacementCounter, tbb::concurrent_unordered_set<DlFormula*>& alreadyProcessing);
 private:
-	static void _findProvenFormulas_byString(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _findProvenFormulasWithEquivalenceClasses(tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, tbb_concurrent_set<std::string, helper::cmpStringGrow>, dlNumFormulaHash, dlFormulaEqual>& representativeProofsWithEquivalenceClasses, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, FormulaMemoryReductionData* const memReductionData = nullptr, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::shared_ptr<DlFormula>, std::string, dlNumFormulaHash, dlFormulaEqual>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
+	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
+	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
 
 public:
 	// Iterates condensed detachment strings for PL-proofs in D-notation, using knowledge of all representative proofs of length n or lower, which must be passed via 'allRepresentatives'.
