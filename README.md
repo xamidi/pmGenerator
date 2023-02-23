@@ -3,7 +3,14 @@
 # @xamidi/pmGenerator
 
 Code extracted from [deontic-logic/proof-tool](https://github.com/deontic-logic/proof-tool) (still private; [readme](https://deontic-logic.github.io/readme.html)). Can be used to generate improved versions of [pmproofs.txt](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") of the [mmsolitaire](https://us.metamath.org/mmsolitaire/mms.html "us.metamath.org/mmsolitaire/mms.html") project.  
-Exemplary generated results are available at [xamidi/mmsolitaire](https://github.com/xamidi/mmsolitaire "GitHub repository"). Eligible for high-performance computing. If you have access to a supercomputer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.
+Exemplary generated results are available at [xamidi/mmsolitaire](https://github.com/xamidi/mmsolitaire "GitHub repository"). Eligible for shared memory high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.  
+The following table exemplary shows progress that has already been made.
+
+|                                            Load Files up to..                                            | Size of Files (with conclusions) [B] | Required Memory (approx.) [GiB] |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------:| -------------------------------:|
+| [dProofs29.txt](https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withConclusions)          |                          735 676 962 |                            2.68 |
+| [dProofs31-unfiltered31+.txt](https://mega.nz/file/G18AWIpC#B04xOdtQj_2PJJP0yNQxbim7pOgd-hwv1i1EVU6ZsTM) |                        2 897 309 412 |                            9.84 |
+| [dProofs33-unfiltered31+.txt](https://mega.nz/file/3gVQSIJL#Qfa9CoUwsHWYYNHXYaP1mg61QQSJ1NSl1CHudK4g7BA) |                       11 246 333 287 |                           36.49 |
 
 Some aspects of this tool were explicated in a [proposal](https://groups.google.com/g/metamath/c/v0p86y5b-m0) at the Metamath mailing list.
 

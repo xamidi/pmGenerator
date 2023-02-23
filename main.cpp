@@ -68,8 +68,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-modifiedOnly.txt -w", " ");
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w", " ");
 		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt", " ");
-		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-old.txt data/pmproofs-reducer_TEST.txt -d", " ");
-		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-unified.txt data/pmproofs-reducer_TEST3.txt -d", " ");
+		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-unified.txt data/pmproofs-reducer33.txt -d", " ");
+		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -a SD data/pmproofs-reducer33.txt data/pmproofs-unified.txt data/pmproofs-unified33-modifiedOnly-noWrap.txt -s", " ");
+		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -a SD data/pmproofs-reducer33.txt data/pmproofs-unified.txt data/pmproofs-unified33.txt -s -l -w -d", " ");
+		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 35 -u", " ");
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly-noWrap.txt -s", " ");
 		argc = customCmd.size();
 		argv = new char*[customCmd.size()];
@@ -214,7 +216,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
 		switch (get<0>(t)) {
 		case Task::Generate:
-			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
+			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
 			break;
 		case Task::CreateReplacements:
 			ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")\n";
@@ -237,8 +239,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
 			switch (get<0>(t)) {
 			case Task::Generate:
-				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", 1, " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")." << endl;
-				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), 1, get<6>(t), get<7>(t));
+				cout << "[Main] Calling generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")." << endl;
+				DlProofEnumerator::generateDProofRepresentativeFiles(get<1>(t), get<6>(t), get<7>(t));
 				break;
 			case Task::CreateReplacements:
 				cout << "[Main] Calling createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")." << endl;

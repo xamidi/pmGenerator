@@ -358,11 +358,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 	return representativeProofs;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32_t distributedNodesAmount, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
-	if (distributedNodesAmount > 1 && redundantSchemaRemoval) { // TODO: Utilize 'distributedNodesAmount'.
-		cerr << "Disabled redundant schema filtering due to multi-node computation." << endl;
-		redundantSchemaRemoval = false;
-	}
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
@@ -433,6 +429,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 	//      25:  61647.44 ms ( 1 min  1 s 647.44 ms) total parse, conversion & insertion duration.  |                     93.01 ms total insertion duration.
 	//      27: 213272.64 ms ( 3 min 33 s 272.64 ms) total parse, conversion & insertion duration.  |                    293.06 ms total insertion duration.
 	//      29: 741236.66 ms (12 min 21 s 236.66 ms) total parse, conversion & insertion duration.  |                    877.29 ms total insertion duration.
+	//#cout << "Done loading (measure memory requirement)." << endl; while (true);
 
 	// 4. Compute and store new representatives indefinitely.
 	for (uint32_t wordLengthLimit = start; wordLengthLimit <= limit; wordLengthLimit += 2) {
@@ -573,12 +570,43 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, uint32
 		} else
 			allRepresentatives.push_back(vector<string>(newRepresentativeSequences.begin(), newRepresentativeSequences.end()));
 
-		// 4.8 Store information permanently.
+		// 4.8 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
-		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
-		string content = withConclusions ? FctHelper::mapStringF(newContent, [](const pair<const string, string>& p) { return p.first + ":" + p.second; }, { }, { }, "\n") : FctHelper::vectorString(allRepresentatives.back(), { }, { }, "\n");
-		FctHelper::writeToFile(file, content);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
+		filesystem::path file = filesystem::u8path(filePrefix + to_string(wordLengthLimit) + filePostfix);
+		string::size_type bytes = 0;
+		{
+			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives.back().size() << " entries to " << file.string() << "." << endl;
+			ofstream fout(file, fstream::out | fstream::binary);
+			bool first = true;
+			if (withConclusions)
+				for (const pair<const string, string>& p : newContent) {
+					const string& dProof = p.first;
+					const string& conclusion = p.second;
+					if (first) {
+						bytes += dProof.length() + conclusion.length() + 1;
+						fout << dProof << ":" << conclusion;
+						first = false;
+					} else {
+						bytes += dProof.length() + conclusion.length() + 2;
+						fout << "\n" << dProof << ":" << conclusion;
+					}
+				}
+			else
+				for (const string& s : allRepresentatives.back()) {
+					if (first) {
+						bytes += s.length();
+						fout << s;
+						first = false;
+					} else {
+						bytes += s.length() + 1;
+						fout << "\n" << s;
+					}
+				}
+		}
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 	}
 	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
 	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
