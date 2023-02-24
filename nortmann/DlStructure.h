@@ -22,7 +22,7 @@ struct DlStructure {
 	//  Y -> 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Y 0 | Y 1 | Y 2 | Y 3 | Y 4 | Y 5 | Y 6 | Y 7 | Y 8 | Y 9
 	static grammar::CfgGrammar& dlEvaluationGrammar();
 
-	// Grammar constants (of dlEvaluationGrammar()) ; used in method evaluateParseTree() for fast expression evaluation
+	// Grammar constants (of dlEvaluationGrammar())
 	static const uint32_t& nonterminal_at();
 	static const uint32_t& nonterminal_S();
 	static const uint32_t& nonterminal_A();
