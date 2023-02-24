@@ -595,7 +595,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 					}
 				}
 			else
-				for (const string& s : allRepresentatives.back()) {
+				for (const string& s : allRepresentatives.back())
 					if (first) {
 						bytes += s.length();
 						fout << s;
@@ -604,7 +604,6 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						bytes += s.length() + 1;
 						fout << "\n" << s;
 					}
-				}
 		}
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 	}
@@ -648,12 +647,31 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputF
 			//#cout << FctHelper::mapStringF(result, [](const pair<const string, string>& p) { return p.first + ":" + p.second; }, { }, { }, "\n");
 		}
 
-		// 3. Store generated D-proofs together with their conclusions permanently.
+		// 3. Store generated D-proofs together with their conclusions permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
-		string file = outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix);
-		string content = FctHelper::mapStringF(result, [](const pair<const string, string>& p) { return p.first + ":" + p.second; }, { }, { }, "\n");
-		FctHelper::writeToFile(file, content);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
+		filesystem::path file = filesystem::u8path(outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix));
+		string::size_type bytes = 0;
+		{
+			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << result.size() << " entries to " << file.string() << "." << endl;
+			ofstream fout(file, fstream::out | fstream::binary);
+			bool first = true;
+			for (const pair<const string, string>& p : result) {
+				const string& dProof = p.first;
+				const string& conclusion = p.second;
+				if (first) {
+					bytes += dProof.length() + conclusion.length() + 1;
+					fout << dProof << ":" << conclusion;
+					first = false;
+				} else {
+					bytes += dProof.length() + conclusion.length() + 2;
+					fout << "\n" << dProof << ":" << conclusion;
+				}
+			}
+		}
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 
 		//#if (wordLengthLimit <= 15)
 		//#	cout << "const vector<string> Resources::dProofConclusions" << wordLengthLimit << " = " << FctHelper::mapStringF(result, [](const pair<const string, string>& p) { return p.second; }, "{ \"", "\" };", "\", \"") << endl;
@@ -681,13 +699,29 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& inp
 		return;
 	}
 
-	// 2. Store generated D-proofs without their conclusions permanently.
+	// 2. Store generated D-proofs without their conclusions permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) {
 		startTime = chrono::steady_clock::now();
-		string file = outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix);
-		string content = FctHelper::vectorString(allRepresentatives[wordLengthLimit], { }, { }, "\n");
-		FctHelper::writeToFile(file, content);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
+		filesystem::path file = filesystem::u8path(outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix));
+		string::size_type bytes = 0;
+		{
+			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives[wordLengthLimit].size() << " entries to " << file.string() << "." << endl;
+			ofstream fout(file, fstream::out | fstream::binary);
+			bool first = true;
+			for (const string& s : allRepresentatives[wordLengthLimit])
+				if (first) {
+					bytes += s.length();
+					fout << s;
+					first = false;
+				} else {
+					bytes += s.length() + 1;
+					fout << "\n" << s;
+				}
+		}
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 	}
 }
 
