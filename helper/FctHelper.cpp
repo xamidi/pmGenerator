@@ -2,7 +2,6 @@
 
 #include "Resources.h"
 
-#include <iomanip> // for setbase
 #include <iostream>
 #include <math.h>
 

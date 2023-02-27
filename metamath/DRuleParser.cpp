@@ -615,7 +615,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 						const vector<shared_ptr<DlFormula>>& children = node->getChildren();
 						const string& value = node->getValue()->value;
 						if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-							shared_ptr<DlFormula> clone(new DlFormula(node->getValue()));
+							shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
 							for (const shared_ptr<DlFormula>& child : children)
 								clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
 							knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
@@ -722,7 +722,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 							const vector<shared_ptr<DlFormula>>& children = node->getChildren();
 							const string& value = node->getValue()->value;
 							if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-								shared_ptr<DlFormula> clone(new DlFormula(node->getValue()));
+								shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
 								for (const shared_ptr<DlFormula>& child : children)
 									clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
 								knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).

@@ -351,7 +351,7 @@ shared_ptr<DlFormula> DlCore::toBasicDlFormula(const shared_ptr<DlFormula>& form
 		__originals = make_unique<unordered_map<shared_ptr<DlFormula>, shared_ptr<DlFormula>>>();
 		optOut_originals = __originals.get();
 	}
-	shared_ptr<DlFormula> rootNode(new DlFormula(make_shared<String>()));
+	shared_ptr<DlFormula> rootNode = make_shared<DlFormula>(make_shared<String>());
 	_toBasicDlFormula(rootNode, formula, optOut_originals, calculateMeanings);
 	if (extra) {
 		bool hasUniqueOriginals = true;
@@ -379,19 +379,19 @@ void DlCore::_toBasicDlFormula(const shared_ptr<DlFormula>& destinationNode, con
 	if (itOperator != dlOperators().end()) { // at an operator
 		const vector<shared_ptr<DlFormula>>& subformulas = formula->getChildren();
 		auto argumentNode = [&](unsigned childIndex) -> shared_ptr<DlFormula> {
-			shared_ptr<DlFormula> node(new DlFormula(make_shared<String>()));
+			shared_ptr<DlFormula> node = make_shared<DlFormula>(make_shared<String>());
 			_toBasicDlFormula(node, subformulas[childIndex], optOut_originals, calculateMeanings); // NOTE: Also adds originals in case optOut_originals is requested.
 			return node;
 		};
 		auto extraUnaryOp = [&](const string& terminalStr, const shared_ptr<DlFormula>& onlyChild) -> shared_ptr<DlFormula> {
-			shared_ptr<DlFormula> node(new DlFormula(shared_ptr<String>(new String(terminalStr))));
+			shared_ptr<DlFormula> node = make_shared<DlFormula>(make_shared<String>(terminalStr));
 			node->addChild(onlyChild);
 			if (calculateMeanings)
 				recalculateMeaningUsingMeaningOfChildren(node);
 			return node;
 		};
 		auto extraBinaryOp = [&](const string& terminalStr, const shared_ptr<DlFormula>& leftChild, const shared_ptr<DlFormula>& rightChild) -> shared_ptr<DlFormula> {
-			shared_ptr<DlFormula> node(new DlFormula(shared_ptr<String>(new String(terminalStr))));
+			shared_ptr<DlFormula> node = make_shared<DlFormula>(make_shared<String>(terminalStr));
 			node->addChild(leftChild);
 			node->addChild(rightChild);
 			if (calculateMeanings)
@@ -417,7 +417,7 @@ void DlCore::_toBasicDlFormula(const shared_ptr<DlFormula>& destinationNode, con
 		};
 		auto firstVariable = []() -> shared_ptr<DlFormula> {
 			vector<uint32_t> variableNameSequence = { digits()[0] };
-			return shared_ptr<DlFormula>(new DlFormula(variableNameSequence, shared_ptr<String>(new String(variableToLabel()[0]))));
+			return make_shared<DlFormula>(variableNameSequence, make_shared<String>(variableToLabel()[0]));
 		};
 		switch (itOperator->second) {
 		case DlOperator::And: // X\andY = \not(X\imply\notY)
@@ -804,7 +804,7 @@ string DlCore::toPolishNotation_noRename(const shared_ptr<DlFormula>& f, bool pr
 		};
 		string str = valToString(node->getValue()->value, startsWithVar);
 		bool prevEndsWithVar = startsWithVar;
-		for (uint32_t i = 0; i < node->getChildren().size(); i++) {
+		for (size_t i = 0; i < node->getChildren().size(); i++) {
 			bool childStartsWithVar, childEndsWithVar;
 			string tmp = me(node->getChildren()[i], childStartsWithVar, childEndsWithVar, me);
 			str += prevEndsWithVar && childStartsWithVar ? "." + tmp : tmp;
@@ -1060,7 +1060,7 @@ string DlCore::substitutionRepresentation_traverse(const map<string, shared_ptr<
 }
 
 shared_ptr<DlFormula> DlCore::substitute(const shared_ptr<DlFormula>& formula, const map<string, shared_ptr<DlFormula>>& substitutions) {
-	shared_ptr<DlFormula> rootNode(new DlFormula(make_shared<String>()));
+	shared_ptr<DlFormula> rootNode = make_shared<DlFormula>(make_shared<String>());
 	_substitute(rootNode, formula, substitutions);
 	return rootNode;
 }
@@ -1074,7 +1074,7 @@ void DlCore::_substitute(const shared_ptr<DlFormula>& destinationNode, const sha
 			*destinationNode = *formula; // copy original primitive (includes meaning)
 	} else {
 		for (const shared_ptr<DlFormula>& subformula : formula->getChildren()) {
-			shared_ptr<DlFormula> childNode(new DlFormula(make_shared<String>()));
+			shared_ptr<DlFormula> childNode = make_shared<DlFormula>(make_shared<String>());
 			destinationNode->addChild(childNode);
 			_substitute(childNode, subformula, substitutions);
 		}

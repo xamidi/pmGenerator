@@ -4,6 +4,8 @@
 #include "../helper/ICloneable.h"
 #include "../helper/IPrintable.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iomanip>
 #include <unordered_set>
@@ -21,25 +23,25 @@ class TreeNode: public helper::IPointToPrintableValue<T>, public helper::IClonea
 	typedef std::unordered_map<const TreeNode<T>*, std::shared_ptr<TreeNode<T>>> TreeNodeCloneMap;
 	std::shared_ptr<T> _value;
 	std::vector<std::shared_ptr<TreeNode<T>>> _children;
-	std::vector<uint32_t> _meaning;
+	std::vector<std::uint32_t> _meaning;
 public:
 	TreeNode() { } // need a public default constructor for ICloneable
-	TreeNode(const std::vector<uint32_t>& meaning, const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : _value(value), _children(children), _meaning(meaning) { }
+	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : _value(value), _children(children), _meaning(meaning) { }
 	TreeNode(const std::shared_ptr<T>& value) : TreeNode( { }, value, { }) { }
-	TreeNode(const std::vector<uint32_t>& meaning, const std::shared_ptr<T>& value) : TreeNode(meaning, value, { }) { }
+	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value) : TreeNode(meaning, value, { }) { }
 	TreeNode(const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : TreeNode( { }, value, children) { }
-	bool hasMeaning(const std::vector<std::string>& meaning, const std::function<std::string(uint32_t)>& idLookup) const {
+	bool hasMeaning(const std::vector<std::string>& meaning, const std::function<std::string(std::uint32_t)>& idLookup) const {
 		if (_meaning.size() != meaning.size())
 			return false;
-		for (uint32_t i = 0; i < _meaning.size(); i++)
+		for (std::size_t i = 0; i < _meaning.size(); i++)
 			if (idLookup(_meaning[i]) != meaning[i])
 				return false;
 		return true;
 	}
-	bool hasMeaning(const std::vector<uint32_t>& meaning) const {
+	bool hasMeaning(const std::vector<std::uint32_t>& meaning) const {
 		if (_meaning.size() != meaning.size())
 			return false;
-		for (uint32_t i = 0; i < _meaning.size(); i++)
+		for (std::size_t i = 0; i < _meaning.size(); i++)
 			if (_meaning[i] != meaning[i])
 				return false;
 		return true;
@@ -59,20 +61,20 @@ public:
 	std::vector<std::shared_ptr<TreeNode<T>>>& children() { // to freely manipulate children
 		return _children;
 	}
-	const std::vector<uint32_t>& getMeaning() const { // to receive unmodifiable meaning
+	const std::vector<std::uint32_t>& getMeaning() const { // to receive unmodifiable meaning
 		return _meaning;
 	}
-	std::vector<uint32_t>& meaning() { // to freely manipulate meaning
+	std::vector<std::uint32_t>& meaning() { // to freely manipulate meaning
 		return _meaning;
 	}
-	size_t height() const {
-		size_t height = 0;
-		auto recurse = [&height](const TreeNode<T>* node, size_t depth, const auto& me) -> void {
+	std::size_t height() const {
+		std::size_t height = 0;
+		auto recurse = [&height](const TreeNode<T>* node, std::size_t depth, const auto& me) -> void {
 			if (node->_children.empty()) {
 				if (depth > height)
 					height = depth;
 			} else
-				for (uint32_t i = 0; i < node->_children.size(); i++)
+				for (std::size_t i = 0; i < node->_children.size(); i++)
 					me(node->_children[i].get(), depth + 1, me);
 		};
 		recurse(this, 0, recurse);
@@ -95,22 +97,22 @@ public:
 
 	// Representations
 	std::string toAddressString() {
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const uint32_t& indent = 0) -> std::string {
-			auto toBase16 = [](size_t value) {
+		auto recurse = [](const TreeNode<T>* node, const auto& me, const std::uint32_t& indent = 0) -> std::string {
+			auto toBase16 = [](std::size_t value) {
 				std::stringstream ss;
 				ss << std::setbase(16) << value;
 				return ss.str();
 			};
 			std::string str;
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			if (node->_children.empty())
-				str += "0x" + toBase16((size_t) node) + "\n";
+				str += "0x" + toBase16((std::size_t) node) + "\n";
 			else {
-				str += "0x" + toBase16((size_t) node) + " -> [\n";
-				for (uint32_t i = 0; i < node->_children.size(); i++)
+				str += "0x" + toBase16((std::size_t) node) + " -> [\n";
+				for (std::size_t i = 0; i < node->_children.size(); i++)
 					str += me(node->_children[i].get(), me, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
+				for (std::uint32_t i = 0; i < indent; i++)
 					str += "\t";
 				str += "]\n";
 			}
@@ -119,17 +121,17 @@ public:
 		return recurse(this, recurse);
 	}
 	std::string toString(const auto& fTtoString) const {
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const auto& fTtoString, const uint32_t& indent = 0) -> std::string {
+		auto recurse = [](const TreeNode<T>* node, const auto& me, const auto& fTtoString, const std::uint32_t& indent = 0) -> std::string {
 			std::string str;
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			if (node->_children.empty())
 				str += fTtoString(*node->_value) + std::string("\n");
 			else {
 				str += fTtoString(*node->_value) + std::string(" -> [\n");
-				for (uint32_t i = 0; i < node->_children.size(); i++)
+				for (std::size_t i = 0; i < node->_children.size(); i++)
 					str += me(node->_children[i].get(), me, fTtoString, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
+				for (std::uint32_t i = 0; i < indent; i++)
 					str += "\t";
 				str += "]\n";
 			}
@@ -138,17 +140,17 @@ public:
 		return recurse(this, recurse, fTtoString);
 	}
 	std::string toString() const override { // override for IPrintable<T> from IPointToPrintableValue<T>
-		auto recurse = [](const TreeNode<T>* node, const auto& me, const uint32_t& indent = 0) -> std::string {
+		auto recurse = [](const TreeNode<T>* node, const auto& me, const std::uint32_t& indent = 0) -> std::string {
 			std::string str;
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			if (node->_children.empty())
 				str += node->_value->toString() + "\n";
 			else {
 				str += node->_value->toString() + " -> [\n";
-				for (uint32_t i = 0; i < node->_children.size(); i++)
+				for (std::size_t i = 0; i < node->_children.size(); i++)
 					str += me(node->_children[i].get(), me, indent + 1);
-				for (uint32_t i = 0; i < indent; i++)
+				for (std::uint32_t i = 0; i < indent; i++)
 					str += "\t";
 				str += "]\n";
 			}

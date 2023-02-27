@@ -1,6 +1,7 @@
 #ifndef XAMID_NORTMANN_DLFORMULA_H
 #define XAMID_NORTMANN_DLFORMULA_H
 
+#include <cstddef>
 #include <memory>
 
 namespace xamid {
@@ -15,7 +16,7 @@ typedef tree::TreeNode<helper::String> DlFormula; // NOTE: Even though possible,
 // given that formulas cannot contain symbols "[", "]" or ",", and all primitives being represented by non-empty strings.
 struct dlFormulaHash {
 	static std::string representativeString(const std::shared_ptr<DlFormula>& f);
-	size_t operator()(const std::shared_ptr<DlFormula>& f) const;
+	std::size_t operator()(const std::shared_ptr<DlFormula>& f) const;
 };
 struct dlFormulaEqual {
 	bool operator()(const std::shared_ptr<DlFormula>& f, const std::shared_ptr<DlFormula>& g) const;

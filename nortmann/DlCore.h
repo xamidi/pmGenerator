@@ -3,6 +3,7 @@
 
 #include <tbb/version.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -41,7 +42,7 @@ struct dlFormulaHash;
 struct dlFormulaEqual;
 enum class DlOperator;
 
-#define FOURCC(a, b, c, d) ((uint32_t) (((d) << 24) | ((c) << 16) | ((b) << 8) | (a)))
+#define FOURCC(a, b, c, d) ((std::uint32_t) (((d) << 24) | ((c) << 16) | ((b) << 8) | (a)))
 enum {
 	MMID_LEFT = FOURCC('(', 0, 0, 0), //      (
 	MMID_RIGHT = FOURCC(')', 0, 0, 0), //     )
@@ -125,8 +126,8 @@ struct DlCore {
 	static const std::shared_ptr<helper::String>& obtainDefiniteOpSymbol(DlOperator op);
 
 	// Shared grammar and variable information (this is handy e.g. for proofs, so that translations of formulas between proofs are easy)
-	static const std::vector<uint32_t>& digits();
-	static tbb_concurrent_map<std::string, std::vector<uint32_t>>& labelToTerminalSymbols_variables();
+	static const std::vector<std::uint32_t>& digits();
+	static tbb_concurrent_map<std::string, std::vector<std::uint32_t>>& labelToTerminalSymbols_variables();
 	static tbb_concurrent_vector<std::string>& variableToLabel();
 	static tbb_concurrent_unordered_map<std::string, std::string>& variableMeaningToLabel();
 
@@ -139,12 +140,12 @@ struct DlCore {
 	//       uniquely determined. In case of such "collisions", 'optOut_representativeOriginals' utilizes originals with minimal meaning lengths.
 	static std::shared_ptr<DlFormula> toBasicDlFormula(const std::shared_ptr<DlFormula>& formula, std::unordered_map<std::shared_ptr<DlFormula>, std::shared_ptr<DlFormula>>* optOut_originals = nullptr, bool* optOut_hasUniqueOriginals = nullptr, std::unordered_map<std::shared_ptr<DlFormula>, std::shared_ptr<DlFormula>, dlFormulaHash, dlFormulaEqual>* optOut_representativeOriginals = nullptr, bool calculateMeanings = true);
 
-	static bool tryRegisterVariable(const std::string& variableName, std::vector<uint32_t>* optOut_variableNameSequence = nullptr);
+	static bool tryRegisterVariable(const std::string& variableName, std::vector<std::uint32_t>* optOut_variableNameSequence = nullptr);
 
 	// Determine whether 'potentialSchema' can be substituted to 'formula', and for which substitution. Note that substitution entries contain references to nodes of 'formula'.
 	static bool isSchemaOf(const std::shared_ptr<DlFormula>& potentialSchema, const std::shared_ptr<DlFormula>& formula, std::map<std::string, std::shared_ptr<DlFormula>>* optOut_substitutions = nullptr);
 	// Variant where inputs are given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
-	static bool isSchemaOf_polishNotation_noRename_numVars(const std::string& potentialSchema, const std::string& formula, std::map<size_t, std::string>* optOut_substitutions = nullptr);
+	static bool isSchemaOf_polishNotation_noRename_numVars(const std::string& potentialSchema, const std::string& formula, std::map<std::size_t, std::string>* optOut_substitutions = nullptr);
 
 	// Determines whether there exists a unifier for the given formulas, i.e. a substitution that results in the same substituted formula for both of the given formulas.
 	// Essentially applies Robinson's unification algorithm, but modified such that the substituted formulas are not constructed but implicitly compared.
@@ -175,10 +176,10 @@ struct DlCore {
 
 	// Calculate the formula's symbolic length (i.e. the amount of nodes of its syntax tree), where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(),
 	// and all variable names consist of only numerical characters.
-	static size_t symbolicLen_polishNotation_noRename_numVars(const std::string& formula);
+	static std::size_t symbolicLen_polishNotation_noRename_numVars(const std::string& formula);
 
 	// Calculate the formula's standard length, where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
-	static size_t standardLen_polishNotation_noRename_numVars(const std::string& formula);
+	static std::size_t standardLen_polishNotation_noRename_numVars(const std::string& formula);
 
 	// Traverse the given amount of (sub-)formulas of the given formula in Łukasiewicz-format provided by toPolishNotation_noRename(), and return the index of the final character.
 	static std::string::size_type traverseFormulas_polishNotation_noRename_numVars(const std::string& formula, std::string::size_type startIndex = 0, std::string::size_type formulasToTraverse = 1);

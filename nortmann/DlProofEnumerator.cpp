@@ -12,6 +12,7 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
+#include <cstring>
 #include <execution>
 #include <iostream>
 
