@@ -14,7 +14,7 @@ string dlFormulaHash::representativeString(const shared_ptr<DlFormula>& f) {
 	const vector<shared_ptr<DlFormula>>& children = f->getChildren();
 	const string& value = f->getValue()->value;
 	string str_children;
-	for (uint32_t i = 0; i < children.size(); i++) {
+	for (size_t i = 0; i < children.size(); i++) {
 		if (i)
 			str_children += ",";
 		str_children += representativeString(children[i]);

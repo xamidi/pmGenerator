@@ -2,6 +2,7 @@
 #include "metamath/DRuleReducer.h"
 #include "nortmann/DlProofEnumerator.h"
 
+#include <cstring>
 #include <ctime>
 #include <iostream>
 

@@ -4,6 +4,8 @@
 #include "../helper/ICloneable.h"
 #include "../helper/IPrintable.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iomanip>
 #include <sstream>
@@ -23,25 +25,25 @@ class TreeNode: public helper::IPointToPrintableValue<T>, public helper::IClonea
 	typedef std::unordered_map<const TreeNode<T>*, std::shared_ptr<TreeNode<T>>> TreeNodeCloneMap;
 	std::shared_ptr<T> _value;
 	std::vector<std::shared_ptr<TreeNode<T>>> _children;
-	std::vector<uint32_t> _meaning;
+	std::vector<std::uint32_t> _meaning;
 public:
 	TreeNode() { } // need a public default constructor for ICloneable
-	TreeNode(const std::vector<uint32_t>& meaning, const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : _value(value), _children(children), _meaning(meaning) { }
+	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : _value(value), _children(children), _meaning(meaning) { }
 	TreeNode(const std::shared_ptr<T>& value) : TreeNode( { }, value, { }) { }
-	TreeNode(const std::vector<uint32_t>& meaning, const std::shared_ptr<T>& value) : TreeNode(meaning, value, { }) { }
+	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value) : TreeNode(meaning, value, { }) { }
 	TreeNode(const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : TreeNode( { }, value, children) { }
-	bool hasMeaning(const std::vector<std::string>& meaning, const std::function<std::string(uint32_t)>& idLookup) const {
+	bool hasMeaning(const std::vector<std::string>& meaning, const std::function<std::string(std::uint32_t)>& idLookup) const {
 		if (_meaning.size() != meaning.size())
 			return false;
-		for (uint32_t i = 0; i < _meaning.size(); i++)
+		for (std::size_t i = 0; i < _meaning.size(); i++)
 			if (idLookup(_meaning[i]) != meaning[i])
 				return false;
 		return true;
 	}
-	bool hasMeaning(const std::vector<uint32_t>& meaning) const {
+	bool hasMeaning(const std::vector<std::uint32_t>& meaning) const {
 		if (_meaning.size() != meaning.size())
 			return false;
-		for (uint32_t i = 0; i < _meaning.size(); i++)
+		for (std::size_t i = 0; i < _meaning.size(); i++)
 			if (_meaning[i] != meaning[i])
 				return false;
 		return true;
@@ -61,24 +63,24 @@ public:
 	std::vector<std::shared_ptr<TreeNode<T>>>& children() { // to freely manipulate children
 		return _children;
 	}
-	const std::vector<uint32_t>& getMeaning() const { // to receive unmodifiable meaning
+	const std::vector<std::uint32_t>& getMeaning() const { // to receive unmodifiable meaning
 		return _meaning;
 	}
-	std::vector<uint32_t>& meaning() { // to freely manipulate meaning
+	std::vector<std::uint32_t>& meaning() { // to freely manipulate meaning
 		return _meaning;
 	}
 private:
-	void recurse_height(const TreeNode<T>* node, size_t depth, size_t& height) {
+	void recurse_height(const TreeNode<T>* node, std::size_t depth, std::size_t& height) {
 		if (node->_children.empty()) {
 			if (depth > height)
 				height = depth;
 		} else
-			for (uint32_t i = 0; i < node->_children.size(); i++)
+			for (std::size_t i = 0; i < node->_children.size(); i++)
 				recurse_height(node->_children[i].get(), depth + 1, height);
 	}
 public:
-	size_t height() const {
-		size_t height = 0;
+	std::size_t height() const {
+		std::size_t height = 0;
 		recurse_height(this, 0, height);
 		return height;
 	}
@@ -99,22 +101,22 @@ public:
 
 	// Representations
 private:
-	std::string recurse_toAddressString(const TreeNode<T>* node, const uint32_t& indent = 0) {
-		auto toBase16 = [](size_t value) {
+	std::string recurse_toAddressString(const TreeNode<T>* node, const std::uint32_t& indent = 0) {
+		auto toBase16 = [](std::size_t value) {
 			std::stringstream ss;
 			ss << std::setbase(16) << value;
 			return ss.str();
 		};
 		std::string str;
-		for (uint32_t i = 0; i < indent; i++)
+		for (std::uint32_t i = 0; i < indent; i++)
 			str += "\t";
 		if (node->_children.empty())
-			str += "0x" + toBase16((size_t) node) + "\n";
+			str += "0x" + toBase16((std::size_t) node) + "\n";
 		else {
-			str += "0x" + toBase16((size_t) node) + " -> [\n";
-			for (uint32_t i = 0; i < node->_children.size(); i++)
+			str += "0x" + toBase16((std::size_t) node) + " -> [\n";
+			for (std::size_t i = 0; i < node->_children.size(); i++)
 				str += recurse_toAddressString(node->_children[i].get(), indent + 1);
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			str += "]\n";
 		}
@@ -126,17 +128,17 @@ public:
 	}
 private:
 	template<typename Func>
-	std::string recurse_toString(const TreeNode<T>* node, const Func& fTtoString, const uint32_t& indent = 0) const {
+	std::string recurse_toString(const TreeNode<T>* node, const Func& fTtoString, const std::uint32_t& indent = 0) const {
 		std::string str;
-		for (uint32_t i = 0; i < indent; i++)
+		for (std::uint32_t i = 0; i < indent; i++)
 			str += "\t";
 		if (node->_children.empty())
 			str += fTtoString(*node->_value) + std::string("\n");
 		else {
 			str += fTtoString(*node->_value) + std::string(" -> [\n");
-			for (uint32_t i = 0; i < node->_children.size(); i++)
+			for (std::size_t i = 0; i < node->_children.size(); i++)
 				str += recurse_toString(node->_children[i].get(), fTtoString, indent + 1);
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			str += "]\n";
 		}
@@ -148,17 +150,17 @@ public:
 		return recurse_toString(this, fTtoString);
 	}
 private:
-	std::string recurse_toString(const TreeNode<T>* node, const uint32_t& indent = 0) const {
+	std::string recurse_toString(const TreeNode<T>* node, const std::uint32_t& indent = 0) const {
 		std::string str;
-		for (uint32_t i = 0; i < indent; i++)
+		for (std::uint32_t i = 0; i < indent; i++)
 			str += "\t";
 		if (node->_children.empty())
 			str += node->_value->toString() + "\n";
 		else {
 			str += node->_value->toString() + " -> [\n";
-			for (uint32_t i = 0; i < node->_children.size(); i++)
+			for (std::size_t i = 0; i < node->_children.size(); i++)
 				str += recurse_toString(node->_children[i].get(), indent + 1);
-			for (uint32_t i = 0; i < indent; i++)
+			for (std::uint32_t i = 0; i < indent; i++)
 				str += "\t";
 			str += "]\n";
 		}

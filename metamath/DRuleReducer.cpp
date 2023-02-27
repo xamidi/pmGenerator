@@ -11,7 +11,7 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
-#include <boost/algorithm/string.hpp> // for boost::replace_all()
+#include <boost/algorithm/string.hpp>
 
 #include <iostream>
 

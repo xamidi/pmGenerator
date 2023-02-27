@@ -7,6 +7,7 @@
 
 #include <array>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
 #include <map>
 #include <thread>
@@ -20,7 +21,7 @@ enum class DlProofEnumeratorMode {
 
 struct DlProofEnumerator {
 	// Data loading
-	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, uint64_t* optOut_allRepresentativesCount = nullptr, uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
+	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, std::uint64_t* optOut_allRepresentativesCount = nullptr, std::uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
 	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::string>& representatives, helper::ProgressData* const progressData = nullptr);
 	static tbb::concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr);
 	static tbb::concurrent_unordered_map<std::string, std::string> connectDProofConclusions(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr);
@@ -31,7 +32,7 @@ struct DlProofEnumerator {
 	static std::vector<std::vector<std::string>> composeToLookupVector(const std::vector<const std::vector<std::string>*>& all);
 	static bool readRepresentativesLookupVectorFromFiles_seq(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
 	static bool readRepresentativesLookupVectorFromFiles_par(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, unsigned concurrencyCount = std::thread::hardware_concurrency(), const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
-	static std::vector<std::pair<std::array<uint32_t, 2>, unsigned>> proofLengthCombinations(uint32_t knownLimit);
+	static std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>> proofLengthCombinations(std::uint32_t knownLimit);
 
 	// Data generation
 	// Summarized, this shared memory parallelism utilizing function is able to generate D-proofs without redundant conclusions ('dProofs<k>.txt')_{k<=n} (where time quickly becomes a limiting factor),
@@ -39,7 +40,7 @@ struct DlProofEnumerator {
 	// The earlier one begins to generate D-proofs with redundant conclusions, the larger resulting files 'dProofs<m>-unfiltered<n+1>+.txt' become (with an exponential growth).
 	// 'dProofs1.txt', 'dProofs3.txt', ..., 'dProofs15.txt' are built-in, and 'dProofs17.txt', ..., 'dProofs29.txt' are available at https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withConclusions
 	// and https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withoutConclusions (150'170'911 bytes compressed into 'dProofs17-29.7z' of 1'005'537 bytes), so it is recommended to choose n >= 29.
-	static void generateDProofRepresentativeFiles(uint32_t limit = UINT32_MAX, bool redundantSchemaRemoval = true, bool withConclusions = true);
+	static void generateDProofRepresentativeFiles(std::uint32_t limit = UINT32_MAX, bool redundantSchemaRemoval = true, bool withConclusions = true);
 	// To create generator files with conclusions from those without, or vice versa. Generator files with conclusions are around four times bigger, with an increasing factor for increasing
 	// proof lengths, e.g. for 'dProofs17.txt' there is a factor (369412 bytes)/(93977 bytes) ≈ 3.93, and for 'dProofs29.txt' there is a factor (516720692 bytes)/(103477529 bytes) ≈ 4.99.
 	// Furthermore, files with conclusions have much higher entropy, thus can be compressed worse. For example, { 'dProofs17.txt', ..., 'dProofs29.txt' } can be compressed via LZMA to around
@@ -48,12 +49,12 @@ struct DlProofEnumerator {
 	static void createGeneratorFilesWithoutConclusions(const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", const std::string& outputFilePrefix = "data/dProofs-withoutConclusions/dProofs", bool debug = false);
 
 	// Data representation ; input files with conclusions are required
-	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, int64_t cutX = -1, int64_t cutY = -1, const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", std::ostream* mout = nullptr, bool debug = false);
+	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, std::int64_t cutX = -1, std::int64_t cutY = -1, const std::string& inputFilePrefix = "data/dProofs-withConclusions/dProofs", std::ostream* mout = nullptr, bool debug = false);
 
 	// Helper functions
 private:
-	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const std::vector<uint32_t>* genIn_stack = nullptr, const uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
-	static void _removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, helper::ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter);
+	static void _findProvenFormulas(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, std::uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, std::uint64_t* optOut_counter, std::uint64_t* optOut_conclusionCounter, std::uint64_t* optOut_redundantCounter, std::uint64_t* optOut_invalidCounter, const std::vector<std::uint32_t>* genIn_stack = nullptr, const std::uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
+	static void _removeRedundantConclusionsForProofsOfMaxLength(const std::uint32_t maxLength, tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, helper::ProgressData* const progressData, std::uint64_t& conclusionCounter, std::uint64_t& redundantCounter);
 
 public:
 	// Iterates condensed detachment strings for PL-proofs in D-notation, using knowledge of all representative proofs of length n or lower, which must be passed via 'allRepresentatives'.
@@ -63,15 +64,15 @@ public:
 	// One may customize what is being iterated by specifying the stack, i.e. { 0 } iterates all formulas, { s } for 0 < s <= n iterates formulas of length s, and
 	// { n + 2 } iterates all formulas of at least length n + 2. Note that this can be combined with 'wordLengthLimit' := n + 2 to iterate only formulas of length n + 2.
 	template<typename Func>
-	static void processCondensedDetachmentPlProofs_generic(const std::vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t n, const std::vector<const std::vector<std::string>*>& allRepresentatives, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	static void processCondensedDetachmentPlProofs_generic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<const std::vector<std::string>*>& allRepresentatives, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		processCondensedDetachmentPlProofs_generic(stack, wordLengthLimit, n, composeToLookupVector(allRepresentatives), fString, concurrencyCount);
 	}
 	template<typename Func>
-	static void processCondensedDetachmentPlProofs_generic(const std::vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	static void processCondensedDetachmentPlProofs_generic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		if (n % 2 == 0)
 			throw std::logic_error("Cannot have an even limit.");
 		std::string prefix;
-		std::vector<uint32_t> _stack = stack;
+		std::vector<std::uint32_t> _stack = stack;
 		if (concurrencyCount < 2) // call 'fString' only from this thread
 			_processCondensedDetachmentPlProofs_generic_seq(prefix, _stack, wordLengthLimit, n, allRepresentativesLookup, fString);
 		else { // call 'fString' from different threads ; NOTE: Iteration itself is super fast, so the worker threads' queues are loaded (and balanced while being processed) by this thread only.
@@ -84,7 +85,7 @@ public:
 	// Iterates condensed detachment strings for PL-proofs in D-notation.
 	// Strings of lengths of 3 and higher may not encode valid PL-proofs, i.e. may result in unification failures upon parsing.
 	template<typename Func>
-	static void processCondensedDetachmentPlProofs_naive(uint32_t wordLengthLimit, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	static void processCondensedDetachmentPlProofs_naive(std::uint32_t wordLengthLimit, const Func& fString, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		std::string prefix;
 		if (concurrencyCount < 2) // call 'fString' only from this thread
 			_processCondensedDetachmentPlProofs_naive_seq(prefix, 1, wordLengthLimit, fString);
@@ -97,10 +98,10 @@ public:
 
 private:
 	template<typename FuncA, typename FuncB> static void _loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs, const FuncA& loader, const FuncB& process);
-	template<typename Func> static void _processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString);
-	template<typename Func> static void _processCondensedDetachmentPlProofs_naive_seq(std::string& prefix, unsigned stackSize, uint32_t wordLengthLimit, const Func& fString);
-	static void _loadCondensedDetachmentPlProofs_generic_par(std::string& prefix, std::vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
-	static void _loadCondensedDetachmentPlProofs_naive_par(std::string& prefix, unsigned stackSize, uint32_t wordLengthLimit, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
+	template<typename Func> static void _processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString);
+	template<typename Func> static void _processCondensedDetachmentPlProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const Func& fString);
+	static void _loadCondensedDetachmentPlProofs_generic_par(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
+	static void _loadCondensedDetachmentPlProofs_naive_par(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
 };
 
 template<typename FuncA, typename FuncB>
@@ -118,7 +119,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	std::atomic<bool> incomplete { true }; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
 	auto worker = [&process, &queues, &cond, &mtxs, &incomplete](unsigned t) {
 		std::deque<std::string>& queue = queues[t];
-		size_t size = 0;
+		std::size_t size = 0;
 		// NOTE: It is important that we update 'size' here in case !incomplete, since 'queue' might become
 		//       filled and 'incomplete' false, while this condition is next to be processed in this thread.
 		//       Since 'incomplete' can only become false after all queues are filled and no more balancing
@@ -204,7 +205,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				sharingCandidates.erase(itLargest);
 			}
 		}
-		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; size_t size = queues[t].size(); ss << t << ": " << size; } return ss.str(); };
+		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; std::size_t size = queues[t].size(); ss << t << ": " << size; } return ss.str(); };
 		//#std::cout << queueSizesStr() << std::endl; // print sizes of queues when a balancing attempt just took place
 	}
 
@@ -216,9 +217,9 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 
 namespace {
 template<typename Func>
-void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<uint32_t>& stack, const uint32_t wordLengthLimit, const uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString, const std::vector<std::pair<std::array<uint32_t, 2>, unsigned>>& combinations) {
-	constexpr uint32_t S = 0;
-	const uint32_t A = knownLimit + 2;
+void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, const std::uint32_t wordLengthLimit, const std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString, const std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>>& combinations) {
+	constexpr std::uint32_t S = 0;
+	const std::uint32_t A = knownLimit + 2;
 	// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
 	if (prefix.length() + stack.size() > wordLengthLimit)
 		return;
@@ -226,7 +227,7 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 		fString(prefix);
 	else {
 		auto processN = [&](const std::vector<std::string>& representatives) {
-			std::vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
 			std::string prefix_copy; //          but the last option, in order to restore the parameters.
 			std::vector<std::string>::const_iterator last = std::prev(representatives.end());
 			for (std::vector<std::string>::const_iterator it = representatives.begin(); it != last; ++it) {
@@ -238,11 +239,11 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 			prefix += *last;
 			recurse_processCondensedDetachmentPlProofs_generic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, combinations);
 		};
-		uint32_t symbol = stack.back();
+		std::uint32_t symbol = stack.back();
 		if (symbol == S) {
 			stack.pop_back(); // pop already for all cases
 			// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
-			std::vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
 			std::string prefix_copy; //          but the last option, in order to restore the parameters.
 			auto processRepresentatives = [&](const std::vector<std::string>& representatives) {
 				for (const std::string& sequence : representatives) {
@@ -253,8 +254,8 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 				}
 			};
 			processRepresentatives(allRepresentatives[1]);
-			uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
-			for (uint32_t s = 3; s <= knownLimit; s += 2)
+			std::uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+			for (std::uint32_t s = 3; s <= knownLimit; s += 2)
 				if (remainingSpace >= s)
 					processRepresentatives(allRepresentatives[s]);
 
@@ -262,7 +263,7 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 			stack.push_back(A);
 			recurse_processCondensedDetachmentPlProofs_generic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, combinations);
 		} else if (symbol == A) {
-			uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+			std::uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
 			if (remainingSpace < knownLimit + 2)
 				return; // cancel already if adding the below sequences would exceed the word length limit
 			// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
@@ -270,10 +271,10 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 			// |combinations|/|combinations| : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
 			prefix += "D"; // same terminal for all cases, so all prefix already
 			stack.pop_back(); // pop already for all cases
-			std::vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
 			std::string prefix_copy; //          but the last option, in order to restore the parameters.
 			for (unsigned i = 0; i < combinations.size() - 1; i++) {
-				const std::pair<std::array<uint32_t, 2>, unsigned>& p = combinations[i];
+				const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[i];
 				if (remainingSpace < p.second)
 					return; // cancel already if adding the following sequences would exceed the word length limit
 				stack_copy = stack;
@@ -281,7 +282,7 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 				stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
 				recurse_processCondensedDetachmentPlProofs_generic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, combinations);
 			}
-			const std::pair<std::array<uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
+			const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
 			if (remainingSpace < p.second)
 				return; // cancel already if adding the final sequence would exceed the word length limit
 			stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
@@ -297,8 +298,8 @@ void recurse_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix,
 }
 }
 template<typename Func>
-void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString) {
-	const std::vector<std::pair<std::array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
+void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString) {
+	const std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
 	recurse_processCondensedDetachmentPlProofs_generic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, combinations);
 }
 
@@ -312,7 +313,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 //  3, S, ε
 //  D, S, SS
 template<typename Func>
-void DlProofEnumerator::_processCondensedDetachmentPlProofs_naive_seq(std::string& prefix, unsigned stackSize, uint32_t wordLengthLimit, const Func& fString) {
+void DlProofEnumerator::_processCondensedDetachmentPlProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const Func& fString) {
 	if (prefix.length() + stackSize > wordLengthLimit)
 		return;
 	if (!stackSize)

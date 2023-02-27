@@ -4,9 +4,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <iostream>
-#include <unordered_set>
-
 using namespace std;
 using namespace xamid::helper;
 
@@ -33,7 +30,7 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 		vector<string> grammarRule;
 		if (splitGrammarLine[1].find('|') != string::npos) { // multiple rules
 			vector<string> rightHandSideElements = FctHelper::stringSplit(splitGrammarLine[1], " | ");
-			for (uint32_t i = 0; i < rightHandSideElements.size(); i++)
+			for (size_t i = 0; i < rightHandSideElements.size(); i++)
 				grammarRule.push_back(rightHandSideElements[i]);
 			productionRules[splitGrammarLine[0]] = grammarRule;
 		} else { // single rule
@@ -48,7 +45,7 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 	_nonterminalStrings.push_back(_startSymbolString);
 	_nonterminalIds.push_back(_startSymbolId);
 	_idLookup.insert(make_pair(_startSymbolString, _startSymbolId));
-	for (uint32_t i = 0; i < nonterminals.size(); i++)
+	for (size_t i = 0; i < nonterminals.size(); i++)
 		if (nonterminals[i] != _startSymbolString) {
 			uint32_t id = _elementCounter++;
 			_nonterminalStringLookup.insert(make_pair(id, nonterminals[i]));
@@ -61,13 +58,13 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 	vector<string> terminals;
 	while (getline(reader2, grammarLine)) {
 		const vector<string>& ruleElements = FctHelper::stringSplit(grammarLine, " ");
-		for (uint32_t i = 1; i < ruleElements.size(); i++)
+		for (size_t i = 1; i < ruleElements.size(); i++)
 			if (!FctHelper::vectorContains(nonterminals, ruleElements[i]) && !FctHelper::vectorContains(terminals, ruleElements[i]) && (ruleElements[i] != "->") && (ruleElements[i] != "|"))
 				terminals.push_back(ruleElements[i]);
 	}
 
 	// 5. Fill terminal pointers
-	for (uint32_t i = 0; i < terminals.size(); i++) {
+	for (size_t i = 0; i < terminals.size(); i++) {
 		uint32_t id = _elementCounter++;
 		_terminalStringLookup.insert(make_pair(id, terminals[i]));
 		_terminalStrings.push_back(terminals[i]);
@@ -79,10 +76,10 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 	unordered_map<string, vector<string>>::const_iterator it = productionRules.begin();
 	while (it != productionRules.end()) {
 		vector<vector<uint32_t>> grammarRule;
-		for (uint32_t i = 0; i < it->second.size(); i++) {
+		for (size_t i = 0; i < it->second.size(); i++) {
 			vector<string> ruleStrElements = FctHelper::stringSplit(it->second[i], " ");
 			vector<uint32_t> ruleElements;
-			for (uint32_t j = 0; j < ruleStrElements.size(); j++)
+			for (size_t j = 0; j < ruleStrElements.size(); j++)
 				ruleElements.push_back(_idLookup[ruleStrElements[j]]);
 			grammarRule.push_back(ruleElements);
 		}
@@ -186,7 +183,7 @@ string CfgGrammar::productionString() const {
 		if (it != _productionRules.begin())
 			ss << ", ";
 		ss << stringOf(it->first) << "=[";
-		for (uint32_t i = 0; i < it->second.size(); ++i) {
+		for (size_t i = 0; i < it->second.size(); ++i) {
 			if (i)
 				ss << ", ";
 			ss << FctHelper::vectorString(stringsOf(it->second[i]));

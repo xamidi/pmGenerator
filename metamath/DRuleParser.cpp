@@ -241,7 +241,7 @@ shared_ptr<DlFormula> cloneSharedPtr_withUniquePrimitives(const shared_ptr<DlFor
 	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
 	const string& value = node->getValue()->value;
 	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-		shared_ptr<DlFormula> clone(new DlFormula(node->getValue()));
+		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
 		for (const shared_ptr<DlFormula>& child : children)
 			clone->addChild(child ? cloneSharedPtr_withUniquePrimitives(child, knownClones, primitiveReferences, registerFreshPrimitives) : nullptr);
 		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
@@ -268,7 +268,7 @@ shared_ptr<DlFormula> cloneSharedPtr_makePrimitivesUnique(const shared_ptr<DlFor
 	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
 	const string& value = node->getValue()->value;
 	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-		shared_ptr<DlFormula> clone(new DlFormula(node->getValue()));
+		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
 		for (const shared_ptr<DlFormula>& child : children)
 			clone->addChild(child ? cloneSharedPtr_makePrimitivesUnique(child, knownClones, primitiveReferences) : nullptr);
 		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).

@@ -4,7 +4,6 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include <iomanip> // for setbase
 #include <iostream>
 #include <math.h>
 

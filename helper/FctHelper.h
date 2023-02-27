@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <fstream>
 #include <map>
@@ -26,8 +28,8 @@ struct cmpStringShrink {
 
 struct FctHelper {
 	// Functions to quickly calculate to_string(n).length()
-	static unsigned digitsNum_uint32(uint32_t n);
-	static unsigned digitsNum_uint64(uint64_t n);
+	static unsigned digitsNum_uint32(std::uint32_t n);
+	static unsigned digitsNum_uint64(std::uint64_t n);
 
 	// To round 'x' to precisely 'n' digits after the decimal separator
 	static std::string round(long double x, unsigned n, char separator = '.');
@@ -55,7 +57,7 @@ struct FctHelper {
 	static std::string vectorString(const std::vector<T, U>& v, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
-		for (uint32_t i = 0; i < v.size(); ++i) {
+		for (std::size_t i = 0; i < v.size(); ++i) {
 			if (i)
 				ss << sep;
 			ss << v[i];
@@ -68,7 +70,7 @@ struct FctHelper {
 	static std::string vectorStringF(const std::vector<T, U>& v, const Func& f, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
-		for (uint32_t i = 0; i < v.size(); ++i) {
+		for (std::size_t i = 0; i < v.size(); ++i) {
 			if (i)
 				ss << sep;
 			ss << f(v[i]);

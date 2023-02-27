@@ -18,7 +18,7 @@ namespace helper {
 
 // General function to combine sets of hashable values to one hash
 template<class T>
-inline void hash_combine(size_t& seed, const T& v) {
+inline void hash_combine(std::size_t& seed, const T& v) {
 #if (SIZE_MAX == UINT64_MAX)
 	seed ^= std::hash<T>()(v) + 0x9e3779b97f4a7c15uLL + (seed << 6) + (seed >> 2);
 #else
@@ -27,16 +27,16 @@ inline void hash_combine(size_t& seed, const T& v) {
 }
 
 // Generic iterator over tuple elements, to combine all values in the tuple to one hash
-template<class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+template<class Tuple, std::size_t Index = std::tuple_size<Tuple>::value - 1>
 struct TupleHashValueImpl {
-	static void apply(size_t& seed, const Tuple& tuple) {
+	static void apply(std::size_t& seed, const Tuple& tuple) {
 		TupleHashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
 		hash_combine(seed, std::get<Index>(tuple));
 	}
 };
 template<class Tuple>
 struct TupleHashValueImpl<Tuple, 0> {
-	static void apply(size_t& seed, const Tuple& tuple) {
+	static void apply(std::size_t& seed, const Tuple& tuple) {
 		hash_combine(seed, std::get<0>(tuple));
 	}
 };
@@ -50,8 +50,8 @@ struct myhash: std::hash<_Tp> { // Supports everything that std::hash does, and 
 //###################################
 template<typename... TT>
 struct myhash<std::tuple<TT...>> {
-	size_t operator()(const std::tuple<TT...>& tt) const {
-		size_t seed = 0;
+	std::size_t operator()(const std::tuple<TT...>& tt) const {
+		std::size_t seed = 0;
 		TupleHashValueImpl<std::tuple<TT...>>::apply(seed, tt);
 		return seed;
 	}
@@ -62,8 +62,8 @@ struct myhash<std::tuple<TT...>> {
 //###################################
 template<typename T>
 struct myhash<std::vector<T>> {
-	size_t operator()(const std::vector<T>& vec) const {
-		size_t seed = vec.size();
+	std::size_t operator()(const std::vector<T>& vec) const {
+		std::size_t seed = vec.size();
 		for (const T& i : vec)
 			hash_combine(seed, i);
 		return seed;
@@ -75,8 +75,8 @@ struct myhash<std::vector<T>> {
 //###################################
 template<typename T, typename U>
 struct myhash<std::pair<T, U>> {
-	size_t operator()(const std::pair<T, U>& t) const {
-		size_t seed = 0;
+	std::size_t operator()(const std::pair<T, U>& t) const {
+		std::size_t seed = 0;
 		hash_combine(seed, t.first);
 		hash_combine(seed, t.second);
 		return seed;
