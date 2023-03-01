@@ -24,8 +24,14 @@ digraph {
 	FctHelper -> sstream [color=red]
 	FctHelper -> string [color=red]
 	FctHelper -> vector [color=red]
+	FwdTbb -> version [color=red]
+	FwdTbb -> tbb_stddef [color=red]
+	FwdTbb -> functional [color=red]
+	FwdTbb -> utility [color=red]
 	Hashing -> cstddef [color=red]
+	Hashing -> functional [color=red]
 	Hashing -> tuple [color=red]
+	Hashing -> utility [color=red]
 	Hashing -> vector [color=red]
 	ICloneable -> memory [color=red]
 	ICloneable -> unordered_map [color=red]
@@ -44,6 +50,7 @@ digraph {
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\helper" {
 		FctHelper
 		FctHelper
+		FwdTbb
 		Hashing
 		ICloneable
 		IPrintable
@@ -76,6 +83,7 @@ digraph {
 	DRuleParser -> tuple [color=red]
 	DRuleParser -> unordered_map [color=red]
 	DRuleParser -> unordered_set [color=red]
+	DRuleParser -> utility [color=red]
 	DRuleParser -> vector [color=red]
 	DRuleReducer -> FctHelper [color=blue]
 	DRuleReducer -> TreeNode [color=blue]
@@ -83,6 +91,7 @@ digraph {
 	DRuleReducer -> DlProofEnumerator [color=blue]
 	DRuleReducer -> DRuleParser [color=blue]
 	DRuleReducer -> concurrent_map [color=blue]
+	DRuleReducer -> concurrent_unordered_map [color=blue]
 	DRuleReducer -> concurrent_vector [color=blue]
 	DRuleReducer -> parallel_for [color=blue]
 	DRuleReducer -> "boost/algorithm/string" [color=blue]
@@ -106,19 +115,20 @@ digraph {
 	DlCore -> concurrent_vector [color=blue]
 	DlCore -> iostream [color=blue]
 	DlCore -> mutex [color=blue]
-	DlCore -> version [color=red]
+	DlCore -> FwdTbb [color=red]
 	DlCore -> cstddef [color=red]
 	DlCore -> cstdint [color=red]
-	DlCore -> functional [color=red]
 	DlCore -> map [color=red]
 	DlCore -> memory [color=red]
 	DlCore -> string [color=red]
 	DlCore -> unordered_map [color=red]
 	DlCore -> unordered_set [color=red]
+	DlCore -> vector [color=red]
 	DlFormula -> TreeNode [color=blue]
 	DlFormula -> DlCore [color=blue]
 	DlFormula -> cstddef [color=red]
 	DlFormula -> memory [color=red]
+	DlFormula -> string [color=red]
 	DlProofEnumerator -> FctHelper [color=blue]
 	DlProofEnumerator -> Resources [color=blue]
 	DlProofEnumerator -> TreeNode [color=blue]
@@ -126,13 +136,14 @@ digraph {
 	DlProofEnumerator -> DlCore [color=blue]
 	DlProofEnumerator -> DlFormula [color=blue]
 	DlProofEnumerator -> concurrent_map [color=blue]
+	DlProofEnumerator -> concurrent_unordered_map [color=blue]
 	DlProofEnumerator -> concurrent_vector [color=blue]
 	DlProofEnumerator -> parallel_for [color=blue]
 	DlProofEnumerator -> cstring [color=blue]
 	DlProofEnumerator -> execution [color=blue]
 	DlProofEnumerator -> iostream [color=blue]
+	DlProofEnumerator -> FwdTbb [color=red]
 	DlProofEnumerator -> ProgressData [color=red]
-	DlProofEnumerator -> concurrent_unordered_map [color=red]
 	DlProofEnumerator -> array [color=red]
 	DlProofEnumerator -> condition_variable [color=red]
 	DlProofEnumerator -> cstddef [color=red]
@@ -157,7 +168,9 @@ digraph {
 	TreeNode -> cstdint [color=red]
 	TreeNode -> functional [color=red]
 	TreeNode -> iomanip [color=red]
+	TreeNode -> sstream [color=red]
 	TreeNode -> unordered_set [color=red]
+	TreeNode -> vector [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\tree" {
 		TreeNode
 	}

@@ -8,7 +8,9 @@
 #include <cstdint>
 #include <functional>
 #include <iomanip>
+#include <sstream>
 #include <unordered_set>
+#include <vector>
 
 namespace xamid {
 namespace tree {
