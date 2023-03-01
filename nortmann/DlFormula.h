@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 
 namespace xamid {
 namespace helper { struct String; }
