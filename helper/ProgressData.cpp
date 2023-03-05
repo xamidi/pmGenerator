@@ -3,6 +3,7 @@
 #include "FctHelper.h"
 
 #include <cstring>
+#include <iostream>
 
 using namespace std;
 
@@ -50,7 +51,10 @@ bool ProgressData::nextState(uint64_t& percentage, string& progress, string& est
 		ss_progress << string(numeratorMaxLen - numeratorLen, ' ') << progressInSteps << " of " << (maximumEstimated ? "approximately " : "") << maximum;
 		progress = ss_progress.str();
 		chrono::microseconds durRemaining = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - startTime);
-		chrono::microseconds durFull = durRemaining * maximum / progressInSteps;
+		long double durUs = durRemaining.count() * (static_cast<long double>(maximum) / progressInSteps);
+		if (durUs > UINT64_MAX)
+			cerr << "Warning: Overflow in ProgressData::nextState() invalidated progress durations." << endl;
+		chrono::microseconds durFull(static_cast<uint64_t>(durUs));
 		durRemaining = durFull - durRemaining;
 		time_t time = chrono::system_clock::to_time_t(startTime + durFull);
 		stringstream ss_etc;

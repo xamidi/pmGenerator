@@ -40,6 +40,7 @@ digraph {
 	IPrintable -> string [color=red]
 	ProgressData -> FctHelper [color=blue]
 	ProgressData -> cstring [color=blue]
+	ProgressData -> iostream [color=blue]
 	ProgressData -> atomic [color=red]
 	ProgressData -> chrono [color=red]
 	ProgressData -> cstdint [color=red]
