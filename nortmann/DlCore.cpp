@@ -662,8 +662,8 @@ bool DlCore::_tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_
 			rhsComp = rhsHasSubstitution ? rhsSubstIt->second : rhs;
 			withinSubstRhs = rhsHasSubstitution; // remember that we applied a substitution on the right-hand side
 		}
-		string& lhsCompValue = lhsHasSubstitution ? lhsComp->getValue()->value : lhsValue;
-		string& rhsCompValue = rhsHasSubstitution ? rhsComp->getValue()->value : rhsValue;
+		const string& lhsCompValue = lhsHasSubstitution ? lhsComp->getValue()->value : lhsValue;
+		const string& rhsCompValue = rhsHasSubstitution ? rhsComp->getValue()->value : rhsValue;
 		if (lhsCompValue != rhsCompValue) { // string comparison
 			mismatch = make_pair(lhsComp, rhsComp); // store mismatching formulas
 			if (debug)

@@ -47,7 +47,7 @@ class IPointToPrintableValue: public IPrintable {
 
 struct String: public IPrintable {
 	std::string value;
-	String(const std::string& value);
+	explicit String(const std::string& value);
 	String();
 	virtual ~String();
 	virtual std::string toString() const override;

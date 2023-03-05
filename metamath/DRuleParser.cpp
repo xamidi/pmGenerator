@@ -608,7 +608,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 					auto cloneSharedPtr_withUniquePrimitives = [&](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
 						DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
 						if (searchResult != knownClones.end()) {
-							shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+							const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
 							if (knownCloneEntry)
 								return knownCloneEntry; // We can return the known clone itself (by reference).
 						}
@@ -715,7 +715,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 						auto cloneSharedPtr_makePrimitivesUnique = [](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
 							DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
 							if (searchResult != knownClones.end()) {
-								shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+								const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
 								if (knownCloneEntry)
 									return knownCloneEntry; // We can return the known clone itself (by reference).
 							}
@@ -868,8 +868,8 @@ shared_ptr<DlFormula> DRuleParser::parseMmPlConsequent(const string& strConseque
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid unary operator sequence \"" + string(unaryOperatorSequence) + "\" for input \"" + strConsequent + "\".");
 		shared_ptr<DlFormula> result = topLevelResult.second.second;
 		string currentPrefix;
-		for (vector<DlOperator>::reverse_iterator it = unaryOperators.rbegin(); it != unaryOperators.rend(); ++it) { // apply unary operators in reverse order
-			const DlOperator& op = *it;
+		for (vector<DlOperator>::const_reverse_iterator it = unaryOperators.rbegin(); it != unaryOperators.rend(); ++it) { // apply unary operators in reverse order
+			DlOperator op = *it;
 			if (op != DlOperator::Not)
 				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string((unsigned) op) + ".");
 			currentPrefix = "~ " + currentPrefix; // NOTE: It is only that simple since '~' (i.e. \not) is the only propositional unary operator.
@@ -943,7 +943,7 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 	auto applyUnaryOperators = [&](shared_ptr<DlFormula>& target, const vector<DlOperator>& unaryOperators) -> void {
 		for (vector<DlOperator>::const_reverse_iterator it = unaryOperators.rbegin(); it != unaryOperators.rend(); ++it) {
 			// Apply unary operators in reverse order
-			const DlOperator& op = *it;
+			DlOperator op = *it;
 			if (op != DlOperator::Not)
 				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string((unsigned) op) + ".");
 			target = make_shared<DlFormula>(_not(), vector<shared_ptr<DlFormula>> { target }); // NOTE: It is only that simple since '~' (i.e. \not) is the only propositional unary operator.

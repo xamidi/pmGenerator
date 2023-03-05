@@ -34,8 +34,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		startTime = chrono::steady_clock::now();
 	vector<string> knownDProofs;
 	for (const pair<const int, set<string>>& p : knownDProofsByLength)
-		for (const string& s : p.second)
-			knownDProofs.push_back(s);
+		copy(p.second.begin(), p.second.end(), knownDProofs.end());
 	if (debug) {
 		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
 		startTime = chrono::steady_clock::now();
@@ -48,7 +47,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	mutex mtx_set;
 	for_each(execution::par, knownDProofs.begin(), knownDProofs.end(), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](const string& s) {
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-		shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 		pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
 		{
 			lock_guard<mutex> lock(mtx_set);
@@ -162,7 +161,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 					extraParseCounter++;
 					// NOTE: If parsing took too long, we could clone B and substitute its variables to start from "0". But parsing isn't an issue here at all.
 					vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
-					shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+					const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 					pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
 
 					// 5.3 Update the structure for efficient iteration
@@ -400,7 +399,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 
 			// Check if we can substitute to desired consequent.
 			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			shared_ptr<DlFormula> reference = DlCore::toBasicDlFormula(consequent, nullptr, nullptr, nullptr, false);
 			map<string, shared_ptr<DlFormula>> substitutions;
 			if (!DlCore::isSchemaOf(conclusion, reference, &substitutions))

@@ -164,6 +164,7 @@ digraph {
 	}
 	TreeNode -> ICloneable [color=red]
 	TreeNode -> IPrintable [color=red]
+	TreeNode -> algorithm [color=red]
 	TreeNode -> cstddef [color=red]
 	TreeNode -> cstdint [color=red]
 	TreeNode -> functional [color=red]
