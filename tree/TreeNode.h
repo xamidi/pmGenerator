@@ -4,6 +4,7 @@
 #include "../helper/ICloneable.h"
 #include "../helper/IPrintable.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -29,7 +30,7 @@ class TreeNode: public helper::IPointToPrintableValue<T>, public helper::IClonea
 public:
 	TreeNode() { } // need a public default constructor for ICloneable
 	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : _value(value), _children(children), _meaning(meaning) { }
-	TreeNode(const std::shared_ptr<T>& value) : TreeNode( { }, value, { }) { }
+	explicit TreeNode(const std::shared_ptr<T>& value) : TreeNode( { }, value, { }) { }
 	TreeNode(const std::vector<std::uint32_t>& meaning, const std::shared_ptr<T>& value) : TreeNode(meaning, value, { }) { }
 	TreeNode(const std::shared_ptr<T>& value, const std::vector<std::shared_ptr<TreeNode<T>>>& children) : TreeNode( { }, value, children) { }
 	bool hasMeaning(const std::vector<std::string>& meaning, const std::function<std::string(std::uint32_t)>& idLookup) const {
@@ -198,16 +199,13 @@ public:
 
 	// Helper methods
 private:
-	bool recurse_cycleDetect(const TreeNode<T>* node, std::unordered_set<const TreeNode<T>*> knowAncestors) const {
-		if (knowAncestors.count(node))
+	bool recurse_cycleDetect(const TreeNode<T>* node, const std::unordered_set<const TreeNode<T>*>& knownAncestors) const {
+		if (knownAncestors.count(node))
 			return true;
 		const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
-		std::unordered_set<const TreeNode<T>*> knowAncestorsAndNode = knowAncestors;
-		knowAncestorsAndNode.emplace(node);
-		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-			if (recurse_cycleDetect(descendant.get(), knowAncestorsAndNode))
-				return true;
-		return false;
+		std::unordered_set<const TreeNode<T>*> knownAncestorsAndNode = knownAncestors;
+		knownAncestorsAndNode.emplace(node);
+		return std::any_of(children.begin(), children.end(), [&](const std::shared_ptr<TreeNode<T>>& descendant) { return recurse_cycleDetect(descendant.get(), knownAncestorsAndNode); });
 	}
 public:
 	bool cycleDetect() const {
@@ -215,29 +213,23 @@ public:
 	}
 private:
 	template<typename Func>
-	bool recurse_cycleDetect(const std::shared_ptr<TreeNode<T>>& node, std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestors, const Func& cycleHandler) const {
-		if (node.get() == this || knowAncestors.count(node)) {
+	bool recurse_cycleDetect(const std::shared_ptr<TreeNode<T>>& node, const std::unordered_set<std::shared_ptr<TreeNode<T>>>& knownAncestors, const Func& cycleHandler) const {
+		if (node.get() == this || knownAncestors.count(node)) {
 			// NOTE: We handle 'this' differently since we do not have a shared_ptr for it, but want to use one in case it has a cycle (in which case we found a shared_ptr for it).
 			cycleHandler(node);
 			return true;
 		}
 		const std::vector<std::shared_ptr<TreeNode<T>>>& children = node->getChildren();
-		std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestorsAndNode = knowAncestors;
-		knowAncestorsAndNode.emplace(node);
-		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-			if (recurse_cycleDetect(descendant, knowAncestorsAndNode, cycleHandler))
-				return true;
-		return false;
+		std::unordered_set<std::shared_ptr<TreeNode<T>>> knownAncestorsAndNode = knownAncestors;
+		knownAncestorsAndNode.emplace(node);
+		return std::any_of(children.begin(), children.end(), [&](const std::shared_ptr<TreeNode<T>>& descendant) { return recurse_cycleDetect(descendant, knownAncestorsAndNode, cycleHandler); });
 	}
 public:
 	template<typename Func>
 	bool cycleDetect(const Func& cycleHandler) const { // Cycle detection one-liner: node->cycleDetect([](const shared_ptr<TreeNode<T>>& cycle) { cerr << "Self reference found: " << *cycle->getValue() << endl; exit(0); });
 		const std::vector<std::shared_ptr<TreeNode<T>>>& children = getChildren();
-		std::unordered_set<std::shared_ptr<TreeNode<T>>> knowAncestorsAndNode;
-		for (const std::shared_ptr<TreeNode<T>>& descendant : children)
-			if (recurse_cycleDetect(descendant, knowAncestorsAndNode, cycleHandler))
-				return true;
-		return false;
+		std::unordered_set<std::shared_ptr<TreeNode<T>>> knownAncestorsAndNode;
+		return std::any_of(children.begin(), children.end(), [&](const std::shared_ptr<TreeNode<T>>& descendant) { return recurse_cycleDetect(descendant, knownAncestorsAndNode, cycleHandler); });
 	}
 };
 

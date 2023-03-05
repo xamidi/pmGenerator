@@ -31,7 +31,7 @@ struct ICloneable {
 			if (knownClones) {
 				typename CloneMap::iterator searchResult = knownClones->find(static_cast<const T*>(this));
 				if (searchResult != knownClones->end()) {
-					std::shared_ptr<T>& knownCloneEntry = searchResult->second;
+					const std::shared_ptr<T>& knownCloneEntry = searchResult->second;
 					if (knownCloneEntry)
 						return *knownCloneEntry; // return a copy of the known clone entry
 				}
@@ -56,7 +56,7 @@ struct ICloneable {
 			if (knownClones) {
 				typename CloneMap::iterator searchResult = knownClones->find(static_cast<const T*>(this));
 				if (searchResult != knownClones->end()) {
-					std::shared_ptr<T>& knownCloneEntry = searchResult->second;
+					const std::shared_ptr<T>& knownCloneEntry = searchResult->second;
 					if (knownCloneEntry) {
 						*clone = *knownCloneEntry; // Copying a clone is sufficient and the best we can do for unique_ptr.
 						return clone;
@@ -83,7 +83,7 @@ struct ICloneable {
 			if (knownClones) {
 				typename CloneMap::iterator searchResult = knownClones->find(static_cast<const T*>(this));
 				if (searchResult != knownClones->end()) {
-					std::shared_ptr<T>& knownCloneEntry = searchResult->second;
+					const std::shared_ptr<T>& knownCloneEntry = searchResult->second;
 					if (knownCloneEntry)
 						return knownCloneEntry; // We can return the known clone itself (by reference).
 				}

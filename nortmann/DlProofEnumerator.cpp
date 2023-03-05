@@ -281,7 +281,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& s = *it;
 			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			// NOTE: Definitely stores, since that is how the input files were constructed.
 			representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
@@ -312,7 +312,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 			for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 				const string& s = *it;
 				vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-				shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+				const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 				// NOTE: Definitely stores, since that is how the input files were constructed.
 				representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
@@ -886,7 +886,7 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
 		if (!(rawParseData = DRuleParser::parseDProof_raw(sequence)).empty()) {
-			shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), sequence);
 			if (!emplaceResult.second) { // a proof for the conclusion is already known
 				redundantCounter++;

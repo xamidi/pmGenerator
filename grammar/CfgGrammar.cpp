@@ -84,7 +84,7 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 			grammarRule.push_back(ruleElements);
 		}
 		_productionRules.insert(make_pair(_idLookup[it->first], grammarRule));
-		it++;
+		++it;
 	}
 }
 
@@ -172,8 +172,8 @@ uint32_t CfgGrammar::maybeStoreTerminal(const string& terminalString) {
 	return search->second;
 }
 
-uint32_t CfgGrammar::idLookup(const string& string) const {
-	return _idLookup.at(string);
+uint32_t CfgGrammar::idLookup(const string& s) const {
+	return _idLookup.at(s);
 }
 
 string CfgGrammar::productionString() const {
