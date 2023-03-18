@@ -9,7 +9,6 @@ digraph {
 		CfgGrammar
 		CfgGrammar
 	}
-	FctHelper -> Resources [color=blue]
 	FctHelper -> iostream [color=blue]
 	FctHelper -> math [color=blue]
 	FctHelper -> algorithm [color=red]
@@ -67,6 +66,7 @@ digraph {
 	main -> cstring [color=blue]
 	main -> ctime [color=blue]
 	main -> iostream [color=blue]
+	main -> unistd [color=blue]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
 		main
 	}

@@ -1,7 +1,5 @@
 #include "FctHelper.h"
 
-#include "Resources.h"
-
 #include <iostream>
 #include <math.h>
 

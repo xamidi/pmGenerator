@@ -5,6 +5,7 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#include <unistd.h>
 
 using namespace std;
 using namespace xamid::helper;
@@ -14,11 +15,11 @@ using namespace xamid::nortmann;
 struct A {
 	A() {
 		time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Process started." << endl;
+		cout << strtok(ctime(&time), "\n") << ": Process started. [pid: " << getpid() << ", tid:" << this_thread::get_id() << "]" << endl;
 	}
 	~A() {
 		time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Process terminated." << endl;
+		cout << strtok(ctime(&time), "\n") << ": Process terminated. [pid: " << getpid() << ", tid:" << this_thread::get_id() << "]" << endl;
 	}
 } a;
 
