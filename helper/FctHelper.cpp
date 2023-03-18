@@ -1,7 +1,5 @@
 #include "FctHelper.h"
 
-#include "Resources.h"
-
 #include <boost/filesystem/operations.hpp>
 
 #include <iostream>
