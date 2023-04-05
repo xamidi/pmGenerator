@@ -97,7 +97,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_seq(vector<vect
 	return true;
 }
 
-bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vector<string>>& allRepresentativesLookup, vector<vector<string>>* optOut_allConclusionsLookup, bool debug, unsigned concurrencyCount, const string& filePrefix, const string& filePostfix, bool initFresh) {
+bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vector<string>>& allRepresentativesLookup, vector<vector<string>>* optOut_allConclusionsLookup, bool debug, unsigned concurrencyCount, const string& filePrefix, const string& filePostfix, bool initFresh, size_t containerReserve) {
 	if (concurrencyCount < 2)
 		return readRepresentativesLookupVectorFromFiles_seq(allRepresentativesLookup, optOut_allConclusionsLookup, debug, filePrefix, filePostfix, initFresh); // system cannot execute threads concurrently
 	chrono::time_point<chrono::steady_clock> startTime;
@@ -116,6 +116,9 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 	vector<thread> threads;
 	unsigned t = 0;
 	bool abortAll = false;
+	allRepresentativesLookup.reserve(containerReserve); // ensure that no container reallocations happen during concurrent access, since they would result in data races
+	if (optOut_allConclusionsLookup)
+		optOut_allConclusionsLookup->reserve(containerReserve);
 	for (uint32_t wordLengthLimit = allRepresentativesLookup.size() + 1; true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		const string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		if (filesystem::exists(file)) { // load
