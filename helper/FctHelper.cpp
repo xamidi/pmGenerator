@@ -30,12 +30,12 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 
 unsigned FctHelper::digitsNum_uint32(uint32_t n) {
 	static constexpr uint32_t MaxTable[9] = { 10u, 100u, 1000u, 10000u, 100000u, 1000000u, 10000000u, 100000000u, 1000000000u };  // to_string(numeric_limits<uint32_t>::max()) = "4294967295" has length 10
-	return 1 + (upper_bound(MaxTable, MaxTable + 9, n) - MaxTable);
+	return 1 + static_cast<unsigned>(upper_bound(MaxTable, MaxTable + 9, n) - MaxTable);
 }
 
 unsigned FctHelper::digitsNum_uint64(uint64_t n) {
 	static constexpr uint64_t MaxTable[19] = { 10uLL, 100uLL, 1000uLL, 10000uLL, 100000uLL, 1000000uLL, 10000000uLL, 100000000uLL, 1000000000uLL, 10000000000uLL, 100000000000uLL, 1000000000000uLL, 10000000000000uLL, 100000000000000uLL, 1000000000000000uLL, 10000000000000000uLL, 100000000000000000uLL, 1000000000000000000uLL, 10000000000000000000uLL };  // to_string(numeric_limits<uint64_t>::max()) = "18446744073709551615" has length 20
-	return 1 + (upper_bound(MaxTable, MaxTable + 19, n) - MaxTable);
+	return 1 + static_cast<unsigned>(upper_bound(MaxTable, MaxTable + 19, n) - MaxTable);
 }
 
 string FctHelper::round(long double x, unsigned n, char separator) {
@@ -122,7 +122,7 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 	durationUs -= minutes * minuteUs;
 	int64_t seconds = durationUs / secondUs;
 	durationUs -= seconds * secondUs;
-	double milliseconds = durationUs / 1000.0;
+	double milliseconds = static_cast<double>(durationUs) / 1000.0;
 
 	stringstream ss;
 	bool empty = true;
@@ -133,14 +133,14 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 		if (innerAlign && !empty) {
 			if (negative)
 				indent++;
-			unsigned len = num.length();
+			string::size_type len = num.length();
 			if (indent <= len)
 				return "";
 			return string(indent - len, ' ');
 		} else
 			return "";
 	};
-	auto appendRequestedBlankIndent = [&](unsigned indent) {
+	auto appendRequestedBlankIndent = [&](string::size_type indent) {
 		if (innerAlign && !empty) {
 			if (negative)
 				indent++;
@@ -204,9 +204,9 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 string FctHelper::durationStringMs(const chrono::microseconds& dur, bool innerAlign, unsigned round, bool showMonths, bool showWeeks, bool wolframAlphaMode, const string& yrId, const string& moId, const string& wkId, const string& dId, const string& hId, const string& minId, const string& sId, const string& msId) {
 	stringstream ss;
 	if (dur.count() >= 1000000)
-		ss << FctHelper::round(dur.count() / 1000.0, 2) << msId << " (" << durationYearsToMs(dur, innerAlign, round, showMonths, showWeeks, wolframAlphaMode, yrId, moId, wkId, dId, hId, minId, sId, msId) << ")";
+		ss << FctHelper::round(static_cast<long double>(dur.count()) / 1000.0, 2) << msId << " (" << durationYearsToMs(dur, innerAlign, round, showMonths, showWeeks, wolframAlphaMode, yrId, moId, wkId, dId, hId, minId, sId, msId) << ")";
 	else
-		ss << FctHelper::round(dur.count() / 1000.0, 2) << msId;
+		ss << FctHelper::round(static_cast<long double>(dur.count()) / 1000.0, 2) << msId;
 	return ss.str();
 }
 
@@ -287,7 +287,7 @@ wstring FctHelper::utf8toWide(const char* in) {
 
 vector<string> FctHelper::stringSplit(const string& str, const string& sep) {
 	vector<string> parts;
-	unsigned start = 0;
+	string::size_type start = 0;
 	string::size_type end = str.find(sep);
 	while (end != string::npos) {
 		parts.push_back(str.substr(start, end - start));

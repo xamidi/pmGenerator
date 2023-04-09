@@ -76,6 +76,7 @@ digraph {
 	DRuleParser -> DlFormula [color=blue]
 	DRuleParser -> "boost/algorithm/string" [color=blue]
 	DRuleParser -> iostream [color=blue]
+	DRuleParser -> cstddef [color=red]
 	DRuleParser -> map [color=red]
 	DRuleParser -> memory [color=red]
 	DRuleParser -> set [color=red]

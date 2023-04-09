@@ -17,7 +17,7 @@ ProgressData::ProgressData(unsigned percentageStepSize, uint64_t maximum, bool e
 				stepAmount--; // do not show 100% progress
 			vector<uint64_t> steps(stepAmount);
 			for (unsigned i = 0; i < stepAmount; i++)
-				steps[i] = (uint64_t) ((double) maximum * (i + 1) * percentageStepSize / 100.0);
+				steps[i] = static_cast<uint64_t>(static_cast<double>(maximum) * (i + 1) * percentageStepSize / 100.0);
 			steps.push_back(0); // to avoid bound checks and never trigger at final state
 			return steps;
 		}()) {
@@ -28,8 +28,8 @@ ProgressData& ProgressData::operator=(const ProgressData& other) {
 	maximum = other.maximum;
 	maximumEstimated = other.maximumEstimated;
 	progressSteps = other.progressSteps;
-	progress = (uint64_t) other.progress;
-	progressState = (uint64_t) other.progressState;
+	progress = static_cast<uint64_t>(other.progress);
+	progressState = static_cast<uint64_t>(other.progressState);
 	return *this;
 }
 

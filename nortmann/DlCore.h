@@ -142,7 +142,7 @@ struct DlCore {
 	// Calculate the formula's representation via left-to-right inorder traversal of its tree structure. Parentheses are generated for each and only binary operators, thus each formula has a unique such representation.
 	static std::string standardFormulaRepresentation(const std::shared_ptr<DlFormula>& formula);
 
-	static unsigned standardFormulaLength(const std::shared_ptr<DlFormula>& formula);
+	static std::size_t standardFormulaLength(const std::shared_ptr<DlFormula>& formula);
 
 	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński).
 	// - standard:  { \and -> K, \or -> A, \nand -> D, \nor -> X, \imply -> C, \implied -> B, \equiv -> E, \xor -> J, \not -> N, \nece -> L, \poss -> M, \top -> V, \bot -> O }

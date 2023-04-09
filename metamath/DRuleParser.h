@@ -1,6 +1,7 @@
 #ifndef XAMID_METAMATH_DRULEPARSER_H
 #define XAMID_METAMATH_DRULEPARSER_H
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -48,7 +49,7 @@ class DRuleParser {
 
 public:
 	static std::vector<std::pair<std::string, std::string>> readFromMmsolitaireFile(const std::string& file, bool debug = false);
-	static std::map<int, std::set<std::string>> prepareDProofsByLength(const std::string& file, unsigned minUseAmountToCreateHelperProof = 2, std::vector<std::pair<std::string, std::string>>* optOut_dProofsInFile = nullptr, bool debug = false);
+	static std::map<std::size_t, std::set<std::string>> prepareDProofsByLength(const std::string& file, unsigned minUseAmountToCreateHelperProof = 2, std::vector<std::pair<std::string, std::string>>* optOut_dProofsInFile = nullptr, bool debug = false);
 
 	// Fast substitution, which only works reliably when it is ensured that 'formula' contains no non-leaf references that also occur in 'substitutions'.
 	// Otherwise, cycles / infinite trees (which are no formulas) may be constructed!
@@ -57,8 +58,8 @@ private:
 	static void _modifyingSubstitute(std::shared_ptr<nortmann::DlFormula>& formula, const std::map<std::string, std::shared_ptr<nortmann::DlFormula>>& substitutions, std::unordered_set<std::shared_ptr<nortmann::DlFormula>>& alreadyModified);
 
 public:
-	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<nortmann::DlFormula>>, std::vector<std::string>, std::map<unsigned, std::vector<unsigned>>>>> parseDProof_raw(const std::string& dProof, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false, bool exceptionOnUnificationFailure = false);
-	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<nortmann::DlFormula>>, std::vector<std::string>, std::map<unsigned, std::vector<unsigned>>>>> parseDProofs_raw(const std::vector<std::pair<std::string, std::string>>& dProofs, unsigned minUseAmountToCreateHelperProof = 2, std::map<std::string, std::string>* optOut_duplicates = nullptr, std::map<int, std::set<std::string>>* optOut_knownDProofsByLength = nullptr, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = true, bool exceptionOnUnificationFailure = true, const std::vector<std::string>* altIn_dProofsWithoutContexts = nullptr, bool prepareOnly = false);
+	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<nortmann::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>>> parseDProof_raw(const std::string& dProof, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false, bool exceptionOnUnificationFailure = false);
+	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<nortmann::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>>> parseDProofs_raw(const std::vector<std::pair<std::string, std::string>>& dProofs, unsigned minUseAmountToCreateHelperProof = 2, std::map<std::string, std::string>* optOut_duplicates = nullptr, std::map<std::size_t, std::set<std::string>>* optOut_knownDProofsByLength = nullptr, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = true, bool exceptionOnUnificationFailure = true, const std::vector<std::string>* altIn_dProofsWithoutContexts = nullptr, bool prepareOnly = false);
 
 	// Parsing of pmproofs' propositional formulas that declare desired consequents or results of proofs. Used by originalCollection().
 	static std::shared_ptr<nortmann::DlFormula> parseMmPlConsequent(const std::string& strConsequent, bool calculateMeanings = true);
