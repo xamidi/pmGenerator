@@ -27,16 +27,16 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	// 1. Load and parse mmsolitaire's D-proofs.
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<pair<string, string>> dProofsInFile;
-	map<int, set<string>> knownDProofsByLength = DRuleParser::prepareDProofsByLength(pmproofsFile, 1, &dProofsInFile, debug);
+	map<size_t, set<string>> knownDProofsByLength = DRuleParser::prepareDProofsByLength(pmproofsFile, 1, &dProofsInFile, debug);
 	//#cout << FctHelper::vectorStringF(dProofsInFile, [](const pair<string, string>& p) { return p.first + ": " + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
-	//#cout << FctHelper::mapStringF(knownDProofsByLength, [](const pair<const int, set<string>>& p) { return to_string(p.first) + " : " + FctHelper::setString(p.second); }, "{\n\t", "\n}", "\n\t") << endl;
+	//#cout << FctHelper::mapStringF(knownDProofsByLength, [](const pair<const size_t, set<string>>& p) { return to_string(p.first) + " : " + FctHelper::setString(p.second); }, "{\n\t", "\n}", "\n\t") << endl;
 	if (debug)
 		startTime = chrono::steady_clock::now();
 	vector<string> knownDProofs;
-	for (const pair<const int, set<string>>& p : knownDProofsByLength)
+	for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
 		copy(p.second.begin(), p.second.end(), knownDProofs.end());
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 	// NOTE: A tbb::concurrent_set<string, cmpStringGrow> inside would be preferable, but it has no reverse iterators in order to directly address the last element (which is required later on),
@@ -46,7 +46,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	atomic<uint64_t> redundantCounter = 0;
 	mutex mtx_set;
 	for_each(execution::par, knownDProofs.begin(), knownDProofs.end(), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](const string& s) {
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
+		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
 		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 		pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
 		{
@@ -59,7 +59,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 			conclusionCounter++;
 	});
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to parse " << conclusionCounter + redundantCounter << " D-proofs (" << conclusionCounter << " conclusions, " << redundantCounter << " redundant)." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to parse " << conclusionCounter + redundantCounter << " D-proofs (" << conclusionCounter << " conclusions, " << redundantCounter << " redundant)." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -96,12 +96,12 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to load " << inputConclusionCounter << " more D-proofs from the input." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to load " << inputConclusionCounter << " more D-proofs from the input." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
 	// 4. Introduce a way to iterate formulas only up to a certain standard length (to greatly improve schema searching).
-	tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>> formulasByStandardLength;
+	tbb::concurrent_map<size_t, tbb::concurrent_vector<pair<const string*, string*>>> formulasByStandardLength;
 	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
 		for (tbb::concurrent_unordered_map<string, string>::iterator it = range.begin(); it != range.end(); ++it) {
 			const string& formula = it->first;
@@ -111,14 +111,14 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 		cout << "|representativeProofs| = " << representativeProofs.size() << ", |formulasByStandardLength| = " << formulasByStandardLength.size() << endl;
-		//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
+		//#cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<pair<const string*, string*>>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
 		startTime = chrono::steady_clock::now();
 	}
-	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const unsigned upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>::range_type& range) {
-			for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<pair<const string*, string*>>>::const_iterator it = range.begin(); it != range.end(); ++it)
+	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const size_t upperBound, atomic<bool>& done, const auto& func) {
+		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<size_t, tbb::concurrent_vector<pair<const string*, string*>>>::range_type& range) {
+			for (tbb::concurrent_map<size_t, tbb::concurrent_vector<pair<const string*, string*>>>::const_iterator it = range.begin(); it != range.end(); ++it)
 				if (done)
 					return;
 				else if (it->first <= upperBound)
@@ -160,7 +160,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 					string dProof = "D" + it->second + searchResult->second; // proof Dαβ for B
 					extraParseCounter++;
 					// NOTE: If parsing took too long, we could clone B and substitute its variables to start from "0". But parsing isn't an issue here at all.
-					vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
+					vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
 					const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 					pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
 
@@ -189,7 +189,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	});
 	// NOTE: Doesn't seem to generate much, e.g. 27: 13366.48 ms taken to check 1733457 conditionals, parse 3 candidates, and load 3 extra D-proofs from existing combinations.
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to check " << extraCheckCounter << " conditionals, parse " << extraParseCounter << " candidates, and load " << extraProofCounter << " new and " << improvedProofCounter << " improved D-proofs from existing combinations." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to check " << extraCheckCounter << " conditionals, parse " << extraParseCounter << " candidates, and load " << extraProofCounter << " new and " << improvedProofCounter << " improved D-proofs from existing combinations." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -204,7 +204,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 			const set<string, cmpStringGrow>& dProofs = it->second;
 			const string& currentWorstDProof = *dProofs.rbegin(); // NOTE: Using set<string, cmpStringGrow> instead of tbb::concurrent_set<string, cmpStringGrow>, avoids doing *next(dProofs.begin(), dProofs.size() - 1) each time.
 			//#if (dProofs.size() > 1) { lock_guard<mutex> lock(mtx_cout); cout << "currentWorstDProof = " << currentWorstDProof << ", dProofs = " << FctHelper::setString(dProofs) << endl; }
-			const unsigned currentWorstLength = currentWorstDProof.length();
+			const string::size_type currentWorstLength = currentWorstDProof.length();
 			atomic<bool> done = false; // NOTE: Shall not be used to abort the below iterateFormulasOfStandardLengthUpTo(), since it is possible that multiple schemas with different proof sizes of the same formula are stored representatives.
 			mutex mtx_best;
 			bool bad = false;
@@ -213,7 +213,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 			mutex mtx_alt;
 			bool alt = false;
 			set<string, cmpStringGrow> alternativeDProofs;
-			unsigned formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+			size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
 			iterateFormulasOfStandardLengthUpTo(formulaLen, done, [&schemaCheckCounter, &formula, &currentWorstDProof, &currentWorstLength, &mtx_best, &bad, &bestSchema, &bestDProof, &mtx_alt, &alt, &alternativeDProofs](const string& potentialSchema, const string& dProof) {
 				if (dProof.length() <= currentWorstLength) {
 					schemaCheckCounter++;
@@ -279,7 +279,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for " << schemaCheckCounter << " schema checks." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for " << schemaCheckCounter << " schema checks." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 	//#cout << "shorteningReplacements = " << FctHelper::vectorStringF(vector<pair<string, string>>(shorteningReplacements.begin(), shorteningReplacements.end()), [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
@@ -328,7 +328,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 			}
 		}
 		if (debug)
-			cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to read " << shorteningReplacements.size() << " shortening replacements and " << stylingReplacements.size() << " styling replacements." << endl;
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to read " << shorteningReplacements.size() << " shortening replacements and " << stylingReplacements.size() << " styling replacements." << endl;
 		//#cout << "shorteningReplacements = " << FctHelper::vectorStringF(shorteningReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 		//#cout << "stylingReplacements = " << FctHelper::vectorStringF(stylingReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 	}
@@ -341,7 +341,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 	for (size_t i = 0; i < dProofsInFile.size(); i++)
 		prevLengths[i] = dProofsInFile[i].second.length();
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to store " << dProofsInFile.size() << " lengths." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to store " << dProofsInFile.size() << " lengths." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -380,7 +380,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 		}
 	}
 	if (debug)
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to apply replacements." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to apply replacements." << endl;
 	startTime = chrono::steady_clock::now();
 
 	// 4. Generate result depending on the request.
@@ -398,7 +398,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 			shared_ptr<DlFormula> consequent = DRuleParser::parseMmPlConsequent(context.substr(0, semIndex), false);
 
 			// Check if we can substitute to desired consequent.
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
+			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
 			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			shared_ptr<DlFormula> reference = DlCore::toBasicDlFormula(consequent, nullptr, nullptr, nullptr, false);
 			map<string, shared_ptr<DlFormula>> substitutions;

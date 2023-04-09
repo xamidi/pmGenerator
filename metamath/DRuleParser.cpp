@@ -62,14 +62,14 @@ vector<pair<string, string>> DRuleParser::readFromMmsolitaireFile(const string& 
 		eof = ss.eof();
 	}
 	if (debug)
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to read " << dProofsInFile.size() << " condensed detachment proofs from file \"" << file << "\"." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to read " << dProofsInFile.size() << " condensed detachment proofs from file \"" << file << "\"." << endl;
 	//#cout << "D-proofs: " << FctHelper::vectorStringF(dProofsInFile, [](const pair<string, string>& p) { return p.first + ": " + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 	return dProofsInFile;
 }
 
-map<int, set<string>> DRuleParser::prepareDProofsByLength(const string& file, unsigned minUseAmountToCreateHelperProof, vector<pair<string, string>>* optOut_dProofsInFile, bool debug) {
+map<size_t, set<string>> DRuleParser::prepareDProofsByLength(const string& file, unsigned minUseAmountToCreateHelperProof, vector<pair<string, string>>* optOut_dProofsInFile, bool debug) {
 	vector<pair<string, string>> dProofsInFile = readFromMmsolitaireFile(file, debug);
-	map<int, set<string>> knownDProofsByLength;
+	map<size_t, set<string>> knownDProofsByLength;
 	parseDProofs_raw(dProofsInFile, minUseAmountToCreateHelperProof, nullptr, &knownDProofsByLength, false, debug, true, true, nullptr, true);
 	if (optOut_dProofsInFile)
 		*optOut_dProofsInFile = dProofsInFile;
@@ -221,15 +221,15 @@ shared_ptr<DlFormula> DRuleParser::_ax3(const shared_ptr<DlFormula>& psi, const 
 	});
 }
 
-vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> DRuleParser::parseDProof_raw(const string& dProof, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure) {
+vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProof_raw(const string& dProof, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure) {
 	const vector<string> dProofsWithoutContexts = { { dProof } };
-	vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = parseDProofs_raw( { }, minUseAmountToCreateHelperProof, nullptr, nullptr, verifyingConstruct, debug, calculateMeanings, exceptionOnUnificationFailure, &dProofsWithoutContexts);
+	vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = parseDProofs_raw( { }, minUseAmountToCreateHelperProof, nullptr, nullptr, verifyingConstruct, debug, calculateMeanings, exceptionOnUnificationFailure, &dProofsWithoutContexts);
 	return rawParseData;
 }
 
-vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> DRuleParser::parseDProofs_raw(const vector<pair<string, string>>& dProofs, unsigned minUseAmountToCreateHelperProof, map<string, string>* optOut_duplicates, map<int, set<string>>* optOut_knownDProofsByLength, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, const vector<string>* altIn_dProofsWithoutContexts, bool prepareOnly) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
+vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProofs_raw(const vector<pair<string, string>>& dProofs, unsigned minUseAmountToCreateHelperProof, map<string, string>* optOut_duplicates, map<size_t, set<string>>* optOut_knownDProofsByLength, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, const vector<string>* altIn_dProofsWithoutContexts, bool prepareOnly) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
 	// 1. Group and order the (in D-notation) given proofs by their length, and create a context lookup table
-	map<int, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length
+	map<size_t, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length
 	unordered_map<string, string> knownDProofsToContext; // condensed detachment proof (e.g. "DD211") -> context (e.g. "(P -> P); ! *2.08 Id")
 	if (altIn_dProofsWithoutContexts) {
 		size_t i = 0;
@@ -254,10 +254,10 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 	if (debug)
 		startTime = chrono::steady_clock::now();
 	vector<pair<string, string>> referencingDProofs; // refined condensed detachment proof (with references) -> extended condensed detachment proof (without references)
-	for (const pair<const int, set<string>>& p : knownDProofsByLength) // register predefined references
+	for (const pair<const size_t, set<string>>& p : knownDProofsByLength) // register predefined references
 		for (const string& concreteDProof : p.second) {
 			string abstractDProof(concreteDProof);
-			vector<string>::size_type pos = 1;
+			size_t pos = 1;
 			for (vector<pair<string, string>>::const_reverse_iterator it = referencingDProofs.rbegin(); it != referencingDProofs.rend(); ++it) {
 				if (it->second.length() > 1)
 					boost::replace_all(abstractDProof, it->second, "(" + to_string(referencingDProofs.size() - pos) + ")");
@@ -276,7 +276,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 			if (abstractDProof.length() >= 5) { // To contain proofs of fundamental length greater than 1, the containing proof requires length >= 5. ; NOTE: D11, D12, D13, D21, D22, D23 are all minimal non-trivial proofs under { (A1), (A2), (A3), (MP) }. D31, D32, D33 are impossible.
 				if (abstractDProof[0] != 'D')
 					throw invalid_argument("DRuleParser::parseDProofs(): A D-proof of length greater 1 must start with 'D'.");
-				unsigned lastDIndex = 0;
+				string::size_type lastDIndex = 0;
 				bool inReference = false;
 				unsigned nonDs = 0;
 				string::size_type i;
@@ -336,9 +336,9 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 							concreteSubproof = "D";
 							for (int referenceIndex : referenceIndices)
 								if (referenceIndex >= 0) { // a reference
-									if ((unsigned) referenceIndex >= referencingDProofs.size() + helperProofCandidates.size())
+									if (static_cast<unsigned>(referenceIndex) >= referencingDProofs.size() + helperProofCandidates.size())
 										throw logic_error("DRuleParser::parseDProofs(): Impossible reference index " + to_string(referenceIndex) + ".");
-									const string& concretePart = (unsigned) referenceIndex < referencingDProofs.size() ? referencingDProofs[referenceIndex].second : helperProofCandidates[referenceIndex - referencingDProofs.size()].second;
+									const string& concretePart = static_cast<unsigned>(referenceIndex) < referencingDProofs.size() ? referencingDProofs[referenceIndex].second : helperProofCandidates[referenceIndex - referencingDProofs.size()].second;
 									concreteSubproof += concretePart;
 								} else // an axiom ; default axioms
 									switch (referenceIndex) {
@@ -361,7 +361,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 				}
 			}
 		}
-		unsigned proofIndex = helperProofCandidates.size() + referencingDProofs.size(); // starting index of the new stuff
+		size_t proofIndex = helperProofCandidates.size() + referencingDProofs.size(); // starting index of the new stuff
 		for (const pair<const string, string>& p : recentCandidates) {
 			const string& recentExtraProof = p.first;
 			// Replacements in existing basic proofs
@@ -378,13 +378,13 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 		helperProofCandidates.insert(helperProofCandidates.end(), recentCandidates.begin(), recentCandidates.end());
 	} while (!recentCandidates.empty());
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << helperProofCandidates.size() << " helper proof candidates, i.e. the minimal set of referenced proofs such that all proofs have a length of at most 3." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << helperProofCandidates.size() << " helper proof candidates, i.e. the minimal set of referenced proofs such that all proofs have a length of at most 3." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
 	// 4. Keep only those helper proof candidates which are referenced at least 'minUseAmountToCreateHelperProof' times. The concrete variants of the accepted
 	//    candidates are -- grouped by concrete lengths -- inserted into 'knownDProofsByLength', which already contains the given proofs in the same manner.
-	map<unsigned, unsigned> referenceAmounts; // index of proof -> amount of references to proof
+	map<size_t, unsigned> referenceAmounts; // index of proof -> amount of references to proof
 	auto findReferences = [&](const string& dProof, unsigned containerIndex) {
 		bool inReference = false;
 		unsigned refIndex = 0;
@@ -446,7 +446,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 	}
 	unsigned extraCounter = 0;
 	{
-		unsigned containerIndex = referencingDProofs.size();
+		size_t containerIndex = referencingDProofs.size();
 		for (const pair<string, string>& p : helperProofCandidates) {
 			if (referenceAmounts[containerIndex] >= minUseAmountToCreateHelperProof) {
 				const string& extraProof = p.second; // concrete variant to be applied a correct index according to its length
@@ -457,16 +457,16 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 		}
 	}
 	if (debug) {
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to reduce to " << extraCounter << " helper proofs." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to reduce to " << extraCounter << " helper proofs." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 	if (optOut_knownDProofsByLength)
 		*optOut_knownDProofsByLength = knownDProofsByLength;
-	//#cout << FctHelper::mapStringF(knownDProofsByLength, [](const pair<const int, set<string>>& p) { return to_string(p.first) + " : " + FctHelper::setString(p.second); }, "{\n\t", "\n}", "\n\t") << endl;
+	//#cout << FctHelper::mapStringF(knownDProofsByLength, [](const pair<const size_t, set<string>>& p) { return to_string(p.first) + " : " + FctHelper::setString(p.second); }, "{\n\t", "\n}", "\n\t") << endl;
 	if (prepareOnly) {
 		if (debug) {
-			unsigned proofCounter = 0;
-			for (const pair<const int, set<string>>& p : knownDProofsByLength)
+			size_t proofCounter = 0;
+			for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
 				proofCounter += p.second.size();
 			cout << proofCounter << " condensed detachment proofs prepared." << endl;
 		}
@@ -481,12 +481,12 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 	vector<string> refinedDProofs;
 	unsigned helperCounter = 0;
 	unsigned theoremCounter = 0;
-	for (const pair<const int, set<string>>& p : knownDProofsByLength)
+	for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
 		for (const string& concreteDProof : p.second) {
 			string refinedDProof(concreteDProof);
 			reverse(refinedDProof.begin(), refinedDProof.end());
 			string revertedDProof(refinedDProof);
-			vector<string>::size_type pos = 1;
+			size_t pos = 1;
 			for (vector<string>::const_reverse_iterator it = revertedDProofs.rbegin(); it != revertedDProofs.rend(); ++it) {
 				if (it->length() > 1)
 					boost::replace_all(refinedDProof, *it, "(" + to_string(revertedDProofs.size() - pos) + ")");
@@ -502,7 +502,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 				proofNames.push_back("H" + to_string(++helperCounter));
 		}
 	if (debug)
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to refine " << proofNames.size() << " condensed detachment proofs." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to refine " << proofNames.size() << " condensed detachment proofs." << endl;
 	//#cout << FctHelper::vectorString(refinedDProofs, "{\n\t", "\n}", "\n\t") << endl;
 
 	// 6. Convert refined D Proof to DL-proofs.
@@ -518,7 +518,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 		} else
 			return primitiveStrings[index];
 	};
-	vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawProofData;
+	vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawProofData;
 	vector<pair<vector<shared_ptr<DlFormula>>, vector<string>>> modProofs(refinedDProofs.size());
 	for (const string& refinedDProof : refinedDProofs) {
 		set<shared_ptr<DlFormula>> freePrimitives; // need to have unique pointers for each condensed detachment proof
@@ -527,7 +527,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 
 		vector<shared_ptr<DlFormula>>& formulas = modProofs[counter].first;
 		vector<string>& dReasons = modProofs[counter].second;
-		map<unsigned, vector<unsigned>> metadata; // metadata[pos] := metadata for DlProof
+		map<size_t, vector<unsigned>> metadata; // metadata[pos] := metadata for DlProof
 		vector<bool> used;
 
 		// Helper lambdas
@@ -688,14 +688,14 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 							return {};
 					}
 					int lastTodo;
-					for (lastTodo = used.size() - 2; lastTodo >= 0; lastTodo--)
+					for (lastTodo = static_cast<int>(used.size()) - 2; lastTodo >= 0; lastTodo--)
 						if (!used[lastTodo])
 							break;
 					if (lastTodo < 0)
 						throw invalid_argument("DRuleParser::parseDProofs(): Cannot find antecedent for condensed detachment proof '" + proofNames[counter] + "'.");
 					shared_ptr<DlFormula>& antecedent = formulas[lastTodo];
 					used[lastTodo] = true;
-					metadata[formulas.size() + 1] = { (unsigned) lastTodo + 1, (unsigned) formulas.size() };
+					metadata[formulas.size() + 1] = { static_cast<unsigned>(lastTodo) + 1, static_cast<unsigned>(formulas.size()) };
 
 					{ // NOTE: Need these braces so that the use counts are correct for updatePrimitives().
 
@@ -786,7 +786,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 				recurse(formula, recurse);
 			};
 			appendNewPrimitivesOfFormula(formulas.back());
-			for (unsigned i = 0; i + 1 < formulas.size(); i++) {
+			for (size_t i = 0; i + 1 < formulas.size(); i++) {
 				appendNewPrimitivesOfFormula(formulas[i]);
 				if (primitivesSequence.size() == usedPrimitives.size())
 					break; // All used primitives have been found, so we are done.
@@ -807,7 +807,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<uns
 		counter++;
 	}
 	if (debug)
-		cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to convert " << proofNames.size() << " condensed detachment proofs to DL-proofs." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to convert " << proofNames.size() << " condensed detachment proofs to DL-proofs." << endl;
 	return rawProofData;
 }
 
@@ -871,7 +871,7 @@ shared_ptr<DlFormula> DRuleParser::parseMmPlConsequent(const string& strConseque
 		for (vector<DlOperator>::const_reverse_iterator it = unaryOperators.rbegin(); it != unaryOperators.rend(); ++it) { // apply unary operators in reverse order
 			DlOperator op = *it;
 			if (op != DlOperator::Not)
-				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string((unsigned) op) + ".");
+				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string(static_cast<unsigned>(op)) + ".");
 			currentPrefix = "~ " + currentPrefix; // NOTE: It is only that simple since '~' (i.e. \not) is the only propositional unary operator.
 			result = make_shared<DlFormula>(_not(), vector<shared_ptr<DlFormula>> { result });
 			string currentFormula = currentPrefix + strConsequent.substr(topLevelOpening);
@@ -945,7 +945,7 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 			// Apply unary operators in reverse order
 			DlOperator op = *it;
 			if (op != DlOperator::Not)
-				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string((unsigned) op) + ".");
+				throw logic_error("DRuleParser::parseConsequent(): Input \"" + strConsequent + "\" resulted in invalid unary operator (DlOperator)" + to_string(static_cast<unsigned>(op)) + ".");
 			target = make_shared<DlFormula>(_not(), vector<shared_ptr<DlFormula>> { target }); // NOTE: It is only that simple since '~' (i.e. \not) is the only propositional unary operator.
 		}
 	};

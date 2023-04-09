@@ -137,7 +137,7 @@ unsigned DlCore::dlOperatorArity(DlOperator op) {
 	case DlOperator::App:
 		return 2;
 	default:
-		throw domain_error("DlCore::dlOperatorArity(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+		throw domain_error("DlCore::dlOperatorArity(): Unknown DlOperator " + to_string(static_cast<unsigned>(op)) + ".");
 	}
 }
 
@@ -182,7 +182,7 @@ const string& DlCore::dlOperatorToString(DlOperator op) {
 	case DlOperator::Bot:
 		return terminalStr_bot();
 	default:
-		throw domain_error("DlCore::dlOperatorToString(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+		throw domain_error("DlCore::dlOperatorToString(): Unknown DlOperator " + to_string(static_cast<unsigned>(op)) + ".");
 	}
 }
 
@@ -227,7 +227,7 @@ const shared_ptr<String>& DlCore::obtainDefiniteOpSymbol(DlOperator op) {
 	case DlOperator::Bot:
 		return DRuleParser::_bot();
 	default:
-		throw domain_error("DlCore::obtainDefiniteOpSymbol(): Unknown DlOperator " + to_string((unsigned) op) + ".");
+		throw domain_error("DlCore::obtainDefiniteOpSymbol(): Unknown DlOperator " + to_string(static_cast<unsigned>(op)) + ".");
 	}
 }
 
@@ -529,7 +529,7 @@ bool DlCore::_isSchemaOf(const shared_ptr<DlFormula>& potentialSchema, const sha
 		const vector<shared_ptr<DlFormula>>& formulaChildren = formula->getChildren();
 		if (potentialSchemaChildren.size() != formulaChildren.size())
 			throw domain_error("DlCore::_isSchemaOf(): Nodes represent the same operator '" + potentialSchemaValue + "', but differ in arity (" + to_string(potentialSchemaChildren.size()) + " vs. " + to_string(formulaChildren.size()) + ").");
-		for (unsigned i = 0; i < potentialSchemaChildren.size(); i++) // check all subformulas
+		for (size_t i = 0; i < potentialSchemaChildren.size(); i++) // check all subformulas
 			if (!_isSchemaOf(potentialSchemaChildren[i], formulaChildren[i], substitutions))
 				return false;
 	}
@@ -539,7 +539,7 @@ bool DlCore::_isSchemaOf(const shared_ptr<DlFormula>& potentialSchema, const sha
 bool DlCore::isSchemaOf_polishNotation_noRename_numVars(const string& potentialSchema, const string& formula, map<size_t, string>* optOut_substitutions) {
 	map<size_t, string> substitutions;
 	string::size_type formulaIndex = 0;
-	unsigned varNum = 0;
+	size_t varNum = 0;
 	bool prevVar = false;
 	auto readSubstitutedFormula = [&]() -> bool {
 		if (prevVar) { // read previous variable first
@@ -674,7 +674,7 @@ bool DlCore::_tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_
 		const vector<shared_ptr<DlFormula>>& rhsCompChildren = rhsComp->getChildren();
 		if (lhsCompChildren.size() != rhsCompChildren.size()) // integer comparison
 			throw domain_error("DlCore::_tryUnifyTrees(): Nodes represent the same operator '" + lhs->getValue()->value + "', but differ in arity (" + to_string(lhsCompChildren.size()) + " vs. " + to_string(rhsCompChildren.size()) + ").");
-		for (unsigned i = 0; i < lhsCompChildren.size(); i++)
+		for (size_t i = 0; i < lhsCompChildren.size(); i++)
 			if (!me(lhsCompChildren[i], rhsCompChildren[i], me, mismatch, withinSubstLhs, withinSubstRhs)) { // recursive DL-formula comparison
 				// No need to store mismatching formulas here, since that would happen in the recursive call.
 				return false;
@@ -739,8 +739,8 @@ string DlCore::standardFormulaRepresentation(const shared_ptr<DlFormula>& formul
 	return formula->getChildren().size() >= 2 ? "(" + formulaRepresentation_traverse(formula) + ")" : formulaRepresentation_traverse(formula);
 }
 
-unsigned DlCore::standardFormulaLength(const shared_ptr<DlFormula>& formula) {
-	unsigned len = 0;
+size_t DlCore::standardFormulaLength(const shared_ptr<DlFormula>& formula) {
+	size_t len = 0;
 	traverseLeftToRightInOrder(formula, [&](const shared_ptr<DlFormula>& node) {
 		len++;
 	}, [&](const shared_ptr<DlFormula>& node, const shared_ptr<DlFormula>& child) {
@@ -827,7 +827,7 @@ bool DlCore::fromPolishNotation_noRename(shared_ptr<DlFormula>& output, const st
 	const unordered_map<char, DlOperator>& operators = prioritizeBochenski ? operators_boc : operators_luk;
 	deque<shared_ptr<DlFormula>> stack;
 	string::size_type varLast = string::npos;
-	for (int64_t i = (int64_t) input.length() - 1; i >= 0; i--) {
+	for (int64_t i = static_cast<int64_t>(input.length()) - 1; i >= 0; i--) {
 		char c = input[i];
 		if (c == '.') { // separator of variables
 			if (varLast == string::npos) {

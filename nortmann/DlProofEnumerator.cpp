@@ -36,7 +36,7 @@ const vector<const vector<string>*>& DlProofEnumerator::builtinConclusions() {
 vector<vector<string>> DlProofEnumerator::composeToLookupVector(const vector<const vector<string>*>& all) {
 	vector<vector<string>> all_refined(2 * all.size());
 	vector<const vector<string>*>::const_iterator it = all.begin();
-	uint32_t limit = 2 * all.size() - 1;
+	uint32_t limit = static_cast<uint32_t>(2 * all.size() - 1);
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit <= limit; wordLengthLimit += 2)
 		all_refined[wordLengthLimit] = **it++;
 	return all_refined;
@@ -53,7 +53,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_seq(vector<vect
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to load built-in representatives." << endl;
 	}
-	for (uint32_t wordLengthLimit = allRepresentativesLookup.size() + 1; true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
+	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + 1); true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		if (filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
@@ -119,7 +119,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 	allRepresentativesLookup.reserve(containerReserve); // ensure that no container reallocations happen during concurrent access, since they would result in data races
 	if (optOut_allConclusionsLookup)
 		optOut_allConclusionsLookup->reserve(containerReserve);
-	for (uint32_t wordLengthLimit = allRepresentativesLookup.size() + 1; true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
+	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + 1); true; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		const string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		if (filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
@@ -242,13 +242,13 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
 		startTime = chrono::steady_clock::now();
-	vector<vector<string>>::size_type startSize = initFresh ? 0 : allRepresentatives.size();
+	size_t startSize = initFresh ? 0 : allRepresentatives.size();
 	if (!readRepresentativesLookupVectorFromFiles_par(allRepresentatives, optOut_allConclusionsLookup, debug, thread::hardware_concurrency(), filePrefix, filePostfix, initFresh))
 		return false;
-	unsigned more = 1;
+	size_t more = 1;
 	if (debug) {
 		if (initFresh) {
-			unsigned total = allRepresentatives.size() / 2;
+			size_t total = allRepresentatives.size() / 2;
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total read duration." << endl;
 			cout << "Loaded " << total << " representative collection" << (total == 1 ? "" : "s") << " of size" << (total == 1 ? "" : "s") << ":" << endl;
 		} else {
@@ -271,7 +271,7 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	if (optOut_allRepresentativesCount)
 		*optOut_allRepresentativesCount = allRepresentativesCount;
 	if (optOut_firstMissingIndex)
-		*optOut_firstMissingIndex = allRepresentatives.size() + 1;
+		*optOut_firstMissingIndex = static_cast<uint32_t>(allRepresentatives.size() + 1);
 	return true;
 }
 
@@ -280,7 +280,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	if (progressData)
 		progressData->setStartTime();
 	for_each(execution::par, representatives.begin(), representatives.end(), [&progressData, &representativeProofs](const string& s) {
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
+		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
 		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 		// NOTE: Definitely stores, since that is how the input files were constructed.
 		representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
@@ -308,7 +308,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) { // FASTEST: Parse each string individually and without translation to DlProof objects.
 		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
 		for_each(execution::par, representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end(), [&progressData, &representativeProofs](const string& s) {
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
+			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
 			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			// NOTE: Definitely stores, since that is how the input files were constructed.
 			representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
@@ -455,16 +455,16 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						itLastKnown = prev(itLastKnown); // bridge potential gaps to reach the relevant entries
 					map<uint32_t, uint64_t>::const_iterator itPrevLastKnown = prev(itLastKnown);
 					uint32_t lastKnownLimit = itLastKnown->first;
-					uint32_t lastKnownCount = itLastKnown->second;
+					uint64_t lastKnownCount = itLastKnown->second;
 					while (itLastKnown->first != itPrevLastKnown->first + 2) { // to not require the initial amount stored, approximate from earlier pairs if necessary
 						itLastKnown = prev(itLastKnown);
 						itPrevLastKnown = prev(itPrevLastKnown);
 					}
-					double lastKnownGrowth = (double) itLastKnown->second / itPrevLastKnown->second;
-					double estimatedLimit = lastKnownCount;
+					double lastKnownGrowth = static_cast<double>(itLastKnown->second) / static_cast<double>(itPrevLastKnown->second);
+					double estimatedLimit = static_cast<double>(lastKnownCount);
 					for (uint32_t i = lastKnownLimit; i < wordLengthLimit; i += 2)
 						estimatedLimit *= lastKnownGrowth;
-					count = estimatedLimit;
+					count = static_cast<uint64_t>(estimatedLimit);
 					return true;
 				} else {
 					count = itIterationCount->second;
@@ -537,19 +537,19 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 
 		// 4.6 Order and output information.
 		startTime = chrono::steady_clock::now();
-		map<unsigned, unsigned> amountPerLength;
+		map<string::size_type, size_t> amountPerLength;
 		set<string, cmpStringGrow> newRepresentativeSequences;
 		map<string, string, cmpStringGrow> newContent;
 		if (withConclusions)
 			for (const pair<const string, string>& p : representativeProofs) {
-				size_t len = p.second.length();
+				string::size_type len = p.second.length();
 				if (len == wordLengthLimit)
 					newContent.emplace(p.second, p.first);
 				amountPerLength[len]++;
 			}
 		else
 			for (const pair<const string, string>& p : representativeProofs) {
-				size_t len = p.second.length();
+				string::size_type len = p.second.length();
 				if (len == wordLengthLimit)
 					newRepresentativeSequences.insert(p.second);
 				amountPerLength[len]++;
@@ -755,7 +755,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			//#	_mout << wordLengthLimit << ": " << allRepresentatives[wordLengthLimit][index] << ":" << conclusion << ", formula representation length: " << conclusion.length() << ", len = " << len << endl;
 			//#index++;
 		}
-		_mout << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is " << totalLen << "/" << conclusions.size() << " ≈ " << FctHelper::round((double) totalLen / conclusions.size(), 2) << "." << endl;
+		_mout << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is " << totalLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(totalLen) / static_cast<long double>(conclusions.size()), 2) << "." << endl;
 		//  1: Average symbolic conclusion length is        27/      3 ≈   9.00.
 		//  3: Average symbolic conclusion length is        74/      6 ≈  12.33.
 		//  5: Average symbolic conclusion length is       180/     12 ≈  15.00.
@@ -798,7 +798,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			if (it->first % 2 == 0)
 				amountEvenConclusionLen += it->second;
 		size_t amountOddConclusionLen = conclusions.size() - amountEvenConclusionLen;
-		_mout << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  There are " << amountEvenConclusionLen << " minimal D-proofs with conclusion" << (measureSymbolicLength ? "" : " representation") << "s of even " << (measureSymbolicLength ? "symbolic " : "") << "length, and " << amountOddConclusionLen << " minimal D-proofs with conclusion" << (measureSymbolicLength ? "" : " representation") << "s of odd " << (measureSymbolicLength ? "symbolic " : "") << "length. [" << amountEvenConclusionLen << "/" << conclusions.size() << " ≈ " << FctHelper::round((double) amountEvenConclusionLen * 100 / conclusions.size(), 2) << "% even]" << endl;
+		_mout << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  There are " << amountEvenConclusionLen << " minimal D-proofs with conclusion" << (measureSymbolicLength ? "" : " representation") << "s of even " << (measureSymbolicLength ? "symbolic " : "") << "length, and " << amountOddConclusionLen << " minimal D-proofs with conclusion" << (measureSymbolicLength ? "" : " representation") << "s of odd " << (measureSymbolicLength ? "symbolic " : "") << "length. [" << amountEvenConclusionLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(amountEvenConclusionLen * 100) / static_cast<long double>(conclusions.size()), 2) << "% even]" << endl;
 		// 'measureSymbolicLength' true:
 		//  1:     0/      3 ≈ 0.00% even
 		//  3:     0/      6 ≈ 0.00% even
@@ -836,7 +836,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 
 		size_t maxLen = prev(allAmounts.end())->first;
 		if (cutX >= 0) {
-			maxLen = min(maxLen, (size_t) cutX);
+			maxLen = min(maxLen, static_cast<size_t>(cutX));
 			for (size_t i = 1; i <= maxLen; i++)
 				allAmounts[i];
 			if (cutX > 0)
@@ -848,7 +848,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 				allAmounts[i];
 		if (cutY >= 0)
 			for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end();) {
-				if (it->second > (size_t) cutY)
+				if (it->second > static_cast<size_t>(cutY))
 					it = allAmounts.erase(it);
 				else
 					++it;
@@ -880,7 +880,7 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 	atomic<uint64_t> invalidCounter = 0;
 	auto process = [&representativeProofs, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter](string& sequence) {
 		counter++;
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<unsigned, vector<unsigned>>>>> rawParseData;
+		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData;
 		if (!(rawParseData = DRuleParser::parseDProof_raw(sequence)).empty()) {
 			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), sequence);
@@ -935,18 +935,18 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 
 void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
 	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
-	tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>> formulasByStandardLength;
+	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
 	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
 		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& formula = it->first;
 			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
 		}
 	});
-	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
+	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#cout << [](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const unsigned upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>::range_type& range) {
-			for (tbb::concurrent_map<unsigned, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const size_t upperBound, atomic<bool>& done, const auto& func) {
+		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+			for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
 				if (done)
 					return;
 				else if (it->first <= upperBound)
@@ -962,11 +962,11 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 		progressData->setStartTime();
 	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<string, string>::range_type& range) {
 		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const uint32_t formula_sequenceLength = it->second.length();
+			const string::size_type formula_sequenceLength = it->second.length();
 			if (formula_sequenceLength == maxLength) {
 				const string& formula = it->first;
 				atomic<bool> redundant = false;
-				unsigned formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+				size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
 				iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const string& potentialSchema) {
 					if (formula != potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) // formula redundant
 						redundant = true;
@@ -992,11 +992,11 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	}); // NOTE: for_each(execution::par, ...) does not concurrently iterate over tbb::concurrent_unordered_map.
 	conclusionCounter -= toErase.size();
 	redundantCounter += toErase.size();
-	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
+	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
 	//#startTime = chrono::steady_clock::now();
 	for (const pair<const string* const, tbb::concurrent_unordered_map<string, string>::const_iterator>& p : toErase)
 		representativeProofs.unsafe_erase(p.second);
-	//#cout << FctHelper::round((chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
+	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
 
 void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
@@ -1010,7 +1010,7 @@ void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& pre
 		if (stack.empty()) {
 			bool processed = false;
 			unsigned bestIndex = 0;
-			unsigned bestSize = UINT_MAX;
+			size_t bestSize = SIZE_MAX;
 			for (unsigned t = 0; t < queues.size(); t++) {
 				deque<string>& queue = queues[t];
 				size_t size = queue.size();
@@ -1061,7 +1061,7 @@ void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& pre
 					}
 				};
 				processRepresentatives(allRepresentatives[1]);
-				uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+				uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
 				for (uint32_t s = 3; s <= knownLimit; s += 2)
 					if (remainingSpace >= s)
 						processRepresentatives(allRepresentatives[s]);
@@ -1070,7 +1070,7 @@ void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& pre
 				stack.push_back(A);
 				me(prefix, stack, me);
 			} else if (symbol == A) {
-				uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+				uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
 				if (remainingSpace < knownLimit + 2)
 					return; // cancel already if adding the below sequences would exceed the word length limit
 				// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
@@ -1113,7 +1113,7 @@ void DlProofEnumerator::_loadCondensedDetachmentPlProofs_naive_par(string& prefi
 		if (!stackSize) {
 			bool processed = false;
 			unsigned bestIndex = 0;
-			unsigned bestSize = UINT_MAX;
+			size_t bestSize = SIZE_MAX;
 			for (unsigned t = 0; t < queues.size(); t++) {
 				deque<string>& queue = queues[t];
 				size_t size = queue.size();

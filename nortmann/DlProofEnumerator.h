@@ -175,7 +175,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 			std::map<unsigned, unsigned> tinyCandidates;
 			std::map<unsigned, unsigned> sharingCandidates;
 			for (unsigned t = 0; t < queues.size(); t++) {
-				unsigned size = queues[t].size();
+				std::size_t size = queues[t].size();
 				if (size < tinyBound)
 					tinyCandidates.emplace(size, t);
 				else if (size > sharingBound)
@@ -192,7 +192,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				if (queue_largest.size() > sharingBound) { // ensure there still are enough elements
 					{
 						std::lock_guard<std::mutex> lock(mtxs[t_largest]);
-						unsigned halfSize = queue_largest.size() / 2;
+						std::size_t halfSize = queue_largest.size() / 2;
 						if (halfSize >= tinyBound) { // ensure there still are enough elements, again
 							tmp = std::vector<std::string>(queue_largest.begin() + halfSize, queue_largest.end());
 							queue_largest.erase(queue_largest.begin() + halfSize, queue_largest.end());
@@ -260,7 +260,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 					}
 				};
 				processRepresentatives(allRepresentatives[1]);
-				std::uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+				std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
 				for (std::uint32_t s = 3; s <= knownLimit; s += 2)
 					if (remainingSpace >= s)
 						processRepresentatives(allRepresentatives[s]);
@@ -269,7 +269,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 				stack.push_back(A);
 				me(prefix, stack, me);
 			} else if (symbol == A) {
-				std::uint32_t remainingSpace = wordLengthLimit - (prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+				std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
 				if (remainingSpace < knownLimit + 2)
 					return; // cancel already if adding the below sequences would exceed the word length limit
 				// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
