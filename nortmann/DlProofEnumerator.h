@@ -33,6 +33,9 @@ struct DlProofEnumerator {
 	static bool readRepresentativesLookupVectorFromFiles_par(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, unsigned concurrencyCount = std::thread::hardware_concurrency(), const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::size_t containerReserve = 100);
 	static std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>> proofLengthCombinations(std::uint32_t knownLimit);
 
+	// Data prediction
+	static void countNextIterationAmount(bool redundantSchemaRemoval = true, bool withConclusions = true);
+
 	// Data generation
 	// Summarized, this shared memory parallelism utilizing function is able to generate D-proofs without redundant conclusions ('dProofs<k>.txt')_{k<=n} (where time quickly becomes a limiting factor),
 	// and subsequently it can generate D-proofs with redundant conclusions ('dProofs<m>-unfiltered<n+1>+.txt')_{m>n} (where space becomes a limiting factor).

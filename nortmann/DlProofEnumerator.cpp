@@ -369,6 +369,72 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 	return representativeProofs;
 }
 
+void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bool withConclusions) {
+	chrono::time_point<chrono::steady_clock> startTime;
+
+	// 1. Load representative D-proof strings.
+	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	cout << strtok(ctime(&time), "\n") << ": Next iteration amount counter started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+	string filePrefix = withConclusions ? "data/dProofs-withConclusions/dProofs" : "data/dProofs-withoutConclusions/dProofs";
+	string filePostfix = ".txt";
+	vector<vector<string>> allRepresentatives;
+	vector<vector<string>> allConclusions;
+	uint64_t allRepresentativesCount;
+	uint32_t wordLengthLimit;
+	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &wordLengthLimit, true, filePrefix, filePostfix))
+		return;
+	uint32_t unfilteredStart = 0;
+	if (!redundantSchemaRemoval) {
+		unfilteredStart = wordLengthLimit;
+		filePostfix = "-unfiltered" + to_string(wordLengthLimit) + "+.txt";
+		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &wordLengthLimit, true, filePrefix, filePostfix, false))
+			return;
+	}
+
+	// 2. Initialize and prepare progress data.
+	bool showProgress = allRepresentatives.size() > 15;
+	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount) : ProgressData();
+
+	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
+	startTime = chrono::steady_clock::now();
+	tbb::concurrent_unordered_map<string, string> representativeProofs;
+	representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << endl;
+
+	// 4. Iterate and count candidates of length 'wordLengthLimit'.
+	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	cout << strtok(ctime(&time), "\n") << ": Starting to iterate D-proof candidates of length " << wordLengthLimit << "." << endl;
+	uint64_t counter;
+	const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
+	const unsigned knownLimit = wordLengthLimit - 2;
+	auto _iterateRepresentatives = [&]() -> uint64_t {
+		atomic<uint64_t> counter { 0 };
+		processCondensedDetachmentPlProofs_generic(stack, wordLengthLimit, knownLimit, allRepresentatives, [&counter](string& sequence) { counter++; });
+		return counter;
+	};
+	startTime = chrono::steady_clock::now();
+	counter = _iterateRepresentatives();
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to iterate " << counter << " condensed detachment proof strings of length " << wordLengthLimit << "." << endl;
+	// e.g. 17              :     11.54 ms                        taken to iterate     31388
+	//      19              :     42.47 ms                        taken to iterate     94907
+	//      21              :     98.47 ms                        taken to iterate    290392
+	//      23              :    280.59 ms                        taken to iterate    886041
+	//      25              :    897.72 ms                        taken to iterate   2709186
+	//      27              :   3248.31 ms (       3 s 248.31 ms) taken to iterate   8320672
+	//      29              :   9294.50 ms (       9 s 294.50 ms) taken to iterate  25589216
+	//      29-unfiltered27+:  10765.89 ms (      10 s 765.88 ms) taken to iterate  27452198
+	//      29-unfiltered25+:  12193.00 ms (      12 s 193.00 ms) taken to iterate  30038660
+	//      29-unfiltered23+:  12953.30 ms (      12 s 953.30 ms) taken to iterate  32772266
+	//      29-unfiltered21+:  14458.88 ms (      14 s 458.88 ms) taken to iterate  36185400
+	//      29-unfiltered19+:  15760.71 ms (      15 s 760.71 ms) taken to iterate  40243692
+	//      29-unfiltered17+:  19397.85 ms (      19 s 397.85 ms) taken to iterate  44934432
+	//      31              :  35628.12 ms (      35 s 628.12 ms) taken to iterate  78896376 ;  78896376 / 44934432 ≈ 1.75581 ;  35628.12 / 19397.85 ≈ 1.83670
+	//      33-unfiltered31+: 106942.91 ms (1 min 46 s 942.90 ms) taken to iterate 260604052 ; 260604052 / 78896376 ≈ 3.30312 ; 106942.91 / 35628.12 ≈ 3.00164
+	cout << "[Copy] Next iteration count (" << (redundantSchemaRemoval || unfilteredStart == wordLengthLimit ? "filtered" : "unfiltered" + to_string(unfilteredStart) + "+") << "): { " << wordLengthLimit << ", " << counter << " }" << endl;
+	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	cout << strtok(ctime(&time), "\n") << ": Next iteration amount counter complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+}
+
 void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/1d05f2a646563061162be9ad0db68946499ac867
 	chrono::time_point<chrono::steady_clock> startTime;
 
@@ -410,7 +476,9 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	// 27 : 1149058
 	// 29 : 3449251
 	// 5181578 representatives in total.
+	uint32_t unfilteredStart = 0;
 	if (!redundantSchemaRemoval) {
+		unfilteredStart = start;
 		filePostfix = "-unfiltered" + to_string(start) + "+.txt";
 		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix, false))
 			return;
@@ -427,7 +495,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	ProgressData findProgress;
 	ProgressData removalProgress;
 
-	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering. To find the conclusions, parse all loaded D-proofs.
+	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
 	startTime = chrono::steady_clock::now();
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr);
@@ -442,7 +510,8 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	//      29: 741236.66 ms (12 min 21 s 236.66 ms) total parse, conversion & insertion duration.  |                    877.29 ms total insertion duration.
 	//#cout << "Done loading (measure memory requirement)." << endl; while (true);
 
-	// 4. Compute and store new representatives indefinitely.
+	// 4. Compute and store new representatives.
+	map<uint32_t, uint64_t> iterationCounts;
 	for (uint32_t wordLengthLimit = start; wordLengthLimit <= limit; wordLengthLimit += 2) {
 
 		// 4.1 Prepare progress data.
@@ -450,11 +519,33 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		// NOTE: The following maps are built dynamically and may contain gaps, in which case earlier
 		//       values are used to approximate the exponential growth rate, based on which new values
 		//       are approximated in order to estimate ongoing progress of unknown scale.
-		static map<uint32_t, uint64_t> iterationCounts_builtin = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 } };
-		static map<uint32_t, uint64_t> iterationCounts = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, };
-		static map<uint32_t, uint64_t> removalCounts = { { 1, 0 }, { 3, 0 }, { 5, 3 }, { 7, 6 }, { 9, 24 }, { 11, 59 }, { 13, 171 }, { 15, 504 }, { 17, 1428 }, { 19, 4141 }, { 21, 12115 }, { 23, 35338 }, { 25, 104815 }, { 27, 310497 }, { 29, 926015 }, };
+		static map<uint32_t, uint64_t> iterationCounts_filtered = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, { 31, 78896376 } };
+		static map<uint32_t, map<uint32_t, uint64_t>> iterationCounts_unfiltered = {
+				{ 17, { { 19, 103475 }, { 21, 350830 }, { 23, 1173825 }, { 25, 3951918 }, { 27, 13339002 }, { 29, 44934432 } } },
+				{ 19, {                 { 21, 315238 }, { 23, 1061733 }, { 25, 3546684 }, { 27, 11942738 }, { 29, 40243692 } } },
+				{ 21, {                                 { 23,  958731 }, { 25, 3221706 }, { 27, 10765954 }, { 29, 36185400 } } },
+				{ 23, {                                                  { 25, 2921214 }, { 27,  9822130 }, { 29, 32772266 } } },
+				{ 25, {                                                                   { 27,  8949562 }, { 29, 30038660 } } },
+				{ 27, {                                                                                     { 29, 27452198 }, { 31, 92103906 } } },
+				{ 29, {                                                                                                       { 31, 84452466 }, { 33, 283384726 } } },
+				{ 31, {                                                                                                                         { 33, 260604052 }, { 35, 874253765 } } },
+		};
+		static map<uint32_t, uint64_t> removalCounts = { { 1, 0 }, { 3, 0 }, { 5, 3 }, { 7, 6 }, { 9, 24 }, { 11, 59 }, { 13, 171 }, { 15, 504 }, { 17, 1428 }, { 19, 4141 }, { 21, 12115 }, { 23, 35338 }, { 25, 104815 }, { 27, 310497 }, { 29, 926015 } };
+		if (iterationCounts.empty()) {
+			if (redundantSchemaRemoval)
+				iterationCounts = iterationCounts_filtered;
+			else {
+				for (const pair<const uint32_t, uint64_t>& p : iterationCounts_filtered)
+					if (p.first <= unfilteredStart)
+						iterationCounts.insert(p);
+					else
+						break;
+				map<uint32_t, uint64_t>& counts = iterationCounts_unfiltered[unfilteredStart];
+				iterationCounts.insert(counts.begin(), counts.end());
+			}
+		}
 		if (showProgress) {
-			auto determineCountingLimit = [&wordLengthLimit](uint64_t& count, const map<uint32_t, uint64_t>& counts) -> bool {
+			auto determineCountingLimit = [&wordLengthLimit](uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration) -> bool {
 				map<uint32_t, uint64_t>::const_iterator itIterationCount = counts.find(wordLengthLimit);
 				if (itIterationCount == counts.end()) {
 					map<uint32_t, uint64_t>::const_iterator itLastKnown = prev(counts.end());
@@ -468,22 +559,25 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						itPrevLastKnown = prev(itPrevLastKnown);
 					}
 					double lastKnownGrowth = static_cast<double>(itLastKnown->second) / static_cast<double>(itPrevLastKnown->second);
-					double estimatedLimit = static_cast<double>(lastKnownCount);
-					for (uint32_t i = lastKnownLimit; i < wordLengthLimit; i += 2)
-						estimatedLimit *= lastKnownGrowth;
+					uint32_t exp = (wordLengthLimit - lastKnownLimit) / 2;
+					double estimatedLimit = static_cast<double>(lastKnownCount) * pow(lastKnownGrowth, exp);
 					count = static_cast<uint64_t>(estimatedLimit);
+					cout << "Estimated " << (iteration ? "iteration" : "removal") << " count set to " << count << ", based on last known pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") with " << itLastKnown->second << "/" << itPrevLastKnown->second << " ≈ " << lastKnownGrowth << " and " << itLastKnown->second << " * (" << itLastKnown->second << "/" << itPrevLastKnown->second << ")^" << (wordLengthLimit - lastKnownLimit) / 2 << " ≈ " << FctHelper::round(estimatedLimit, 2) << "." << endl;
 					return true;
 				} else {
 					count = itIterationCount->second;
+					cout << "Known " << (iteration ? "iteration" : "removal") << " count loaded from " << itIterationCount->first << ":" << itIterationCount->second << "." << endl;
 					return false;
 				}
 			};
 			uint64_t iterationCount;
-			bool iterationCountEstimated = determineCountingLimit(iterationCount, redundantSchemaRemoval ? iterationCounts : iterationCounts_builtin);
+			bool iterationCountEstimated = determineCountingLimit(iterationCount, iterationCounts, true);
 			findProgress = ProgressData(wordLengthLimit >= 27 ? 2 : wordLengthLimit >= 25 ? 5 : wordLengthLimit >= 23 ? 10 : 20, iterationCount, iterationCountEstimated);
-			uint64_t removalCount;
-			bool removalCountEstimated = determineCountingLimit(removalCount, removalCounts);
-			removalProgress = ProgressData(wordLengthLimit >= 23 ? 2 : wordLengthLimit >= 21 ? 5 : wordLengthLimit >= 19 ? 10 : 20, removalCount, removalCountEstimated);
+			if (redundantSchemaRemoval) {
+				uint64_t removalCount;
+				bool removalCountEstimated = determineCountingLimit(removalCount, removalCounts, false);
+				removalProgress = ProgressData(wordLengthLimit >= 23 ? 2 : wordLengthLimit >= 21 ? 5 : wordLengthLimit >= 19 ? 10 : 20, removalCount, removalCountEstimated);
+			}
 		}
 
 		time = chrono::system_clock::to_time_t(chrono::system_clock::now());
@@ -508,8 +602,12 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		//      29: 3187900.65 ms (53 min  7 s 900.65 ms) taken to collect 4375266 [...] ; 3187900.65 / 916905.86 ≈ 3.47680
 
 		// 4.3 Update iteration progress information.
-		(redundantSchemaRemoval ? iterationCounts : iterationCounts_builtin).emplace(wordLengthLimit, counter);
-		//#cout << "Updated iterationCounts: " << FctHelper::mapString((redundantSchemaRemoval ? iterationCounts : iterationCounts_builtin)) << endl;
+		iterationCounts.emplace(wordLengthLimit, counter);
+		(redundantSchemaRemoval ? iterationCounts_filtered : (wordLengthLimit <= unfilteredStart ? iterationCounts_filtered : iterationCounts_unfiltered[unfilteredStart])).emplace(wordLengthLimit, counter); // also save progress statically for potential subsequent generations
+		//#cout << "Updated iterationCounts: " << FctHelper::mapString(iterationCounts) << ", static entry: " << FctHelper::mapString(redundantSchemaRemoval ? iterationCounts_filtered : iterationCounts_unfiltered[unfilteredStart]) << endl;
+		cout << "[Copy] Static filtered iteration counts: " << FctHelper::mapStringF(iterationCounts_filtered, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
+		if (!redundantSchemaRemoval)
+			cout << "[Copy] Static unfiltered iteration counts: { " << unfilteredStart << ", " << FctHelper::mapStringF(iterationCounts_unfiltered[unfilteredStart], [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << " }," << endl;
 
 		// 4.4 Remove new proofs with redundant conclusions.
 		// NOTE: For a few steps more to not take ages (but still get all minimal D-proofs up to a certain length), one can skip the time-intensive filtering below and then
@@ -540,6 +638,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			// 4.5 Update removal progress information.
 			removalCounts.emplace(wordLengthLimit, oldRepresentativeCounter - representativeCounter);
 			//#cout << "Updated removalCounts: " << FctHelper::mapString(removalCounts) << endl;
+			cout << "[Copy] Static filtered removal counts: " << FctHelper::mapStringF(removalCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
 		}
 
 		// 4.6 Order and output information.
