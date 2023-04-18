@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	if (argc <= 1)
 		return printUsage();
 	enum class Task {
-		Generate, // get<6> = redundantSchemaRemoval, get<7> = withConclusions, get<8> : whether -i was called
+		Generate, // get<1> = limit, get<6> = redundantSchemaRemoval, get<7> = withConclusions, get<8> : whether -i was called
 		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = withConclusions
 		ApplyReplacements, // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 		FileConversion, // get<2> = inputFilePrefix, get<3> = outputFilePrefix, get<6> = debug, get<7> ? createGeneratorFilesWithConclusions(...) : createGeneratorFilesWithoutConclusions(...)

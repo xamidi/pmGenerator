@@ -227,6 +227,10 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 	return rawParseData;
 }
 
+vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProof_raw_permissive(const string& dProof, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings) {
+	return parseDProof_raw(dProof, minUseAmountToCreateHelperProof, verifyingConstruct, debug, calculateMeanings, false);
+}
+
 vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProofs_raw(const vector<pair<string, string>>& dProofs, unsigned minUseAmountToCreateHelperProof, map<string, string>* optOut_duplicates, map<size_t, set<string>>* optOut_knownDProofsByLength, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, const vector<string>* altIn_dProofsWithoutContexts, bool prepareOnly) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
 	// 1. Group and order the (in D-notation) given proofs by their length, and create a context lookup table
 	map<size_t, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length

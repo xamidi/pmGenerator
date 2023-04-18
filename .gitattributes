@@ -8,3 +8,4 @@
 *.gif    -text
 *.ico    -text
 *.7z     -text
+*.pdf    -text

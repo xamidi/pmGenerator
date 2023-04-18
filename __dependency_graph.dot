@@ -97,7 +97,6 @@ digraph {
 	DRuleReducer -> concurrent_vector [color=blue]
 	DRuleReducer -> parallel_for [color=blue]
 	DRuleReducer -> "boost/algorithm/string" [color=blue]
-	DRuleReducer -> execution [color=blue]
 	DRuleReducer -> iostream [color=blue]
 	DRuleReducer -> string [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\metamath" {
@@ -142,7 +141,6 @@ digraph {
 	DlProofEnumerator -> concurrent_vector [color=blue]
 	DlProofEnumerator -> parallel_for [color=blue]
 	DlProofEnumerator -> cstring [color=blue]
-	DlProofEnumerator -> execution [color=blue]
 	DlProofEnumerator -> iostream [color=blue]
 	DlProofEnumerator -> FwdTbb [color=red]
 	DlProofEnumerator -> ProgressData [color=red]

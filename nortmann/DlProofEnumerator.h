@@ -20,7 +20,7 @@ enum class DlProofEnumeratorMode {
 
 struct DlProofEnumerator {
 	// Data loading
-	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, std::uint64_t* optOut_allRepresentativesCount = nullptr, std::uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
+	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, std::uint64_t* optOut_allRepresentativesCount = nullptr, std::uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::uint32_t limit = UINT32_MAX);
 	static tbb_concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::string>& representatives, helper::ProgressData* const progressData = nullptr);
 	static tbb_concurrent_unordered_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr);
 	static tbb_concurrent_unordered_map<std::string, std::string> connectDProofConclusions(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr);
@@ -29,12 +29,16 @@ struct DlProofEnumerator {
 	static const std::vector<const std::vector<std::string>*>& builtinRepresentatives();
 	static const std::vector<const std::vector<std::string>*>& builtinConclusions();
 	static std::vector<std::vector<std::string>> composeToLookupVector(const std::vector<const std::vector<std::string>*>& all);
-	static bool readRepresentativesLookupVectorFromFiles_seq(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true);
-	static bool readRepresentativesLookupVectorFromFiles_par(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, unsigned concurrencyCount = std::thread::hardware_concurrency(), const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::size_t containerReserve = 100);
+	static bool readRepresentativesLookupVectorFromFiles_seq(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::uint32_t limit = UINT32_MAX);
+	static bool readRepresentativesLookupVectorFromFiles_par(std::vector<std::vector<std::string>>& allRepresentativesLookup, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, bool debug = false, unsigned concurrencyCount = std::thread::hardware_concurrency(), const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::uint32_t limit = UINT32_MAX, std::size_t containerReserve = 100);
 	static std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>> proofLengthCombinations(std::uint32_t knownLimit);
 
 	// Data prediction
 	static void countNextIterationAmount(bool redundantSchemaRemoval = true, bool withConclusions = true);
+	static bool determineCountingLimit(std::uint32_t wordLengthLimit, std::uint64_t& count, const std::map<std::uint32_t, std::uint64_t>& counts, bool iteration);
+	static std::map<std::uint32_t, std::uint64_t>& iterationCounts_filtered();
+	static std::map<std::uint32_t, std::map<std::uint32_t, std::uint64_t>>& iterationCounts_unfiltered();
+	static std::map<std::uint32_t, std::uint64_t>& removalCounts();
 
 	// Data generation
 	// Summarized, this shared memory parallelism utilizing function is able to generate D-proofs without redundant conclusions ('dProofs<k>.txt')_{k<=n} (where time quickly becomes a limiting factor),

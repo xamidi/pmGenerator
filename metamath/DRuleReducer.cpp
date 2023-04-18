@@ -13,7 +13,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <execution>
 #include <iostream>
 
 using namespace std;
@@ -34,7 +33,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		startTime = chrono::steady_clock::now();
 	vector<string> knownDProofs;
 	for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
-		copy(p.second.begin(), p.second.end(), knownDProofs.end());
+		copy(p.second.begin(), p.second.end(), back_inserter(knownDProofs));
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
 		startTime = chrono::steady_clock::now();
@@ -45,18 +44,21 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
 	mutex mtx_set;
-	for_each(execution::par, knownDProofs.begin(), knownDProofs.end(), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](const string& s) {
-		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
-		pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
-		{
-			lock_guard<mutex> lock(mtx_set);
-			emplaceResult.first->second.insert(s);
+	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(knownDProofs.begin(), knownDProofs.end()), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](tbb::blocked_range<vector<string>::const_iterator>& range) {
+		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const string& s = *it;
+			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
+			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+			pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
+			{
+				lock_guard<mutex> lock(mtx_set);
+				emplaceResult.first->second.insert(s);
+			}
+			if (!emplaceResult.second) // a proof for the conclusion is already known
+				redundantCounter++;
+			else
+				conclusionCounter++;
 		}
-		if (!emplaceResult.second) // a proof for the conclusion is already known
-			redundantCounter++;
-		else
-			conclusionCounter++;
 	});
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to parse " << conclusionCounter + redundantCounter << " D-proofs (" << conclusionCounter << " conclusions, " << redundantCounter << " redundant)." << endl;
