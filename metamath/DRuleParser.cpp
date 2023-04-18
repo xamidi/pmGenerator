@@ -227,6 +227,10 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 	return rawParseData;
 }
 
+vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProof_raw_permissive(const string& dProof, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings) {
+	return parseDProof_raw(dProof, minUseAmountToCreateHelperProof, verifyingConstruct, debug, calculateMeanings, false);
+}
+
 namespace {
 // Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
 // NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.

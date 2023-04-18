@@ -33,7 +33,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		startTime = chrono::steady_clock::now();
 	vector<string> knownDProofs;
 	for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
-		copy(p.second.begin(), p.second.end(), knownDProofs.end());
+		copy(p.second.begin(), p.second.end(), back_inserter(knownDProofs));
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
 		startTime = chrono::steady_clock::now();
