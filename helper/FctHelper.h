@@ -26,7 +26,67 @@ struct cmpStringShrink {
 	bool operator()(const std::string& a, const std::string& b) const;
 };
 
+template<typename T>
+struct ManagedArray { // for RAII on dynamic arrays
+	T* data;
+	ManagedArray() : data(nullptr) { }
+	ManagedArray(std::size_t size) : data(new T[size]) { }
+	~ManagedArray() { delete data; }
+};
+
 struct FctHelper {
+	static void mpi_sendString(int rank, const std::string& s, int dest, bool debug = false);
+	static std::string mpi_recvString(int rank, int source, bool debug = false);
+	static bool mpi_tryRecvString(int rank, int source, std::string& result, bool debug = false);
+
+	template<typename T>
+	static bool toUInt(const std::string& str, T& value) {
+		if (*str.c_str() == '0' && str.length() != 1)
+			return false;
+		T num = 0;
+		for (char c : str) {
+			T before = num;
+			switch (c) {
+			case '0':
+				num = 10 * num;
+				break;
+			case '1':
+				num = 10 * num + 1;
+				break;
+			case '2':
+				num = 10 * num + 2;
+				break;
+			case '3':
+				num = 10 * num + 3;
+				break;
+			case '4':
+				num = 10 * num + 4;
+				break;
+			case '5':
+				num = 10 * num + 5;
+				break;
+			case '6':
+				num = 10 * num + 6;
+				break;
+			case '7':
+				num = 10 * num + 7;
+				break;
+			case '8':
+				num = 10 * num + 8;
+				break;
+			case '9':
+				num = 10 * num + 9;
+				break;
+			default:
+				return false;
+			}
+			if (num < before) // overflow
+				return false;
+		}
+		value = num;
+		return true;
+	}
+
 	// Functions to quickly calculate to_string(n).length()
 	static unsigned digitsNum_uint32(std::uint32_t n);
 	static unsigned digitsNum_uint64(std::uint64_t n);

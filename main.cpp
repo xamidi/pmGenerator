@@ -5,6 +5,7 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#include <mpi.h>
 #include <unistd.h>
 
 using namespace std;
@@ -29,7 +30,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
-				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+\n"
+				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit>\n"
 				"    -g: Generate proof files\n"
 				"        -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"        -c: proof files without conclusions, requires additional parsing\n"
@@ -54,6 +55,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				"        -y: upper vertical limit\n"
 				"        -o: print to given output file\n"
 				"        -d: print debug information\n"
+				"    -m: MPI-based multi-node filtering (-m <n>) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt. Creates dProofs<n>.txt.\n"
+				"        Cannot be combined with further commands.\n"
 				"Examples:\n"
 				"    pmGenerator -g -1\n"
 				"    pmGenerator -r \"data/pmproofs.txt\" \"data/pmproofs-reducer.txt\" -i \"data/dProofs\" -c -d\n"
@@ -76,7 +79,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -r data/pmproofs-unified.txt data/pmproofs-reducer33.txt -d", " ");
 		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -a SD data/pmproofs-reducer33.txt data/pmproofs-unified.txt data/pmproofs-unified33-modifiedOnly-noWrap.txt -s", " ");
 		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -a SD data/pmproofs-reducer33.txt data/pmproofs-unified.txt data/pmproofs-unified33.txt -s -l -w -d", " ");
-		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 35 -u", " ");
+		//static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 35 -u", " ");
+		static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -m 17", " ");
 		//#static vector<string> customCmd = FctHelper::stringSplit("pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly-noWrap.txt -s", " ");
 		argc = customCmd.size();
 		argv = new char*[customCmd.size()];
@@ -91,10 +95,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = withConclusions
 		ApplyReplacements, // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 		FileConversion, // get<2> = inputFilePrefix, get<3> = outputFilePrefix, get<6> = debug, get<7> ? createGeneratorFilesWithConclusions(...) : createGeneratorFilesWithoutConclusions(...)
-		ConclusionLengthPlot // get<2> = inputFilePrefix, get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
+		ConclusionLengthPlot, // get<2> = inputFilePrefix, get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
+		MpiFilter // get<1> = wordLengthLimit
 	};
 	vector<tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>> tasks;
 
+	string mpiArg;
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] != '-' || argv[i][1] == '\0' || argv[i][2] != '\0')
 			return printUsage("Invalid argument \"" + string { argv[i] } + "\".");
@@ -211,35 +217,73 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-y\".");
 			}
 			break;
+		case 'm':
+			if (!tasks.empty())
+				return printUsage("Invalid argument \"-m\": Cannot be combined with further commands.");
+			if (i + 1 >= argc)
+				return printUsage("Missing parameter for \"-m\".");
+			else {
+				string param = string(argv[++i]);
+				unsigned value;
+				if (!FctHelper::toUInt(param, value))
+					return printUsage("Invalid parameter \"" + param + "\" for \"-m\".");
+				tasks.emplace_back(Task::MpiFilter, value, "", "", "", "", false, false, false, false, 0, 0);
+				mpiArg = "-m";
+			}
+			break;
 		default:
 			return printUsage("Invalid argument \"" + string { argv[i] } + "\".");
 		}
 	}
-	auto bstr = [](bool b) { return b ? "true" : "false"; };
-	stringstream ss;
-	size_t index = 0;
-	for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
-		switch (get<0>(t)) {
-		case Task::Generate:
-			ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
-			break;
-		case Task::CreateReplacements:
-			ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")\n";
-			break;
-		case Task::ApplyReplacements:
-			ss << ++index << ". applyReplacements(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", \"" << get<5>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<9>(t)) << ", " << bstr(get<6>(t)) << ")\n";
-			break;
-		case Task::FileConversion:
-			if (get<7>(t))
-				ss << ++index << ". createGeneratorFilesWithConclusions(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<6>(t)) << ")\n";
-			else
-				ss << ++index << ". createGeneratorFilesWithoutConclusions(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<6>(t)) << ")\n";
-			break;
-		case Task::ConclusionLengthPlot:
-			ss << ++index << ". printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", \"" << get<2>(t) << "\", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")\n";
-			break;
+	int mpi_size;
+	int mpi_rank;
+	if (!mpiArg.empty()) {
+		if (tasks.size() > 1)
+			return printUsage("Invalid argument \"" + mpiArg + "\": Cannot be combined with further commands.");
+
+		// Initialize the MPI library
+		int provided;
+		MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+		if (provided < MPI_THREAD_FUNNELED) {
+			cerr << "Missing MPI support. (provided: " << provided << ", requested: " << MPI_THREAD_FUNNELED << ") Aborting." << endl;
+			MPI_Finalize(); // Finalize the MPI library
+			return 0;
 		}
-	cout << "Tasks:\n" << ss.str() << endl;
+
+		// Obtain the process ID and the number of processes
+		MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+		MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+	}
+	auto bstr = [](bool b) { return b ? "true" : "false"; };
+	if (mpiArg.empty() || mpi_rank == 0) {
+		stringstream ss;
+		size_t index = 0;
+		for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
+			switch (get<0>(t)) {
+			case Task::Generate:
+				ss << ++index << ". generateDProofRepresentativeFiles(" << get<1>(t) << ", " << bstr(get<6>(t)) << ", " << bstr(get<7>(t)) << ")\n";
+				break;
+			case Task::CreateReplacements:
+				ss << ++index << ". createReplacementsFile(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<6>(t)) << ")\n";
+				break;
+			case Task::ApplyReplacements:
+				ss << ++index << ". applyReplacements(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", \"" << get<4>(t) << "\", \"" << get<5>(t) << "\", " << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << bstr(get<9>(t)) << ", " << bstr(get<6>(t)) << ")\n";
+				break;
+			case Task::FileConversion:
+				if (get<7>(t))
+					ss << ++index << ". createGeneratorFilesWithConclusions(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<6>(t)) << ")\n";
+				else
+					ss << ++index << ". createGeneratorFilesWithoutConclusions(\"" << get<2>(t) << "\", \"" << get<3>(t) << "\", " << bstr(get<6>(t)) << ")\n";
+				break;
+			case Task::ConclusionLengthPlot:
+				ss << ++index << ". printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", \"" << get<2>(t) << "\", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")\n";
+				break;
+			case Task::MpiFilter:
+				ss << ++index << ". mpi_filterDProofRepresentativeFile(" << get<1>(t) << ")\n";
+				break;
+			}
+		cout << "Tasks:\n" << ss.str() << endl;
+	}
 	try {
 		for (const tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>& t : tasks)
 			switch (get<0>(t)) {
@@ -277,9 +321,17 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), get<2>(t), &fout, get<6>(t));
 				}
 				break;
+			case Task::MpiFilter:
+				stringstream ss;
+				ss << "[Main; pid: " << getpid() << ", tid:" << this_thread::get_id() << ", rank " << mpi_rank << " (" << mpi_size << " proc" << (mpi_size == 1 ? "" : "s") << ")] Calling mpi_filterDProofRepresentativeFile(" << get<1>(t) << ").";
+				cout << ss.str() << endl;
+				DlProofEnumerator::mpi_filterDProofRepresentativeFile(get<1>(t));
+				break;
 			}
 	} catch (exception& e) {
 		cerr << "ERROR exception thrown: " << e.what() << endl;
 	}
+	if (!mpiArg.empty())
+		MPI_Finalize(); // Finalize the MPI library
 	return 0;
 }

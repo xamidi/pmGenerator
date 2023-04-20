@@ -10,12 +10,15 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <tbb/concurrent_map.h>
+#include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
 #include <cstring>
 #include <iostream>
+#include <mpi.h>
 
 using namespace std;
 using namespace xamid::helper;
@@ -348,7 +351,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 		const vector<string>& conclusionsOfWordLengthLimit = allConclusions[wordLengthLimit];
 		if (representativesOfWordLengthLimit.size() != conclusionsOfWordLengthLimit.size())
 			throw invalid_argument("allRepresentatives[" + to_string(wordLengthLimit) + "].size() = " + to_string(representativesOfWordLengthLimit.size()) + " != " + to_string(conclusionsOfWordLengthLimit.size()) + " = allConclusions[" + to_string(wordLengthLimit) + "].size()");
-		tbb::parallel_for(size_t(0), representativesOfWordLengthLimit.size(), [&progressData, &representativeProofs, &representativesOfWordLengthLimit, &conclusionsOfWordLengthLimit] (size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
+		tbb::parallel_for(size_t(0), representativesOfWordLengthLimit.size(), [&progressData, &representativeProofs, &representativesOfWordLengthLimit, &conclusionsOfWordLengthLimit](size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
 			// NOTE: Definitely stores, since that is how the input files were constructed.
 			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]);
 
@@ -734,6 +737,140 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
 }
 
+void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLimit) {
+	chrono::time_point<chrono::steady_clock> startTime;
+
+	// Obtain the process ID and the number of processes
+	int mpi_size;
+	int mpi_rank;
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+	if (mpi_size <= 1)
+		cerr << "Single-process call. Utilize multiple processes via \"mpiexec -n <np> ./pmGenerator <args>\" or \"srun -n <np> ./pmGenerator <args>\" (or similar), for np > 1." << endl;
+
+	// 1. Load representative D-proof strings.
+	auto myTime = []() -> string { time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now()); return strtok(ctime(&time), "\n"); };
+	auto myInfo = [&]() -> string {
+		stringstream ss;
+		ss << "[rank " << mpi_rank << " ; " << mpi_size << " process" << (mpi_size == 1 ? "" : "es") << " ; " << thread::hardware_concurrency() << " local hardware thread contexts]";
+		return ss.str();
+	};
+	cout << myTime() + ": MPI-based D-proof representative filter started. " + myInfo() << endl;
+	bool isMainProc = mpi_rank == 0;
+	string filePrefix = "data/dProofs-withConclusions/dProofs";
+	string filePostfix = ".txt";
+	vector<vector<string>> allRepresentatives;
+	vector<vector<string>> allConclusions;
+	uint64_t allRepresentativesCount;
+	uint32_t start;
+	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &start, isMainProc, filePrefix, filePostfix)) {
+		cerr << "[Rank " + to_string(mpi_rank) + "] Failed to load D-proof representatives. Aborting." << endl;
+		MPI_Abort(MPI_COMM_WORLD, 1);
+		return;
+	}
+	if (start != wordLengthLimit) {
+		cerr << "[Rank " + to_string(mpi_rank) + "] First unfiltered file to load would be ./" + filePrefix + to_string(start) + "-unfiltered" + to_string(start) + "+.txt, but wordLengthLimit := " + to_string(wordLengthLimit) + ". Aborting." << endl;
+		MPI_Abort(MPI_COMM_WORLD, 1);
+		return;
+	}
+	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &start, isMainProc, filePrefix, "-unfiltered" + to_string(start) + "+.txt", false, wordLengthLimit)) {
+		cerr << "[Rank " + to_string(mpi_rank) + "] Failed to load D-proof representatives. Aborting." << endl;
+		MPI_Abort(MPI_COMM_WORLD, 1);
+		return;
+	}
+	if (start != wordLengthLimit + 2) {
+		cerr << "[Rank " + to_string(mpi_rank) + "] Could not find ./" + filePrefix + to_string(wordLengthLimit) + "-unfiltered" + to_string(wordLengthLimit) + ".txt. Aborting." << endl;
+		MPI_Abort(MPI_COMM_WORLD, 1);
+		return;
+	}
+	string myData = to_string(allRepresentativesCount);
+	if (isMainProc) {
+		for (int source = 1; source < mpi_size; source++) {
+			string data = FctHelper::mpi_recvString(0, source);
+			if (myData != data) {
+				cerr << "Uniform loading failed: " + data + " representatives loaded on rank 0, but " + myData + " representatives loaded on rank " + to_string(source) + ". Aborting." << endl;
+				MPI_Abort(MPI_COMM_WORLD, 1);
+				return;
+			}
+		}
+		cout << myTime() + ": Representative collections were initialized successfully on all ranks." << endl;
+	} else
+		FctHelper::mpi_sendString(mpi_rank, myData, 0);
+
+	// 2. Initialize and prepare progress data.
+	bool showProgress = isMainProc && allRepresentatives.size() > 15;
+	ProgressData connectProgress = showProgress ? ProgressData(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount) : ProgressData();
+	ProgressData removalProgress;
+	if (isMainProc) {
+		uint64_t removalCount;
+		bool removalCountEstimated = determineCountingLimit(wordLengthLimit, removalCount, removalCounts(), false);
+		removalProgress = ProgressData(wordLengthLimit >= 23 ? 2 : wordLengthLimit >= 21 ? 5 : wordLengthLimit >= 19 ? 10 : 20, removalCount, removalCountEstimated);
+	}
+
+	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
+	if (isMainProc)
+		startTime = chrono::steady_clock::now();
+	tbb::concurrent_unordered_map<string, string> representativeProofs;
+	representativeProofs = connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &connectProgress : nullptr);
+	if (isMainProc)
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " total insertion duration." << endl;
+
+	// 4. Remove new proofs with redundant conclusions.
+	const vector<string>& recentRepresentativeSequence = allRepresentatives[wordLengthLimit];
+	const vector<string>& recentConclusionSequence = allConclusions[wordLengthLimit];
+	if (isMainProc)
+		startTime = chrono::steady_clock::now();
+	tbb::concurrent_unordered_set<string> redundant = _mpi_findRedundantConclusionsForProofsOfMaxLength(mpi_rank, mpi_size, wordLengthLimit, representativeProofs, recentConclusionSequence, isMainProc ? &removalProgress : nullptr);
+	if (isMainProc)
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to detect " + to_string(redundant.size()) + " conclusions for which there are more general variants proven in lower or equal amounts of steps." << endl;
+
+	// 5. Print removal progress information.
+	if (isMainProc) {
+		cout << "Found " + to_string(recentRepresentativeSequence.size() - redundant.size()) + " representative and " + to_string(redundant.size()) + " redundant condensed detachment proof strings." << endl;
+		cout << "[Copy] Removal count: { " + to_string(wordLengthLimit) + ", " + to_string(redundant.size()) + " }" << endl;
+	}
+
+	// 6. Store new representatives.
+	tbb::concurrent_map<string, string, cmpStringGrow> newContent;
+	if (isMainProc) {
+
+		// 6.1 Order information.
+		startTime = chrono::steady_clock::now();
+		tbb::parallel_for(size_t(0), recentRepresentativeSequence.size(), [&recentRepresentativeSequence, &recentConclusionSequence, &redundant, &newContent](size_t i) { // NOTE: Counts from i = start := 0 until i < end := recentRepresentativeSequence.size().
+			const string& conclusion = recentConclusionSequence[i];
+			if (!redundant.count(conclusion))
+				newContent.emplace(recentRepresentativeSequence[i], conclusion);
+		});
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to filter and order new representative proofs." << endl;
+
+		// 6.2 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		startTime = chrono::steady_clock::now();
+		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
+		string::size_type bytes = 0;
+		{
+			while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+				cerr << "Failed to create file at \"" + file + "\", trying again." << endl;
+			cout << myTime() + ": Starting to write " + to_string(newContent.size()) + " entries to " + file + "." << endl;
+			ofstream fout(file, fstream::out | fstream::binary);
+			bool first = true;
+			for (const pair<const string, string>& p : newContent) {
+				const string& dProof = p.first;
+				const string& conclusion = p.second;
+				if (first) {
+					bytes += dProof.length() + conclusion.length() + 1;
+					fout << dProof << ":" << conclusion;
+					first = false;
+				} else {
+					bytes += dProof.length() + conclusion.length() + 2;
+					fout << "\n" << dProof << ":" << conclusion;
+				}
+			}
+		}
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to print and save " + to_string(bytes) + " bytes of representative condensed detachment proof strings to " + file + "." << endl;
+	}
+	cout << myTime() + ": MPI-based D-proof representative filter complete. " + myInfo() << endl;
+}
+
 void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputFilePrefix, const string& outputFilePrefix, bool debug) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
@@ -1110,6 +1247,139 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	for (const pair<const string* const, tbb::concurrent_unordered_map<string, string>::const_iterator>& p : toErase)
 		representativeProofs.unsafe_erase(p.second);
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
+}
+
+tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, helper::ProgressData* const progressData) {
+	bool isMainProc = mpi_rank == 0;
+	size_t n = recentConclusionSequence.size();
+
+	size_t first = mpi_rank * n / mpi_size;
+	size_t end = mpi_rank + 1 == mpi_size ? n : (mpi_rank + 1) * n / mpi_size; // first index that is not contained
+	// NOTE: Using unordered structure to reduce fluctuations (since then the candidates are in a pseudo-random order).
+	tbb::concurrent_unordered_set<string> myRange = tbb::concurrent_unordered_set<string>(recentConclusionSequence.begin() + first, recentConclusionSequence.begin() + end); // empty in case first == end
+	//#if (isMainProc) this_thread::sleep_for(2s);
+	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Interval: [" + to_string(first) + ", " + (end ? to_string(end - 1) : "-1") + "] (size " + to_string(end - first) + "), |myRange| = " + to_string(myRange.size()) << endl;
+	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const string& formula = it->first;
+			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
+		}
+	});
+	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
+	//#if (isMainProc) cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const size_t, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
+	tbb::concurrent_queue<string> toErase;
+	tbb::concurrent_unordered_set<string> toErase_mainProc;
+	mutex mtx;
+	unique_lock<std::mutex> condLock(mtx);
+	condition_variable cond;
+	atomic<bool> communicate { true };
+	atomic<bool> workerDone { false };
+	atomic<uint64_t> localCounter { 0 };
+	if (progressData)
+		progressData->setStartTime();
+	auto worker = [](int mpi_rank, size_t n, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_unordered_set<string>& myRange, tbb::concurrent_queue<string>& toErase, tbb::concurrent_unordered_set<string>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
+		tbb::parallel_for(myRange.range(), [&isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](tbb::concurrent_unordered_set<string>::range_type& range) {
+			for (tbb::concurrent_unordered_set<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+				const string& formula = *it;
+				atomic<bool> redundant { false };
+				size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+					for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+						if (redundant)
+							return;
+						else if (it->first <= formulaLen)
+							for (const string* const potentialSchema : it->second)
+								if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
+									redundant = true;
+									return;
+								}
+				});
+				if (redundant) {
+					localCounter++;
+					if (isMainProc)
+						toErase_mainProc.insert(*it);
+					else {
+						toErase.push(*it);
+						cond.notify_one();
+					}
+
+					// Show progress if requested
+					if (progressData) {
+						if (progressData->nextStep()) {
+							uint64_t percentage;
+							string progress;
+							string etc;
+							if (progressData->nextState(percentage, progress, etc)) {
+								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+								cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
+							}
+						}
+					}
+				} else if (!toErase.empty())
+					cond.notify_one();
+			}
+		});
+		workerDone = true;
+		if (!isMainProc)
+			while (communicate) {
+				cond.notify_one();
+				this_thread::yield();
+			}
+		cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Worker complete." << endl;
+	};
+	thread workerThread(worker, mpi_rank, n, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(myRange), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
+	if (isMainProc) {
+		int numComplete = 0;
+		string f;
+		while (communicate) {
+			for (int source = 1; source < mpi_size; source++)
+				while (FctHelper::mpi_tryRecvString(mpi_rank, source, f)) {
+					if (f == ";")
+						numComplete++;
+					else {
+						toErase_mainProc.insert(f);
+
+						// Show progress if requested
+						if (progressData) {
+							if (progressData->nextStep()) {
+								uint64_t percentage;
+								string progress;
+								string etc;
+								if (progressData->nextState(percentage, progress, etc)) {
+									time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+									cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
+								}
+							}
+						}
+					}
+				}
+			if (numComplete + 1 == mpi_size) {
+				// NOTE: The MPI standard guarantees that messages are received in the order they are sent ("non-overtaking messages", https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node41.html).
+				//       Therefore, since ";" is the last message for each rank, all messages have been received.
+				communicate = false;
+			} else
+				this_thread::yield();
+		}
+	} else
+		while (communicate) {
+			cond.wait(condLock);
+			string f;
+			while (toErase.try_pop(f)) // send and clear 'toErase'
+				FctHelper::mpi_sendString(mpi_rank, f, 0);
+			if (workerDone && toErase.empty()) {
+				FctHelper::mpi_sendString(mpi_rank, ";", 0); // notify main process that this process is done
+				communicate = false;
+			}
+		}
+	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Communication complete, waiting for worker to join main thread." << endl;
+	workerThread.join();
+	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
+
+	//#MPI_Barrier(MPI_COMM_WORLD);
+	cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Done. Candidates registered: " + to_string(localCounter) << endl;
+	return toErase_mainProc;
 }
 
 namespace {

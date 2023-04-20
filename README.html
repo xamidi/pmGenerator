@@ -3,10 +3,10 @@
      Update instructions:
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
-     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (211 occurences)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (236 occurences)
      4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<img src\=\"icon\/icon-readme\.png\" align\=\"left\">[/REPLACE] (1 occurence)
      5. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
-     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (418 occurences)
+     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (468 occurences)
      (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4, 5 and 6.)
      -->
 <html>
@@ -214,7 +214,7 @@ b, strong {
 </head>
 <body><div class="markdown-container ltr"><div id="readme"><img src="icon/icon-readme.png" align="left">
 <h1 id="xamidi-pmgenerator">@xamidi/pmGenerator</h1>
-<p>Code extracted from <a href="https://github.com/deontic-logic/proof-tool" title="GitHub repository">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>. Eligible for shared memory high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.<br>The following table exemplary shows progress that has already been made.</p>
+<p>Code extracted from <a href="https://github.com/deontic-logic/proof-tool" title="GitHub repository">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>.<br>Eligible for high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.<br>The following table exemplary shows progress that has already been made.</p>
 <table>
 <thead>
 <tr>
@@ -259,7 +259,7 @@ b, strong {
 </table>
 <p>This tool has been <a href="https://groups.google.com/g/metamath/c/6DzIY33mthE/m/K0I6UNoiAgAJ">posted</a> to the Metamath mailing list.</p>
 <h4 id="usage">Usage</h4>
-<pre><code>pmGenerator ( -g &lt;limit&gt; [-u] [-c] | -r &lt;pmproofs file&gt; &lt;output file&gt; [-i &lt;prefix&gt;] [-c] [-d] | -a &lt;initials&gt; &lt;replacements file&gt; &lt;pmproofs file&gt; &lt;output file&gt; [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i &lt;prefix&gt;] [-o &lt;prefix&gt;] [-d] | -p [-i &lt;prefix&gt;] [-s] [-t] [-x &lt;limit&gt;] [-y &lt;limit&gt;] [-o &lt;output file&gt;] [-d] )+
+<pre><code>pmGenerator ( -g &lt;limit&gt; [-u] [-c] | -r &lt;pmproofs file&gt; &lt;output file&gt; [-i &lt;prefix&gt;] [-c] [-d] | -a &lt;initials&gt; &lt;replacements file&gt; &lt;pmproofs file&gt; &lt;output file&gt; [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i &lt;prefix&gt;] [-o &lt;prefix&gt;] [-d] | -p [-i &lt;prefix&gt;] [-s] [-t] [-x &lt;limit&gt;] [-y &lt;limit&gt;] [-o &lt;output file&gt;] [-d] )+ | -m &lt;limit&gt;
 -g: Generate proof files
     -u: unfiltered (significantly faster, but generates redundant proofs)
     -c: proof files without conclusions, requires additional parsing
@@ -284,6 +284,8 @@ b, strong {
     -y: upper vertical limit
     -o: print to given output file
     -d: print debug information
+-m: MPI-based multi-node filtering (-m &lt;n&gt;) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs&lt;n&gt;-unfiltered&lt;n&gt;+.txt. Creates dProofs&lt;n&gt;.txt.
+    Cannot be combined with further commands.
 </code></pre><h4 id="examples">Examples</h4>
 <pre><code>pmGenerator -g -1
 pmGenerator -r "data/pmproofs.txt" "data/pmproofs-reducer.txt" -i "data/dProofs" -c -d
@@ -291,6 +293,7 @@ pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-resu
 pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
 pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d
 pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
+pmGenerator -m 17
 </code></pre><h4 id="navigation">Navigation</h4>
 <ul>
 <li><a href="https://github.com/xamidi/pmGenerator/tree/c++11">C++11 branch</a></li>

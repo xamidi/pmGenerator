@@ -47,6 +47,12 @@ struct DlProofEnumerator {
 	// 'dProofs1.txt', 'dProofs3.txt', ..., 'dProofs15.txt' are built-in, and 'dProofs17.txt', ..., 'dProofs29.txt' are available at https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withConclusions
 	// and https://github.com/xamidi/pmGenerator/tree/master/data/dProofs-withoutConclusions (150'170'911 bytes compressed into 'dProofs17-29.7z' of 1'005'537 bytes), so it is recommended to choose n >= 29.
 	static void generateDProofRepresentativeFiles(std::uint32_t limit = UINT32_MAX, bool redundantSchemaRemoval = true, bool withConclusions = true);
+	// Given word length limit n, filters a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt in order to create dProofs<n>.txt.
+	// The function utilizes multiple processes via Message Passing Interface (MPI) and assumes that MPI has been initialized with at least MPI_THREAD_FUNNELED threading support.
+	// Prints a warning message for single-process calls, i.e. when the executable was not called via "mpiexec -n <np> ./pmGenerator <args>" or "srun -n <np> ./pmGenerator <args>" (with np > 1), or similar.
+	// The schema checks are distributed among the processes, and candidates for removal are sent to the main thread of the main process for registration, as soon as they are detected.
+	// Finally, the main process (MPI_COMM_WORLD rank 0) waits until all other processes have finished, and stores the resulting database at ./data/dProofs-withConclusions/dProofs<n>.txt.
+	static void mpi_filterDProofRepresentativeFile(std::uint32_t wordLengthLimit);
 	// To create generator files with conclusions from those without, or vice versa. Generator files with conclusions are around four times bigger, with an increasing factor for increasing
 	// proof lengths, e.g. for 'dProofs17.txt' there is a factor (369412 bytes)/(93977 bytes) ≈ 3.93, and for 'dProofs29.txt' there is a factor (516720692 bytes)/(103477529 bytes) ≈ 4.99.
 	// Furthermore, files with conclusions have much higher entropy, thus can be compressed worse. For example, { 'dProofs17.txt', ..., 'dProofs29.txt' } can be compressed via LZMA to around
@@ -61,6 +67,7 @@ struct DlProofEnumerator {
 private:
 	static void _findProvenFormulas(tbb_concurrent_unordered_map<std::string, std::string>& representativeProofs, std::uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, std::uint64_t* optOut_counter, std::uint64_t* optOut_conclusionCounter, std::uint64_t* optOut_redundantCounter, std::uint64_t* optOut_invalidCounter, const std::vector<std::uint32_t>* genIn_stack = nullptr, const std::uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr);
 	static void _removeRedundantConclusionsForProofsOfMaxLength(const std::uint32_t maxLength, tbb_concurrent_unordered_map<std::string, std::string>& representativeProofs, helper::ProgressData* const progressData, std::uint64_t& conclusionCounter, std::uint64_t& redundantCounter);
+	static tbb_concurrent_unordered_set<std::string> _mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const std::uint32_t maxLength, tbb_concurrent_unordered_map<std::string, std::string>& representativeProofs, const std::vector<std::string>& recentConclusionSequence, helper::ProgressData* const progressData);
 
 public:
 	// Iterates condensed detachment strings for PL-proofs in D-notation, using knowledge of all representative proofs of length n or lower, which must be passed via 'allRepresentatives'.

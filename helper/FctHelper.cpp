@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <math.h>
+#include <mpi.h>
 
 using namespace std;
 
@@ -26,6 +27,45 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 		return false;
 	else
 		return a < b;
+}
+
+void FctHelper::mpi_sendString(int rank, const string& s, int dest, bool debug) {
+	if (debug)
+		cout << rank << "->" << dest << ": Sending " << s << ". (length " << s.length() << ")" << endl;
+	// Actually send s.size() + 1 chars, since s.c_str() is null-terminated.
+	MPI_Send(s.c_str(), static_cast<int>(s.size() + 1), MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+}
+
+string FctHelper::mpi_recvString(int rank, int source, bool debug) {
+	MPI_Status status_recv;
+	MPI_Probe(source, 0, MPI_COMM_WORLD, &status_recv);
+	int size;
+	MPI_Get_count(&status_recv, MPI_CHAR, &size);
+	if (debug)
+		cout << source << "->" << rank << ": Will receive " << size << " chars." << endl;
+	ManagedArray<char> arr(size);
+	MPI_Recv(arr.data, size, MPI_CHAR, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (debug)
+		cout << source << "->" << rank << ": Received: " << arr.data << ". (length " << string(arr.data).length() << ")" << endl;
+	return arr.data;
+}
+
+bool FctHelper::mpi_tryRecvString(int rank, int source, string& result, bool debug) {
+	int flag;
+	MPI_Status status_recv;
+	MPI_Iprobe(source, 0, MPI_COMM_WORLD, &flag, &status_recv);
+	if (flag) {
+		int size;
+		MPI_Get_count(&status_recv, MPI_CHAR, &size);
+		if (debug)
+			cout << source << "->" << rank << ": Will receive " << size << " chars." << endl;
+		ManagedArray<char> arr(size);
+		MPI_Recv(arr.data, size, MPI_CHAR, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		if (debug)
+			cout << source << "->" << rank << ": Received: " << arr.data << ". (length " << string(arr.data).length() << ")" << endl;
+		result = arr.data;
+	}
+	return flag;
 }
 
 unsigned FctHelper::digitsNum_uint32(uint32_t n) {
