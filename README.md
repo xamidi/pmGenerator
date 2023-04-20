@@ -3,7 +3,8 @@
 # @xamidi/pmGenerator
 
 Code extracted from [deontic-logic/proof-tool](https://github.com/deontic-logic/proof-tool "GitHub repository") (still private; [readme](https://deontic-logic.github.io/readme.html)). Can be used to generate improved versions of [pmproofs.txt](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") of the [mmsolitaire](https://us.metamath.org/mmsolitaire/mms.html "us.metamath.org/mmsolitaire/mms.html") project.  
-Exemplary generated results are available at [xamidi/mmsolitaire](https://github.com/xamidi/mmsolitaire "GitHub repository"). Eligible for shared memory high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.  
+Exemplary generated results are available at [xamidi/mmsolitaire](https://github.com/xamidi/mmsolitaire "GitHub repository").  
+Eligible for high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.  
 The following table exemplary shows progress that has already been made.
 
 |                                                                                         Load Files up to..                                                                                                      | Size of Files (with conclusions) [B] | Required Memory (approx.) [GiB] |                                                                 Recent Growth Factor                                                                 |
@@ -17,7 +18,7 @@ The following table exemplary shows progress that has already been made.
 This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m/K0I6UNoiAgAJ) to the Metamath mailing list.
 
 #### Usage
-    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+
+    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit>
     -g: Generate proof files
         -u: unfiltered (significantly faster, but generates redundant proofs)
         -c: proof files without conclusions, requires additional parsing
@@ -42,6 +43,8 @@ This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m
         -y: upper vertical limit
         -o: print to given output file
         -d: print debug information
+    -m: MPI-based multi-node filtering (-m <n>) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt. Creates dProofs<n>.txt.
+        Cannot be combined with further commands.
 
 #### Examples
     pmGenerator -g -1
@@ -50,6 +53,7 @@ This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d
     pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
+    pmGenerator -m 17
 
 #### Navigation
 - [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11)

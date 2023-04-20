@@ -2,6 +2,7 @@
 #define XAMID_HELPER_FCTHELPER_H
 
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -27,7 +28,56 @@ struct cmpStringShrink {
 	bool operator()(const std::string& a, const std::string& b) const;
 };
 
+template<typename T>
+struct ManagedArray { // for RAII on dynamic arrays
+	T* data;
+	ManagedArray() : data(nullptr) { }
+	ManagedArray(std::size_t size) : data(new T[size]) { }
+	~ManagedArray() { delete data; }
+};
+
 struct FctHelper {
+	static void mpi_sendString(int rank, const std::string& s, int dest, bool debug = false);
+	static std::string mpi_recvString(int rank, int source, bool debug = false);
+	static bool mpi_tryRecvString(int rank, int source, std::string& result, bool debug = false);
+
+	// from_chars does not work as desired (i.e. accepts invalid inputs), so we use it with some additional argument checks
+	template<typename T>
+	static constexpr std::from_chars_result charsToUInt(const char* begin, const char* end, T& value) {
+		std::from_chars_result result;
+		if (begin > end) {
+			result.ec = std::errc::invalid_argument;
+			return result;
+		}
+		if (*begin == '0' && begin + 1 != end) {
+			result.ec = std::errc::invalid_argument;
+			return result;
+		}
+		for (const char* it = begin; it < end; it++)
+			switch (*it) {
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				break;
+			default:
+				result.ec = std::errc::invalid_argument;
+				return result;
+			}
+		result = std::from_chars(begin, end, value);
+		return result;
+	}
+	template<typename T>
+	static constexpr std::from_chars_result toUInt(const std::string& str, T& value) {
+		return charsToUInt(str.c_str(), str.c_str() + str.length(), value);
+	}
+
 	// Functions to quickly calculate to_string(n).length()
 	static unsigned digitsNum_uint32(std::uint32_t n);
 	static unsigned digitsNum_uint64(std::uint64_t n);
