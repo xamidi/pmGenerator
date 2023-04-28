@@ -27,43 +27,147 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 		return a < b;
 }
 
-void FctHelper::mpi_sendString(int rank, const string& s, int dest, bool debug) {
+// Templates for using values, static arrays and dynamic arrays on MPI_Send and MPI_Recv ("block until received", with extra mode "receive only if sent")
+template<typename T> void mpi_send(int rank, int count, MPI_Datatype type, const T* val, int dest, int tag, bool debug, auto printer) {
 	if (debug)
-		cout << rank << "->" << dest << ": Sending " << s << ". (length " << s.length() << ")" << endl;
+		cout << rank << "->" << dest << ": Sending " << printer(val) << "." << endl;
+	MPI_Send(val, count, type, dest, tag, MPI_COMM_WORLD);
+}
+template<typename T> T mpi_recvValue(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+	T val;
+	MPI_Recv(&val, 1, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (debug)
+		cout << source << "->" << rank << ": Received " << printer(val) << "." << endl;
+	return val;
+}
+template<typename T> bool mpi_tryRecvValue(int rank, MPI_Datatype type, int source, int tag, T& result, bool debug, auto printer) {
+	int flag;
+	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+	if (flag) {
+		MPI_Recv(&result, 1, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		if (debug)
+			cout << source << "->" << rank << ": Received " << printer(result) << "." << endl;
+	}
+	return flag;
+}
+template<typename T, size_t N> array<T, N> mpi_recvArray(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+	array<T, N> arr;
+	MPI_Recv(arr.data(), N, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (debug)
+		cout << source << "->" << rank << ": Received " << printer(arr) << "." << endl;
+	return arr;
+}
+template<typename T, size_t N> bool mpi_tryRecvArray(int rank, MPI_Datatype type, int source, int tag, array<T, N>& result, bool debug, auto printer) {
+	int flag;
+	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+	if (flag) {
+		MPI_Recv(result.data(), N, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		if (debug)
+			cout << source << "->" << rank << ": Received " << printer(result) << "." << endl;
+	}
+	return flag;
+}
+template<typename T> ManagedArray<T> mpi_recvDynArray(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+	MPI_Status status_recv;
+	MPI_Probe(source, tag, MPI_COMM_WORLD, &status_recv);
+	int size;
+	MPI_Get_count(&status_recv, type, &size);
+	if (debug)
+		cout << source << "->" << rank << ": Will receive " << size << " elements." << endl;
+	ManagedArray<T> arr(size);
+	MPI_Recv(arr.data, size, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (debug)
+		cout << source << "->" << rank << ": Received " << printer(arr) << "." << endl;
+	return arr;
+}
+template<typename T> bool mpi_tryRecvDynArray(int rank, MPI_Datatype type, int source, int tag, ManagedArray<T>& result, bool debug, auto printer) {
+	int flag;
+	MPI_Status status_recv;
+	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status_recv);
+	if (flag) {
+		int size;
+		MPI_Get_count(&status_recv, type, &size);
+		if (debug)
+			cout << source << "->" << rank << ": Will receive " << size << " elements." << endl;
+		result.alloc(size);
+		MPI_Recv(result.data, size, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		if (debug)
+			cout << source << "->" << rank << ": Received " << printer(result) << "." << endl;
+	}
+	return flag;
+}
+
+enum mpi_tag : int {
+	mpi_tag_unspecified = 0, // not used by any helper function
+	mpi_tag_bool,
+	mpi_tag_string,
+	mpi_tag_uint64_pair
+};
+
+void FctHelper::mpi_sendString(int rank, const string& s, int dest, bool debug) {
 	// Actually send s.size() + 1 chars, since s.c_str() is null-terminated.
-	MPI_Send(s.c_str(), static_cast<int>(s.size() + 1), MPI_CHAR, dest, 0, MPI_COMM_WORLD);
+	mpi_send(rank, static_cast<int>(s.size() + 1), MPI_CHAR, s.c_str(), dest, mpi_tag_string, debug, [&](const char* x) {
+		stringstream ss;
+		ss << "\"" << x << "\" (length " << s.length() << ")";
+		return ss.str();
+	});
 }
 
 string FctHelper::mpi_recvString(int rank, int source, bool debug) {
-	MPI_Status status_recv;
-	MPI_Probe(source, 0, MPI_COMM_WORLD, &status_recv);
-	int size;
-	MPI_Get_count(&status_recv, MPI_CHAR, &size);
-	if (debug)
-		cout << source << "->" << rank << ": Will receive " << size << " chars." << endl;
-	ManagedArray<char> arr(size);
-	MPI_Recv(arr.data, size, MPI_CHAR, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	if (debug)
-		cout << source << "->" << rank << ": Received: " << arr.data << ". (length " << string(arr.data).length() << ")" << endl;
-	return arr.data;
+	return mpi_recvDynArray<char>(rank, MPI_CHAR, source, mpi_tag_string, debug, [&](const ManagedArray<char>& x) {
+		stringstream ss;
+		ss << "\"" << x.data << "\" (length " << string(x.data).length() << ")";
+		return ss.str();
+	}).data;
 }
 
 bool FctHelper::mpi_tryRecvString(int rank, int source, string& result, bool debug) {
-	int flag;
-	MPI_Status status_recv;
-	MPI_Iprobe(source, 0, MPI_COMM_WORLD, &flag, &status_recv);
-	if (flag) {
-		int size;
-		MPI_Get_count(&status_recv, MPI_CHAR, &size);
-		if (debug)
-			cout << source << "->" << rank << ": Will receive " << size << " chars." << endl;
-		ManagedArray<char> arr(size);
-		MPI_Recv(arr.data, size, MPI_CHAR, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		if (debug)
-			cout << source << "->" << rank << ": Received: " << arr.data << ". (length " << string(arr.data).length() << ")" << endl;
+	ManagedArray<char> arr;
+	if (mpi_tryRecvDynArray(rank, MPI_CHAR, source, mpi_tag_string, arr, debug, [&](const ManagedArray<char>& x) {
+		stringstream ss;
+		ss << "\"" << x.data << "\" (length " << string(x.data).length() << ")";
+		return ss.str();
+	})) {
 		result = arr.data;
+		return true;
 	}
-	return flag;
+	return false;
+}
+
+void FctHelper::mpi_sendBool(int rank, const bool b, int dest, bool debug) {
+	char c(b);
+	mpi_send(rank, 1, MPI_CHAR, &c, dest, mpi_tag_bool, debug, [](const char* x) { return *x ? "true" : "false"; });
+}
+
+bool FctHelper::mpi_recvBool(int rank, int source, bool debug) {
+	return mpi_recvValue<char>(rank, MPI_CHAR, source, mpi_tag_bool, debug, [](const char x) { return x ? "true" : "false"; });
+}
+
+bool FctHelper::mpi_tryRecvBool(int rank, int source, bool& result, bool debug) {
+	char c;
+	if (mpi_tryRecvValue(rank, MPI_CHAR, source, mpi_tag_bool, c, debug, [](const char x) { return x ? "true" : "false"; })) {
+		result = c;
+		return true;
+	}
+	return false;
+}
+
+void FctHelper::mpi_sendUint64Pair(int rank, const array<uint64_t, 2>& arr, int dest, bool debug) {
+	mpi_send(rank, 2, MPI_LONG_LONG_INT, arr.data(), dest, mpi_tag_uint64_pair, debug, [](const uint64_t* x) {
+		return "(" + to_string(x[0]) + ", " + to_string(x[1]) + ")";
+	});
+}
+
+array<uint64_t, 2> FctHelper::mpi_recvUint64Pair(int rank, int source, bool debug) {
+	return mpi_recvArray<uint64_t, 2>(rank, MPI_LONG_LONG_INT, source, mpi_tag_uint64_pair, debug, [](const array<uint64_t, 2>& x) {
+		return "(" + to_string(x[0]) + ", " + to_string(x[1]) + ")";
+	});
+}
+
+bool FctHelper::mpi_tryRecvUint64Pair(int rank, int source, array<uint64_t, 2>& result, bool debug) {
+	return mpi_tryRecvArray(rank, MPI_LONG_LONG_INT, source, mpi_tag_uint64_pair, result, debug, [](const array<uint64_t, 2>& x) {
+		return "(" + to_string(x[0]) + ", " + to_string(x[1]) + ")";
+	});
 }
 
 unsigned FctHelper::digitsNum_uint32(uint32_t n) {
