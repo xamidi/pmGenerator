@@ -2,6 +2,7 @@
 #define XAMID_HELPER_FCTHELPER_H
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -31,13 +32,23 @@ struct ManagedArray { // for RAII on dynamic arrays
 	T* data;
 	ManagedArray() : data(nullptr) { }
 	ManagedArray(std::size_t size) : data(new T[size]) { }
+	ManagedArray(ManagedArray<T>&& old) : data(old.data) { old.data = nullptr; } // move ; prohibit copying ; data shall be managed by a single object
 	~ManagedArray() { delete data; }
+	void alloc(std::size_t size) { delete data; data = new T[size]; }
 };
 
 struct FctHelper {
 	static void mpi_sendString(int rank, const std::string& s, int dest, bool debug = false);
 	static std::string mpi_recvString(int rank, int source, bool debug = false);
 	static bool mpi_tryRecvString(int rank, int source, std::string& result, bool debug = false);
+
+	static void mpi_sendBool(int rank, const bool num, int dest, bool debug = false);
+	static bool mpi_recvBool(int rank, int source, bool debug = false);
+	static bool mpi_tryRecvBool(int rank, int source, bool& result, bool debug = false);
+
+	static void mpi_sendUint64Pair(int rank, const std::array<std::uint64_t, 2>& arr, int dest, bool debug = false);
+	static std::array<std::uint64_t, 2> mpi_recvUint64Pair(int rank, int source, bool debug = false);
+	static bool mpi_tryRecvUint64Pair(int rank, int source, std::array<std::uint64_t, 2>& result, bool debug = false);
 
 	template<typename T>
 	static bool toUInt(const std::string& str, T& value) {

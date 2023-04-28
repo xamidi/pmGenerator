@@ -14,6 +14,7 @@ digraph {
 	FctHelper -> math [color=blue]
 	FctHelper -> mpi [color=blue]
 	FctHelper -> algorithm [color=red]
+	FctHelper -> array [color=red]
 	FctHelper -> chrono [color=red]
 	FctHelper -> cstddef [color=red]
 	FctHelper -> cstdint [color=red]
