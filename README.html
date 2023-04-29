@@ -3,10 +3,10 @@
      Update instructions:
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
-     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (236 occurences)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (249 occurences)
      4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<img src\=\"icon\/icon-readme\.png\" align\=\"left\">[/REPLACE] (1 occurence)
      5. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
-     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (468 occurences)
+     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (494 occurences)
      (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4, 5 and 6.)
      -->
 <html>
@@ -232,19 +232,19 @@ b, strong {
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=516720692%2F153725015" title="size(dProofs29.txt) / size(dProofs27.txt)">3.3613...</a></td>
 </tr>
 <tr>
-<td><a href="https://mega.nz/file/G18AWIpC#B04xOdtQj_2PJJP0yNQxbim7pOgd-hwv1i1EVU6ZsTM" title="2'161'632'450 bytes compressed into 112'364'583 bytes (ratio approx. 19.2377)">dProofs31&#x2011;unfiltered31+.txt</a></td>
+<td><a href="https://mega.nz/file/G18AWIpC#B04xOdtQj_2PJJP0yNQxbim7pOgd-hwv1i1EVU6ZsTM" title="2'161'632'450 bytes compressed into 112'364'583 bytes (ratio approx. 19.2377)">dProofs31‑unfiltered31+.txt</a></td>
 <td style="text-align:right">2 897 309 412</td>
 <td style="text-align:right">9.84</td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=2161632450%2F516720692" title="size(dProofs31-unfiltered31+.txt) / size(dProofs29.txt)">4.1833...</a></td>
 </tr>
 <tr>
-<td><a href="https://mega.nz/file/3gVQSIJL#Qfa9CoUwsHWYYNHXYaP1mg61QQSJ1NSl1CHudK4g7BA" title="8'349'023'875 bytes compressed into 402'886'507 bytes (ratio approx. 20.7230)">dProofs33&#x2011;unfiltered31+.txt</a></td>
+<td><a href="https://mega.nz/file/3gVQSIJL#Qfa9CoUwsHWYYNHXYaP1mg61QQSJ1NSl1CHudK4g7BA" title="8'349'023'875 bytes compressed into 402'886'507 bytes (ratio approx. 20.7230)">dProofs33‑unfiltered31+.txt</a></td>
 <td style="text-align:right">11 246 333 287</td>
 <td style="text-align:right">36.49</td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=8349023875%2F2161632450" title="size(dProofs33-unfiltered31+.txt) / size(dProofs31-unfiltered31+.txt)">3.8623...</a></td>
 </tr>
 <tr>
-<td><a href="https://mega.nz/file/2893yZ7S#JlCHv4uOajgBJPPE2W87F_LAPzkH0-FlF4_2OrccuC4" title="30'717'801'573 bytes compressed into 1'400'853'331 bytes (ratio approx. 21.9279)">dProofs35&#x2011;unfiltered31+.txt</a></td>
+<td><a href="https://mega.nz/file/2893yZ7S#JlCHv4uOajgBJPPE2W87F_LAPzkH0-FlF4_2OrccuC4" title="30'717'801'573 bytes compressed into 1'400'853'331 bytes (ratio approx. 21.9279)">dProofs35‑unfiltered31+.txt</a></td>
 <td style="text-align:right">41 964 134 860</td>
 <td style="text-align:right">130.52</td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=30717801573%2F8349023875" title="size(dProofs35-unfiltered31+.txt) / size(dProofs33-unfiltered31+.txt)">3.6792...</a></td>
@@ -259,7 +259,7 @@ b, strong {
 </table>
 <p>This tool has been <a href="https://groups.google.com/g/metamath/c/6DzIY33mthE/m/K0I6UNoiAgAJ">posted</a> to the Metamath mailing list.</p>
 <h4 id="usage">Usage</h4>
-<pre><code>pmGenerator ( -g &lt;limit&gt; [-u] [-c] | -r &lt;pmproofs file&gt; &lt;output file&gt; [-i &lt;prefix&gt;] [-c] [-d] | -a &lt;initials&gt; &lt;replacements file&gt; &lt;pmproofs file&gt; &lt;output file&gt; [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i &lt;prefix&gt;] [-o &lt;prefix&gt;] [-d] | -p [-i &lt;prefix&gt;] [-s] [-t] [-x &lt;limit&gt;] [-y &lt;limit&gt;] [-o &lt;output file&gt;] [-d] )+ | -m &lt;limit&gt;
+<pre><code>pmGenerator ( -g &lt;limit&gt; [-u] [-c] | -r &lt;pmproofs file&gt; &lt;output file&gt; [-i &lt;prefix&gt;] [-c] [-d] | -a &lt;initials&gt; &lt;replacements file&gt; &lt;pmproofs file&gt; &lt;output file&gt; [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i &lt;prefix&gt;] [-o &lt;prefix&gt;] [-d] | -p [-i &lt;prefix&gt;] [-s] [-t] [-x &lt;limit&gt;] [-y &lt;limit&gt;] [-o &lt;output file&gt;] [-d] )+ | -m &lt;limit&gt; [-s]
 -g: Generate proof files
     -u: unfiltered (significantly faster, but generates redundant proofs)
     -c: proof files without conclusions, requires additional parsing
@@ -286,6 +286,7 @@ b, strong {
     -d: print debug information
 -m: MPI-based multi-node filtering (-m &lt;n&gt;) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs&lt;n&gt;-unfiltered&lt;n&gt;+.txt. Creates dProofs&lt;n&gt;.txt.
     Cannot be combined with further commands.
+    -s: disable smooth progress mode (lowers memory requirements, but makes worse progress predictions)
 </code></pre><h4 id="examples">Examples</h4>
 <pre><code>pmGenerator -g -1
 pmGenerator -r "data/pmproofs.txt" "data/pmproofs-reducer.txt" -i "data/dProofs" -c -d
@@ -293,7 +294,7 @@ pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-resu
 pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
 pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d
 pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
-pmGenerator -m 17
+pmGenerator -m 17 -s
 </code></pre><h4 id="navigation">Navigation</h4>
 <ul>
 <li><a href="https://github.com/xamidi/pmGenerator/tree/c++11">C++11 branch</a></li>
