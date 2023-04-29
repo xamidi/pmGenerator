@@ -18,7 +18,7 @@ The following table exemplary shows progress that has already been made.
 This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m/K0I6UNoiAgAJ) to the Metamath mailing list.
 
 #### Usage
-    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit>
+    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit> [-s]
     -g: Generate proof files
         -u: unfiltered (significantly faster, but generates redundant proofs)
         -c: proof files without conclusions, requires additional parsing
@@ -45,6 +45,7 @@ This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m
         -d: print debug information
     -m: MPI-based multi-node filtering (-m <n>) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt. Creates dProofs<n>.txt.
         Cannot be combined with further commands.
+        -s: disable smooth progress mode (lowers memory requirements, but makes worse progress predictions)
 
 #### Examples
     pmGenerator -g -1
@@ -53,7 +54,7 @@ This tool has been [posted](https://groups.google.com/g/metamath/c/6DzIY33mthE/m
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d
     pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
-    pmGenerator -m 17
+    pmGenerator -m 17 -s
 
 #### Navigation
 - [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11)

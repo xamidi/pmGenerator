@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
-				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit>\n"
+				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit> [-s]\n"
 				"    -g: Generate proof files\n"
 				"        -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"        -c: proof files without conclusions, requires additional parsing\n"
@@ -57,13 +57,15 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				"        -d: print debug information\n"
 				"    -m: MPI-based multi-node filtering (-m <n>) of a first unfiltered proof file (with conclusions) at ./data/dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt. Creates dProofs<n>.txt.\n"
 				"        Cannot be combined with further commands.\n"
+				"        -s: disable smooth progress mode (lowers memory requirements, but makes worse progress predictions)\n"
 				"Examples:\n"
 				"    pmGenerator -g -1\n"
 				"    pmGenerator -r \"data/pmproofs.txt\" \"data/pmproofs-reducer.txt\" -i \"data/dProofs\" -c -d\n"
 				"    pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
 				"    pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
 				"    pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d\n"
-				"    pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt" << endl;
+				"    pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt"
+				"    pmGenerator -m 17 -s" << endl;
 		return 0;
 	};
 #if 0 // default command
@@ -96,7 +98,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		ApplyReplacements, // get<6> = debug, get<7> = styleAll, get<8> = listAll, get<9> = wrap
 		FileConversion, // get<2> = inputFilePrefix, get<3> = outputFilePrefix, get<6> = debug, get<7> ? createGeneratorFilesWithConclusions(...) : createGeneratorFilesWithoutConclusions(...)
 		ConclusionLengthPlot, // get<2> = inputFilePrefix, get<3> = mout, get<6> = debug, get<7> = measureSymbolicLength, get<8> = table, get<10> = cutX, get<11> = cutY
-		MpiFilter // get<1> = wordLengthLimit
+		MpiFilter // get<1> = wordLengthLimit, get<6> = smoothProgress
 	};
 	vector<tuple<Task, unsigned, string, string, string, string, bool, bool, bool, bool, int64_t, int64_t>> tasks;
 
@@ -155,9 +157,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			i += 4;
 			break;
 		case 's':
-			if (tasks.empty() || (get<0>(tasks.back()) != Task::ApplyReplacements && get<0>(tasks.back()) != Task::ConclusionLengthPlot))
+			if (tasks.empty() || (get<0>(tasks.back()) != Task::ApplyReplacements && get<0>(tasks.back()) != Task::ConclusionLengthPlot && get<0>(tasks.back()) != Task::MpiFilter))
 				return printUsage("Invalid argument \"-s\".");
-			get<7>(tasks.back()) = true; // styleAll := true, or measureSymbolicLength := true
+			if (get<0>(tasks.back()) != Task::MpiFilter)
+				get<7>(tasks.back()) = true; // styleAll := true, or measureSymbolicLength := true
+			else
+				get<6>(tasks.back()) = false; // smoothProgress := false
 			break;
 		case 'l':
 			if (tasks.empty() || get<0>(tasks.back()) != Task::ApplyReplacements)
@@ -227,7 +232,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				unsigned value;
 				if (!FctHelper::toUInt(param, value))
 					return printUsage("Invalid parameter \"" + param + "\" for \"-m\".");
-				tasks.emplace_back(Task::MpiFilter, value, "", "", "", "", false, false, false, false, 0, 0);
+				tasks.emplace_back(Task::MpiFilter, value, "", "", "", "", true, false, false, false, 0, 0);
 				mpiArg = "-m";
 			}
 			break;
@@ -279,7 +284,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				ss << ++index << ". printConclusionLengthPlotData(" << bstr(get<7>(t)) << ", " << bstr(get<8>(t)) << ", " << get<10>(t) << ", " << get<11>(t) << ", \"" << get<2>(t) << "\", " << (get<3>(t).empty() ? "null" : "\"" + get<3>(t) + "\"") << ", " << bstr(get<6>(t)) << ")\n";
 				break;
 			case Task::MpiFilter:
-				ss << ++index << ". mpi_filterDProofRepresentativeFile(" << get<1>(t) << ")\n";
+				ss << ++index << ". mpi_filterDProofRepresentativeFile(" << get<1>(t) << ", " << bstr(get<6>(t)) << ")\n";
 				break;
 			}
 		cout << "Tasks:\n" << ss.str() << endl;
@@ -323,9 +328,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				break;
 			case Task::MpiFilter:
 				stringstream ss;
-				ss << "[Main; pid: " << getpid() << ", tid:" << this_thread::get_id() << ", rank " << mpi_rank << " (" << mpi_size << " proc" << (mpi_size == 1 ? "" : "s") << ")] Calling mpi_filterDProofRepresentativeFile(" << get<1>(t) << ").";
+				ss << "[Main; pid: " << getpid() << ", tid:" << this_thread::get_id() << ", rank " << mpi_rank << " (" << mpi_size << " proc" << (mpi_size == 1 ? "" : "s") << ")] Calling mpi_filterDProofRepresentativeFile(" << get<1>(t) << ", " << bstr(get<6>(t)) << ").";
 				cout << ss.str() << endl;
-				DlProofEnumerator::mpi_filterDProofRepresentativeFile(get<1>(t));
+				DlProofEnumerator::mpi_filterDProofRepresentativeFile(get<1>(t), get<6>(t));
 				break;
 			}
 	} catch (exception& e) {

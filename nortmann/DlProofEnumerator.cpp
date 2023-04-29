@@ -737,7 +737,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
 }
 
-void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLimit) {
+void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLimit, bool smoothProgress) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// Obtain the process ID and the number of processes
@@ -820,7 +820,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	const vector<string>& recentConclusionSequence = allConclusions[wordLengthLimit];
 	if (isMainProc)
 		startTime = chrono::steady_clock::now();
-	tbb::concurrent_unordered_set<string> redundant = _mpi_findRedundantConclusionsForProofsOfMaxLength(mpi_rank, mpi_size, wordLengthLimit, representativeProofs, recentConclusionSequence, isMainProc ? &removalProgress : nullptr);
+	tbb::concurrent_unordered_set<string> redundant = _mpi_findRedundantConclusionsForProofsOfMaxLength(mpi_rank, mpi_size, wordLengthLimit, representativeProofs, recentConclusionSequence, isMainProc ? &removalProgress : nullptr, smoothProgress);
 	if (isMainProc)
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to detect " + to_string(redundant.size()) + " conclusions for which there are more general variants proven in lower or equal amounts of steps." << endl;
 
@@ -1249,7 +1249,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
 
-tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, helper::ProgressData* const progressData) {
+tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, helper::ProgressData* const progressData, bool smoothProgress) {
 	bool isMainProc = mpi_rank == 0;
 	size_t n = recentConclusionSequence.size();
 
@@ -1272,7 +1272,7 @@ tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConcl
 	tbb::concurrent_queue<string> toErase;
 	tbb::concurrent_unordered_set<string> toErase_mainProc;
 	mutex mtx;
-	unique_lock<std::mutex> condLock(mtx);
+	unique_lock<mutex> condLock(mtx);
 	condition_variable cond;
 	atomic<bool> communicate { true };
 	atomic<bool> workerDone { false };
