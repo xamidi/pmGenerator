@@ -1,6 +1,6 @@
 digraph {
 	CfgGrammar -> FctHelper [color=blue]
-	CfgGrammar -> regex [color=blue]
+	CfgGrammar -> "boost/algorithm/string" [color=blue]
 	CfgGrammar -> IPrintable [color=red]
 	CfgGrammar -> cstdint [color=red]
 	CfgGrammar -> unordered_map [color=red]
@@ -9,17 +9,16 @@ digraph {
 		CfgGrammar
 		CfgGrammar
 	}
+	FctHelper -> "boost/filesystem/operations" [color=blue]
 	FctHelper -> iostream [color=blue]
 	FctHelper -> math [color=blue]
 	FctHelper -> mpi [color=blue]
 	FctHelper -> algorithm [color=red]
 	FctHelper -> array [color=red]
-	FctHelper -> charconv [color=red]
 	FctHelper -> chrono [color=red]
 	FctHelper -> cstddef [color=red]
 	FctHelper -> cstdint [color=red]
 	FctHelper -> deque [color=red]
-	FctHelper -> filesystem [color=red]
 	FctHelper -> fstream [color=red]
 	FctHelper -> map [color=red]
 	FctHelper -> set [color=red]
@@ -84,7 +83,6 @@ digraph {
 	DRuleParser -> map [color=red]
 	DRuleParser -> memory [color=red]
 	DRuleParser -> set [color=red]
-	DRuleParser -> string_view [color=red]
 	DRuleParser -> string [color=red]
 	DRuleParser -> tuple [color=red]
 	DRuleParser -> unordered_map [color=red]
@@ -140,6 +138,7 @@ digraph {
 	DlProofEnumerator -> DRuleParser [color=blue]
 	DlProofEnumerator -> DlCore [color=blue]
 	DlProofEnumerator -> DlFormula [color=blue]
+	DlProofEnumerator -> "boost/filesystem/operations" [color=blue]
 	DlProofEnumerator -> concurrent_map [color=blue]
 	DlProofEnumerator -> concurrent_queue [color=blue]
 	DlProofEnumerator -> concurrent_unordered_map [color=blue]

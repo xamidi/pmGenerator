@@ -1,5 +1,7 @@
 #include "FctHelper.h"
 
+#include <boost/filesystem/operations.hpp>
+
 #include <iostream>
 #include <math.h>
 #include <mpi.h>
@@ -28,19 +30,19 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 }
 
 // Templates for using values, static arrays and dynamic arrays on MPI_Send and MPI_Recv ("block until received", with extra mode "receive only if sent")
-template<typename T> void mpi_send(int rank, int count, MPI_Datatype type, const T* val, int dest, int tag, bool debug, auto printer) {
+template<typename T, typename Func> void mpi_send(int rank, int count, MPI_Datatype type, const T* val, int dest, int tag, bool debug, Func printer) {
 	if (debug)
 		cout << rank << "->" << dest << ": Sending " << printer(val) << "." << endl;
 	MPI_Send(val, count, type, dest, tag, MPI_COMM_WORLD);
 }
-template<typename T> T mpi_recvValue(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+template<typename T, typename Func> T mpi_recvValue(int rank, MPI_Datatype type, int source, int tag, bool debug, Func printer) {
 	T val;
 	MPI_Recv(&val, 1, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	if (debug)
 		cout << source << "->" << rank << ": Received " << printer(val) << "." << endl;
 	return val;
 }
-template<typename T> bool mpi_tryRecvValue(int rank, MPI_Datatype type, int source, int tag, T& result, bool debug, auto printer) {
+template<typename T, typename Func> bool mpi_tryRecvValue(int rank, MPI_Datatype type, int source, int tag, T& result, bool debug, Func printer) {
 	int flag;
 	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
 	if (flag) {
@@ -50,14 +52,14 @@ template<typename T> bool mpi_tryRecvValue(int rank, MPI_Datatype type, int sour
 	}
 	return flag;
 }
-template<typename T, size_t N> array<T, N> mpi_recvArray(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+template<typename T, size_t N, typename Func> array<T, N> mpi_recvArray(int rank, MPI_Datatype type, int source, int tag, bool debug, Func printer) {
 	array<T, N> arr;
 	MPI_Recv(arr.data(), N, type, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	if (debug)
 		cout << source << "->" << rank << ": Received " << printer(arr) << "." << endl;
 	return arr;
 }
-template<typename T, size_t N> bool mpi_tryRecvArray(int rank, MPI_Datatype type, int source, int tag, array<T, N>& result, bool debug, auto printer) {
+template<typename T, size_t N, typename Func> bool mpi_tryRecvArray(int rank, MPI_Datatype type, int source, int tag, array<T, N>& result, bool debug, Func printer) {
 	int flag;
 	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
 	if (flag) {
@@ -67,7 +69,7 @@ template<typename T, size_t N> bool mpi_tryRecvArray(int rank, MPI_Datatype type
 	}
 	return flag;
 }
-template<typename T> ManagedArray<T> mpi_recvDynArray(int rank, MPI_Datatype type, int source, int tag, bool debug, auto printer) {
+template<typename T, typename Func> ManagedArray<T> mpi_recvDynArray(int rank, MPI_Datatype type, int source, int tag, bool debug, Func printer) {
 	MPI_Status status_recv;
 	MPI_Probe(source, tag, MPI_COMM_WORLD, &status_recv);
 	int size;
@@ -80,7 +82,7 @@ template<typename T> ManagedArray<T> mpi_recvDynArray(int rank, MPI_Datatype typ
 		cout << source << "->" << rank << ": Received " << printer(arr) << "." << endl;
 	return arr;
 }
-template<typename T> bool mpi_tryRecvDynArray(int rank, MPI_Datatype type, int source, int tag, ManagedArray<T>& result, bool debug, auto printer) {
+template<typename T, typename Func> bool mpi_tryRecvDynArray(int rank, MPI_Datatype type, int source, int tag, ManagedArray<T>& result, bool debug, Func printer) {
 	int flag;
 	MPI_Status status_recv;
 	MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status_recv);
@@ -247,10 +249,10 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 	//                             2^63+1 µs =  292277 yr  0 mo  1 wk  1 d  23 h  52 min  30 s  775.807 ms
 	//        wolframAlphaMode =>  -2^63  µs = -292471 yr -2 mo -2 wk -1 d  -8 h   0 min -54 s -775.808 ms
 	//                             2^63+1 µs =  292471 yr  2 mo  2 wk  1 d   8 h   0 min  54 s  775.807 ms
-	constexpr intmax_t yearUs = chrono::years::period::num * chrono::microseconds::period::den; //     1 yr  = 31556952000000 µs ; NOTE: 31556952 s / yr include leap years, otherwise it would be 60 * 60 * 24 * 365 = 31540000 s / yr.
-	constexpr intmax_t monthUs = chrono::months::period::num * chrono::microseconds::period::den; //   1 mo  =  2629746000000 µs ;       2629746 s / mo include leap years, otherwise it would be 31540000 / 12 = 7885000 / 3 = 2628333.333.. s / mo.
-	constexpr intmax_t weekUs = chrono::weeks::period::num * chrono::microseconds::period::den; //     1 wk  =   604800000000 µs ;       60 * 60 * 24 * 7 = 604800 s / wk, i.e. from here down, the C++ standard's leap years do not influence values.
-	constexpr intmax_t dayUs = chrono::days::period::num * chrono::microseconds::period::den; //       1 d   =    86400000000 µs
+	constexpr intmax_t yearUs = 31556952 * chrono::microseconds::period::den; //   1 yr  = 31556952000000 µs ; NOTE: 31556952 s / yr include leap years, otherwise it would be 60 * 60 * 24 * 365 = 31540000 s / yr.
+	constexpr intmax_t monthUs = 2629746 * chrono::microseconds::period::den; //   1 mo  =  2629746000000 µs ;       2629746 s / mo include leap years, otherwise it would be 31540000 / 12 = 7885000 / 3 = 2628333.333.. s / mo.
+	constexpr intmax_t weekUs = 604800 * chrono::microseconds::period::den; //     1 wk  =   604800000000 µs ;       60 * 60 * 24 * 7 = 604800 s / wk, i.e. from here down, the C++ standard's leap years do not influence values.
+	constexpr intmax_t dayUs = 86400 * chrono::microseconds::period::den; //       1 d   =    86400000000 µs
 	constexpr intmax_t hourUs = chrono::hours::period::num * chrono::microseconds::period::den; //     1 h   =     3600000000 µs
 	constexpr intmax_t minuteUs = chrono::minutes::period::num * chrono::microseconds::period::den; // 1 min =       60000000 µs
 	constexpr intmax_t secondUs = chrono::seconds::period::num * chrono::microseconds::period::den; // 1 s   =        1000000 µs
@@ -369,10 +371,10 @@ bool FctHelper::ensureDirExists(const string& path) {
 	string::size_type dirMarkerIndex = path.find_last_of("/\\");
 	if (dirMarkerIndex != string::npos) { // If there is a path to another directory given, make sure that the directory exists.
 		string dir = path.substr(0, dirMarkerIndex);
-		if (!filesystem::is_directory(dir)) { // Need to create that directory, but in order to do so, must first ensure that its parent directory exists.
+		if (!boost::filesystem::is_directory(dir)) { // Need to create that directory, but in order to do so, must first ensure that its parent directory exists.
 			if (!ensureDirExists(dir))
 				return false;
-			if (!filesystem::create_directories(dir)) {
+			if (!boost::filesystem::create_directories(dir)) {
 				cerr << "Failed to create directory \"" << dir << "\"." << endl;
 				return false;
 			}
@@ -382,17 +384,13 @@ bool FctHelper::ensureDirExists(const string& path) {
 }
 
 bool FctHelper::writeToFile(const string& file, const string& content, fstream::openmode mode) {
-	return _writeToFile(filesystem::u8path(file), content, mode);
-}
-
-bool FctHelper::_writeToFile(const filesystem::path& file, const string& content, fstream::openmode mode) {
 	// 1. Ensure directory exists
-	if (!filesystem::exists(file) && !ensureDirExists(file.string()))
+	if (!boost::filesystem::exists(file) && !ensureDirExists(file))
 		return false;
 	// 2. Save file
 	ofstream fout(file, mode);
 	if (!fout.is_open()) {
-		cerr << "Cannot write to file \"" << file.string() << "\"." << endl;
+		cerr << "Cannot write to file \"" << file << "\"." << endl;
 		return false;
 	}
 	fout << content;
@@ -400,13 +398,9 @@ bool FctHelper::_writeToFile(const filesystem::path& file, const string& content
 }
 
 bool FctHelper::readFile(const string& file, string& out_content, fstream::openmode mode) {
-	return _readFile(filesystem::u8path(file), out_content, mode);
-}
-
-bool FctHelper::_readFile(const filesystem::path& file, string& out_content, fstream::openmode mode) {
 	ifstream fin(file, mode);
 	if (!fin.is_open()) {
-		cerr << "Cannot read from file \"" << file.string() << "\"." << endl;
+		cerr << "Cannot read from file \"" << file << "\"." << endl;
 		return false;
 	}
 	stringstream buffer;

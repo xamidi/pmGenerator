@@ -231,6 +231,67 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 	return parseDProof_raw(dProof, minUseAmountToCreateHelperProof, verifyingConstruct, debug, calculateMeanings, false);
 }
 
+namespace {
+// Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
+// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
+template<typename Func>
+shared_ptr<DlFormula> cloneSharedPtr_withUniquePrimitives(const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const Func& registerFreshPrimitives) {
+	DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
+	if (searchResult != knownClones.end()) {
+		const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+		if (knownCloneEntry)
+			return knownCloneEntry; // We can return the known clone itself (by reference).
+	}
+	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
+	const string& value = node->getValue()->value;
+	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
+		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
+		for (const shared_ptr<DlFormula>& child : children)
+			clone->addChild(child ? cloneSharedPtr_withUniquePrimitives(child, knownClones, primitiveReferences, registerFreshPrimitives) : nullptr);
+		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
+		return clone;
+	} else {
+		unordered_map<string, shared_ptr<DlFormula>>::iterator searchResult = primitiveReferences.find(value);
+		if (searchResult == primitiveReferences.end()) {
+			shared_ptr<DlFormula> primitive = registerFreshPrimitives(1)[0];
+			primitiveReferences[value] = primitive;
+			return primitive;
+		} else
+			return searchResult->second;
+	}
+}
+// Basically does what DlFormula::cloneSharedPtr() would do, except that primitives are not cloned but changed to a unique reference, and meanings are not copied.
+// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
+shared_ptr<DlFormula> cloneSharedPtr_makePrimitivesUnique(const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences) {
+	DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
+	if (searchResult != knownClones.end()) {
+		const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+		if (knownCloneEntry)
+			return knownCloneEntry; // We can return the known clone itself (by reference).
+	}
+	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
+	const string& value = node->getValue()->value;
+	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
+		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
+		for (const shared_ptr<DlFormula>& child : children)
+			clone->addChild(child ? cloneSharedPtr_makePrimitivesUnique(child, knownClones, primitiveReferences) : nullptr);
+		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
+		return clone;
+	} else
+		return primitiveReferences.at(value);
+}
+void appendNewPrimitivesOfFormula(const shared_ptr<DlFormula>& formula, vector<DlFormula*>& primitivesSequence, unordered_set<DlFormula*>& alreadyProcessedPrimitives, const set<shared_ptr<DlFormula>>& usedPrimitives) {
+	if (primitivesSequence.size() == usedPrimitives.size())
+		return; // All used primitives have been found, so we are done.
+	const string& value = formula->getValue()->value;
+	if (formula->getChildren().empty()) {
+		if (value != DlCore::terminalStr_bot() && value != DlCore::terminalStr_top() && alreadyProcessedPrimitives.emplace(formula.get()).second)
+			primitivesSequence.push_back(formula.get());
+	} else
+		for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
+			appendNewPrimitivesOfFormula(subformula, primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
+}
+}
 vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> DRuleParser::parseDProofs_raw(const vector<pair<string, string>>& dProofs, unsigned minUseAmountToCreateHelperProof, map<string, string>* optOut_duplicates, map<size_t, set<string>>* optOut_knownDProofsByLength, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, const vector<string>* altIn_dProofsWithoutContexts, bool prepareOnly) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
 	// 1. Group and order the (in D-notation) given proofs by their length, and create a context lookup table
 	map<size_t, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length
@@ -607,36 +668,9 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 					// Insert fresh primitives into formula
 					shared_ptr<DlFormula>& formula = formulas.back();
 
-					// Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
-					// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
-					auto cloneSharedPtr_withUniquePrimitives = [&](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
-						DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
-						if (searchResult != knownClones.end()) {
-							const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
-							if (knownCloneEntry)
-								return knownCloneEntry; // We can return the known clone itself (by reference).
-						}
-						const vector<shared_ptr<DlFormula>>& children = node->getChildren();
-						const string& value = node->getValue()->value;
-						if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-							shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
-							for (const shared_ptr<DlFormula>& child : children)
-								clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
-							knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
-							return clone;
-						} else {
-							unordered_map<string, shared_ptr<DlFormula>>::iterator searchResult = primitiveReferences.find(value);
-							if (searchResult == primitiveReferences.end()) {
-								shared_ptr<DlFormula> primitive = registerFreshPrimitives(1)[0];
-								primitiveReferences[value] = primitive;
-								return primitive;
-							} else
-								return searchResult->second;
-						}
-					};
 					DlFormula::CloneMap cloneMap;
 					unordered_map<string, shared_ptr<DlFormula>> primitiveReferences; // to assign primitives by strings
-					formula = cloneSharedPtr_withUniquePrimitives(formula, cloneMap, primitiveReferences, cloneSharedPtr_withUniquePrimitives); // partial cloning
+					formula = cloneSharedPtr_withUniquePrimitives(formula, cloneMap, primitiveReferences, registerFreshPrimitives); // partial cloning
 
 					atRef = false;
 					refIndex = 0;
@@ -714,27 +748,6 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 								return {};
 						}
 
-						// Basically does what DlFormula::cloneSharedPtr() would do, except that primitives are not cloned but changed to a unique reference, and meanings are not copied.
-						// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
-						auto cloneSharedPtr_makePrimitivesUnique = [](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
-							DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
-							if (searchResult != knownClones.end()) {
-								const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
-								if (knownCloneEntry)
-									return knownCloneEntry; // We can return the known clone itself (by reference).
-							}
-							const vector<shared_ptr<DlFormula>>& children = node->getChildren();
-							const string& value = node->getValue()->value;
-							if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-								shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
-								for (const shared_ptr<DlFormula>& child : children)
-									clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
-								knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
-								return clone;
-							} else
-								return primitiveReferences.at(value);
-						};
-
 						// The output of DlCore::tryUnifyTrees() shall be safely used with modifyingSubstitute(), therefore the substitution entries must be cloned unless they are primitives.
 						// NOTE: The cloning part could be removed in case DlCore::tryUnifyTrees()'s behavior would be modified in this way (but a variant that doesn't clone should be kept since it is faster this way).
 						DlFormula::CloneMap baseCloneMap; // to assign non-primitives by pointers ; unordered_map<const DlFormula*, shared_ptr<DlFormula>> of predefined 'clone' assignments
@@ -745,7 +758,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 							primitiveReferences.emplace(primitive->getValue()->value, primitive);
 						for (pair<const string, shared_ptr<DlFormula>>& p : substitutions) {
 							DlFormula::CloneMap cloneMap = baseCloneMap;
-							p.second = cloneSharedPtr_makePrimitivesUnique(p.second, cloneMap, primitiveReferences, cloneSharedPtr_makePrimitivesUnique); // partial cloning
+							p.second = cloneSharedPtr_makePrimitivesUnique(p.second, cloneMap, primitiveReferences); // partial cloning
 						}
 
 						// 3. Update all the formulas
@@ -775,23 +788,9 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 		vector<DlFormula*> primitivesSequence;
 		if (!formulas.empty()) {
 			unordered_set<DlFormula*> alreadyProcessedPrimitives;
-			auto appendNewPrimitivesOfFormula = [&](const shared_ptr<DlFormula>& formula) {
-				auto recurse = [&](const shared_ptr<DlFormula>& formula, const auto& me) {
-					if (primitivesSequence.size() == usedPrimitives.size())
-						return; // All used primitives have been found, so we are done.
-					const string& value = formula->getValue()->value;
-					if (formula->getChildren().empty()) {
-						if (value != DlCore::terminalStr_bot() && value != DlCore::terminalStr_top() && alreadyProcessedPrimitives.emplace(formula.get()).second)
-							primitivesSequence.push_back(formula.get());
-					} else
-						for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
-							me(subformula, me);
-				};
-				recurse(formula, recurse);
-			};
-			appendNewPrimitivesOfFormula(formulas.back());
+			appendNewPrimitivesOfFormula(formulas.back(), primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
 			for (size_t i = 0; i + 1 < formulas.size(); i++) {
-				appendNewPrimitivesOfFormula(formulas[i]);
+				appendNewPrimitivesOfFormula(formulas[i], primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
 				if (primitivesSequence.size() == usedPrimitives.size())
 					break; // All used primitives have been found, so we are done.
 			}
@@ -865,9 +864,9 @@ shared_ptr<DlFormula> DRuleParser::parseMmPlConsequent(const string& strConseque
 	if (topLevelOpening) { // Is there something in the beginning not processed yet?
 		if (strConsequent[topLevelOpening - 1] != ' ')
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has non-enclosed prefix without separation.");
-		string_view unaryOperatorSequence(consBegin, consBegin + topLevelOpening);
+		string unaryOperatorSequence(consBegin, consBegin + topLevelOpening);
 		vector<DlOperator> unaryOperators;
-		string_view::iterator unopsEnd = _obtainUnaryOperatorSequence(unaryOperatorSequence, unaryOperators);
+		string::const_iterator unopsEnd = _obtainUnaryOperatorSequence(unaryOperatorSequence, unaryOperators);
 		if (unopsEnd < unaryOperatorSequence.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid unary operator sequence \"" + string(unaryOperatorSequence) + "\" for input \"" + strConsequent + "\".");
 		shared_ptr<DlFormula> result = topLevelResult.second.second;
@@ -937,11 +936,11 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 	shared_ptr<DlFormula> lhs;
 	shared_ptr<DlFormula> rhs;
 	string binOp;
-	auto obtainBinaryOperator = [&](const string_view& source, string_view::size_type opBeginOffset) -> string_view::size_type {
-		string_view::size_type opEndOffset = source.find(' ', opBeginOffset);
-		if (opEndOffset == string_view::npos)
+	auto obtainBinaryOperator = [&](const string& source, string::size_type opBeginOffset) -> string::size_type {
+		string::size_type opEndOffset = source.find(' ', opBeginOffset);
+		if (opEndOffset == string::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". There should be a binary operator ending with ' '.");
-		binOp = string(source.begin() + opBeginOffset, opEndOffset - opBeginOffset);
+		binOp = source.substr(opBeginOffset, opEndOffset - opBeginOffset);
 		return opEndOffset;
 	};
 	auto applyUnaryOperators = [&](shared_ptr<DlFormula>& target, const vector<DlOperator>& unaryOperators) -> void {
@@ -959,32 +958,32 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 		target = make_shared<DlFormula>(make_shared<String>(var));
 		applyUnaryOperators(target, unaryOperators);
 	};
-	auto readAndAssignIntermediateVariableTerm = [&](const string_view& source, shared_ptr<DlFormula>& target) -> string_view::size_type {
+	auto readAndAssignIntermediateVariableTerm = [&](const string& source, shared_ptr<DlFormula>& target) -> string::size_type {
 		vector<DlOperator> unaryOperators;
-		string_view::iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string::const_iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (varBegin >= source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain more symbols after the unary operator sequence.");
-		string_view::size_type varBeginOffset = varBegin - source.begin();
-		string_view::size_type varEndOffset = source.find(' ', varBeginOffset);
-		if (varEndOffset == string_view::npos)
+		string::size_type varBeginOffset = varBegin - source.begin();
+		string::size_type varEndOffset = source.find(' ', varBeginOffset);
+		if (varEndOffset == string::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain a variable ending with ' '.");
-		assignVariableTerm(target, string(varBegin, varEndOffset - varBeginOffset), unaryOperators);
+		assignVariableTerm(target, source.substr(varBeginOffset, varEndOffset - varBeginOffset), unaryOperators);
 		return varEndOffset;
 	};
-	auto readAndAssignEndingVariableTerm = [&](const string_view& source, shared_ptr<DlFormula>& target) -> void {
+	auto readAndAssignEndingVariableTerm = [&](const string& source, shared_ptr<DlFormula>& target) -> void {
 		vector<DlOperator> unaryOperators;
-		string_view::iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string::const_iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (varBegin >= source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain more symbols after the unary operator sequence.");
-		string_view::size_type varBeginOffset = varBegin - source.begin();
-		string_view::size_type varEndOffset = source.find(' ', varBeginOffset);
-		if (varEndOffset != string_view::npos)
+		string::size_type varBeginOffset = varBegin - source.begin();
+		string::size_type varEndOffset = source.find(' ', varBeginOffset);
+		if (varEndOffset != string::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should end with a single variable after the unary operator sequence (and contain no further ' ').");
-		assignVariableTerm(target, string(varBegin, source.end()), unaryOperators);
+		assignVariableTerm(target, source.substr(varBeginOffset), unaryOperators);
 	};
-	auto readAndApplySubformula = [&](const string_view& source, shared_ptr<DlFormula>& target, const shared_ptr<DlFormula>& subformula) -> void {
+	auto readAndApplySubformula = [&](const string& source, shared_ptr<DlFormula>& target, const shared_ptr<DlFormula>& subformula) -> void {
 		vector<DlOperator> unaryOperators;
-		string_view::iterator unopsEnd = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string::const_iterator unopsEnd = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (unopsEnd < source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should end with a unary operator sequence.");
 		target = subformula;
@@ -994,37 +993,37 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 	string::const_iterator formulaBegin = consBegin + formulaOffset;
 	switch (foundSubformulaBounds.size()) {
 	case 0: { // e.g. "~ P -> ~ ~ Q" => binary operator is first symbol in prefix
-		string_view prefix(myFormula);
-		string_view::size_type varEndOffsetLhs = readAndAssignIntermediateVariableTerm(prefix, lhs);
-		string_view::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffsetLhs + 1);
+		string prefix(myFormula);
+		string::size_type varEndOffsetLhs = readAndAssignIntermediateVariableTerm(prefix, lhs);
+		string::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffsetLhs + 1);
 		readAndAssignEndingVariableTerm(prefix.substr(opEndOffset + 1), rhs);
 		break;
 	}
 	case 1: {
-		string_view prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
-		string_view postfix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + myLast); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst)
+		string prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
+		string postfix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + myLast); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst)
 		if (postfix.empty()) { // e.g. "~ P -> ~ <#1>" => binary operator is first symbol after the first symbol that is not a unary operator in prefix
-			string_view::size_type varEndOffset = readAndAssignIntermediateVariableTerm(prefix, lhs);
-			string_view::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffset + 1);
+			string::size_type varEndOffset = readAndAssignIntermediateVariableTerm(prefix, lhs);
+			string::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffset + 1);
 			readAndApplySubformula(prefix.substr(opEndOffset + 1), rhs, firstSubformula);
 		} else { // e.g. "~ <#1> -> ~ Q" => binary operator is first symbol in postfix
 			readAndApplySubformula(prefix, lhs, firstSubformula);
 			if (postfix[0] != ' ')
 				throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Given a single left argument, postfix should begin with ' '.");
-			string_view::size_type opEndOffset = obtainBinaryOperator(postfix, 1);
+			string::size_type opEndOffset = obtainBinaryOperator(postfix, 1);
 			readAndAssignEndingVariableTerm(postfix.substr(opEndOffset + 1), rhs);
 		}
 		break;
 	}
 	case 2: { // e.g. "~ <#1> -> ~ <#2>" => binary operator is first symbol in infix
-		string_view prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
-		string_view infix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + foundSubformulaBounds[1].first); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst, foundSubformulaBounds[1].first - foundSubformulaBounds[0].second - 1)
+		string prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
+		string infix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + foundSubformulaBounds[1].first); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst, foundSubformulaBounds[1].first - foundSubformulaBounds[0].second - 1)
 		if (foundSubformulaBounds[1].second + 1 != myLast)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\" has non-enclosed postfix.");
 		readAndApplySubformula(prefix, lhs, firstSubformula);
 		if (infix[0] != ' ')
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Given both arguments, infix should begin with ' '.");
-		string_view::size_type opEndOffset = obtainBinaryOperator(infix, 1);
+		string::size_type opEndOffset = obtainBinaryOperator(infix, 1);
 		readAndApplySubformula(infix.substr(opEndOffset + 1), rhs, secondSubformula);
 		break;
 	}
@@ -1065,19 +1064,19 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 	return result;
 }
 
-string_view::iterator DRuleParser::_obtainUnaryOperatorSequence(const string_view& unaryOperatorSequence, vector<DlOperator>& unaryOperators) {
-	string_view::size_type begin = 0;
-	string_view::size_type end = string_view::npos;
-	for (string_view::size_type i = 0; i < unaryOperatorSequence.length(); i++)
+string::const_iterator DRuleParser::_obtainUnaryOperatorSequence(const string& unaryOperatorSequence, vector<DlOperator>& unaryOperators) {
+	string::size_type begin = 0;
+	string::size_type end = string::npos;
+	for (string::size_type i = 0; i < unaryOperatorSequence.length(); i++)
 		if (unaryOperatorSequence[i] == ' ') {
 			end = i;
 			string op(unaryOperatorSequence.substr(begin, end - begin));
 			if (op != "~")
-				return unaryOperatorSequence.begin() + begin; // '~' (i.e. \not) is the only propositional unary operator ; return current pos when reaching a symbol that is not a unary operator
+				return next(unaryOperatorSequence.begin(), begin); // '~' (i.e. \not) is the only propositional unary operator ; return current pos when reaching a symbol that is not a unary operator
 			unaryOperators.push_back(DlOperator::Not); // add unary operator to process queue (so it can be processed before earlier occurring operators)
 		} else if (end + 1 == i)
 			begin = i;
-	return end == string_view::npos ? unaryOperatorSequence.begin() : unaryOperatorSequence.begin() + end + 1;
+	return end == string::npos ? unaryOperatorSequence.begin() : next(unaryOperatorSequence.begin(), end + 1);
 };
 
 }

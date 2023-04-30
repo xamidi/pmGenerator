@@ -230,8 +230,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			else {
 				string param = string(argv[++i]);
 				unsigned value;
-				from_chars_result result = FctHelper::toUInt(param, value);
-				if (result.ec != errc())
+				if (!FctHelper::toUInt(param, value))
 					return printUsage("Invalid parameter \"" + param + "\" for \"-m\".");
 				tasks.emplace_back(Task::MpiFilter, value, "", "", "", "", true, false, false, false, 0, 0);
 				mpiArg = "-m";
@@ -321,7 +320,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				else {
 					string path = get<3>(t);
 					FctHelper::ensureDirExists(path);
-					ofstream fout(filesystem::u8path(path), fstream::out | fstream::binary);
+					ofstream fout(path, fstream::out | fstream::binary);
 					if (!fout.is_open())
 						throw invalid_argument("Cannot write to file \"" + string(path) + "\".");
 					DlProofEnumerator::printConclusionLengthPlotData(get<7>(t), get<8>(t), get<10>(t), get<11>(t), get<2>(t), &fout, get<6>(t));

@@ -7,6 +7,8 @@
 #include "DlCore.h"
 #include "DlFormula.h"
 
+#include <boost/filesystem/operations.hpp>
+
 #include <tbb/concurrent_map.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -58,7 +60,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_seq(vector<vect
 	}
 	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + 1); wordLengthLimit <= limit; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
-		if (filesystem::exists(file)) { // load
+		if (boost::filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
 			allRepresentativesLookup.push_back( { });
 			vector<string>& contents = allRepresentativesLookup.back();
@@ -124,7 +126,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 		optOut_allConclusionsLookup->reserve(containerReserve);
 	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + 1); wordLengthLimit <= limit; wordLengthLimit += 2) { // look for files containing D-proofs, starting from built-in limit + 2
 		const string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
-		if (filesystem::exists(file)) { // load
+		if (boost::filesystem::exists(file)) { // load
 			allRepresentativesLookup.push_back( { });
 			allRepresentativesLookup.push_back( { });
 			if (optOut_allConclusionsLookup) {
@@ -410,7 +412,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 	const unsigned knownLimit = wordLengthLimit - 2;
 	auto _iterateRepresentatives = [&]() -> uint64_t {
-		atomic<uint64_t> counter = 0;
+		atomic<uint64_t> counter { 0 };
 		processCondensedDetachmentPlProofs_generic(stack, wordLengthLimit, knownLimit, allRepresentatives, [&counter](string& sequence) { counter++; });
 		return counter;
 	};
@@ -487,7 +489,7 @@ map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
 	return _;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/1d05f2a646563061162be9ad0db68946499ac867
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
@@ -697,13 +699,13 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 
 		// 4.8 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
-		filesystem::path file = filesystem::u8path(filePrefix + to_string(wordLengthLimit) + filePostfix);
+		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		string::size_type bytes = 0;
 		{
-			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
-				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+				cerr << "Failed to create file at \"" << file << "\", trying again." << endl;
 			time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives.back().size() << " entries to " << file.string() << "." << endl;
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives.back().size() << " entries to " << file << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			if (withConclusions)
@@ -730,7 +732,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						fout << "\n" << s;
 					}
 		}
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
 	}
 	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
 	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
@@ -842,12 +844,12 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 
 		// 6.2 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
-		filesystem::path file = filesystem::u8path(filePrefix + to_string(wordLengthLimit) + filePostfix);
+		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		string::size_type bytes = 0;
 		{
-			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
-				cerr << "Failed to create file at \"" + file.string() + "\", trying again." << endl;
-			cout << myTime() + ": Starting to write " + to_string(newContent.size()) + " entries to " + file.string() + "." << endl;
+			while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+				cerr << "Failed to create file at \"" + file + "\", trying again." << endl;
+			cout << myTime() + ": Starting to write " + to_string(newContent.size()) + " entries to " + file + "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			for (const pair<const string, string>& p : newContent) {
@@ -863,7 +865,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 				}
 			}
 		}
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to print and save " + to_string(bytes) + " bytes of representative condensed detachment proof strings to " + file.string() + "." << endl;
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to print and save " + to_string(bytes) + " bytes of representative condensed detachment proof strings to " + file + "." << endl;
 	}
 	cout << myTime() + ": MPI-based D-proof representative filter complete. " + myInfo() << endl;
 }
@@ -906,13 +908,13 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputF
 
 		// 3. Store generated D-proofs together with their conclusions permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
-		filesystem::path file = filesystem::u8path(outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix));
+		string file = outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix);
 		string::size_type bytes = 0;
 		{
-			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
-				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+				cerr << "Failed to create file at \"" << file << "\", trying again." << endl;
 			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << result.size() << " entries to " << file.string() << "." << endl;
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << result.size() << " entries to " << file << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			for (const pair<const string, string>& p : result) {
@@ -928,7 +930,7 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputF
 				}
 			}
 		}
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
 
 		//#if (wordLengthLimit <= 15)
 		//#	cout << "const vector<string> Resources::dProofConclusions" << wordLengthLimit << " = " << FctHelper::mapStringF(result, [](const pair<const string, string>& p) { return p.second; }, "{ \"", "\" };", "\", \"") << endl;
@@ -959,13 +961,13 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& inp
 	// 2. Store generated D-proofs without their conclusions permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += 2) {
 		startTime = chrono::steady_clock::now();
-		filesystem::path file = filesystem::u8path(outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix));
+		string file = outputFilePrefix + to_string(wordLengthLimit) + (wordLengthLimit < filteredMissing ? ".txt" : filePostfix);
 		string::size_type bytes = 0;
 		{
-			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
-				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+				cerr << "Failed to create file at \"" << file << "\", trying again." << endl;
 			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives[wordLengthLimit].size() << " entries to " << file.string() << "." << endl;
+			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives[wordLengthLimit].size() << " entries to " << file << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			for (const string& s : allRepresentatives[wordLengthLimit])
@@ -978,7 +980,7 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& inp
 					fout << "\n" << s;
 				}
 		}
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file << "." << endl;
 	}
 }
 
@@ -1127,10 +1129,10 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 }
 
 void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
-	atomic<uint64_t> counter = 0;
-	atomic<uint64_t> conclusionCounter = 0;
-	atomic<uint64_t> redundantCounter = 0;
-	atomic<uint64_t> invalidCounter = 0;
+	atomic<uint64_t> counter { 0 };
+	atomic<uint64_t> conclusionCounter { 0 };
+	atomic<uint64_t> redundantCounter { 0 };
+	atomic<uint64_t> invalidCounter { 0 };
 	auto process = [&representativeProofs, &progressData, &counter, &conclusionCounter, &redundantCounter, &invalidCounter](string& sequence) {
 		counter++;
 		vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData;
@@ -1197,32 +1199,26 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	});
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const size_t, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const size_t upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
-			for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
-				if (done)
-					return;
-				else if (it->first <= upperBound)
-					for (const string* const f : it->second) {
-						func(*f);
-						if (done)
-							return;
-					}
-		});
-	};
 	tbb::concurrent_unordered_map<const string*, tbb::concurrent_unordered_map<string, string>::const_iterator> toErase;
 	if (progressData)
 		progressData->setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<string, string>::range_type& range) {
+	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &formulasByStandardLength, &toErase](tbb::concurrent_unordered_map<string, string>::range_type& range) {
 		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string::size_type dProofLen = it->second.length();
 			if (dProofLen == maxLength) {
 				const string& formula = it->first;
-				atomic<bool> redundant = false;
+				atomic<bool> redundant { false };
 				size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
-				iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const string& potentialSchema) {
-					if (formula != potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) // formula redundant
-						redundant = true;
+				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+					for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+						if (redundant)
+							return;
+						else if (it->first <= formulaLen)
+							for (const string* const potentialSchema : it->second)
+								if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
+									redundant = true;
+									return;
+								}
 				});
 				if (redundant) {
 					toErase.emplace(&it->first, it);
@@ -1287,38 +1283,32 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	});
 	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#if (isMainProc) cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const size_t, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	auto iterateFormulasOfStandardLengthUpTo = [&formulasByStandardLength](const size_t upperBound, atomic<bool>& done, const auto& func) {
-		tbb::parallel_for(formulasByStandardLength.range(), [&upperBound, &done, &func](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
-			for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
-				if (done)
-					return;
-				else if (it->first <= upperBound)
-					for (const string* const f : it->second) {
-						func(*f);
-						if (done)
-							return;
-					}
-		});
-	};
 	tbb::concurrent_queue<uint64_t> toErase;
 	tbb::concurrent_unordered_set<uint64_t> toErase_mainProc;
 	mutex mtx;
 	unique_lock<mutex> condLock(mtx);
 	condition_variable cond;
-	atomic<bool> communicate = true;
-	atomic<bool> workerDone = false;
-	atomic<uint64_t> localCounter = 0;
+	atomic<bool> communicate { true };
+	atomic<bool> workerDone { false };
+	atomic<uint64_t> localCounter { 0 };
 	if (progressData)
 		progressData->setStartTime();
-	auto worker = [&recentConclusionSequence, &indexDistribution, &iterateFormulasOfStandardLengthUpTo](int mpi_rank, size_t first, size_t end, size_t n, bool smoothProgress, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_queue<uint64_t>& toErase, tbb::concurrent_unordered_set<uint64_t>& toErase_mainProc, helper::ProgressData* const progressData) {
-		tbb::parallel_for(first, end, [&recentConclusionSequence, &indexDistribution, &smoothProgress, &isMainProc, &localCounter, &cond, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase, &toErase_mainProc](size_t i) {
+	auto worker = [&recentConclusionSequence, &indexDistribution](int mpi_rank, size_t first, size_t end, size_t n, bool smoothProgress, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_queue<uint64_t>& toErase, tbb::concurrent_unordered_set<uint64_t>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
+		tbb::parallel_for(first, end, [&recentConclusionSequence, &indexDistribution, &smoothProgress, &isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](size_t i) {
 			uint64_t index = smoothProgress ? indexDistribution[i] : i;
 			const string& formula = recentConclusionSequence[index];
-			atomic<bool> redundant = false;
+			atomic<bool> redundant { false };
 			size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
-			iterateFormulasOfStandardLengthUpTo(formulaLen, redundant, [&formula, &redundant](const string& potentialSchema) {
-				if (formula != potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) // formula redundant
-					redundant = true;
+			tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+				for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+					if (redundant)
+						return;
+					else if (it->first <= formulaLen)
+						for (const string* const potentialSchema : it->second)
+							if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
+								redundant = true;
+								return;
+							}
 			});
 			if (redundant) {
 				localCounter++;
@@ -1352,7 +1342,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 			}
 		cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Worker complete." << endl;
 	};
-	thread workerThread(worker, mpi_rank, first, end, n, smoothProgress, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(toErase), ref(toErase_mainProc), progressData);
+	thread workerThread(worker, mpi_rank, first, end, n, smoothProgress, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
 	if (isMainProc) {
 		int numComplete = 0;
 		uint64_t index;
@@ -1405,164 +1395,163 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	return toErase_mainProc;
 }
 
-void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
-	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
-	auto recurse = [&wordLengthLimit, &knownLimit, &allRepresentatives, &queues, &mtxs, &combinations](string& prefix, vector<uint32_t>& stack, const auto& me) -> void {
-		constexpr uint32_t S = 0;
-		const uint32_t A = knownLimit + 2;
-		// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
-		if (prefix.length() + stack.size() > wordLengthLimit)
-			return;
-		if (stack.empty()) {
-			bool processed = false;
-			unsigned bestIndex = 0;
-			size_t bestSize = SIZE_MAX;
-			for (unsigned t = 0; t < queues.size(); t++) {
-				deque<string>& queue = queues[t];
-				size_t size = queue.size();
-				if (size) {
-					if (size < bestSize) {
-						bestIndex = t;
-						bestSize = size;
-					}
-				} else {
-					{
-						lock_guard<mutex> lock(mtxs[t]);
-						queue.push_back(prefix);
-					}
-					processed = true;
-					break;
+namespace {
+void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, const uint32_t wordLengthLimit, const uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs, const vector<pair<array<uint32_t, 2>, unsigned>>& combinations) {
+	constexpr uint32_t S = 0;
+	const uint32_t A = knownLimit + 2;
+	// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
+	if (prefix.length() + stack.size() > wordLengthLimit)
+		return;
+	if (stack.empty()) {
+		bool processed = false;
+		unsigned bestIndex = 0;
+		size_t bestSize = SIZE_MAX;
+		for (unsigned t = 0; t < queues.size(); t++) {
+			deque<string>& queue = queues[t];
+			size_t size = queue.size();
+			if (size) {
+				if (size < bestSize) {
+					bestIndex = t;
+					bestSize = size;
 				}
-			}
-			if (!processed) {
-				lock_guard<mutex> lock(mtxs[bestIndex]);
-				queues[bestIndex].push_back(prefix);
-			}
-		} else {
-			auto processN = [&](const vector<string>& representatives) {
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				vector<string>::const_iterator last = prev(representatives.end());
-				for (vector<string>::const_iterator it = representatives.begin(); it != last; ++it) {
-					stack_copy = stack;
-					prefix_copy = prefix;
-					prefix_copy += *it;
-					me(prefix_copy, stack_copy, me);
-				}
-				prefix += *last;
-				me(prefix, stack, me);
-			};
-			uint32_t symbol = stack.back();
-			if (symbol == S) {
-				stack.pop_back(); // pop already for all cases
-				// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				auto processRepresentatives = [&](const vector<string>& representatives) {
-					for (const string& sequence : representatives) {
-						stack_copy = stack;
-						prefix_copy = prefix;
-						prefix_copy += sequence;
-						me(prefix_copy, stack_copy, me);
-					}
-				};
-				processRepresentatives(allRepresentatives[1]);
-				uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
-				for (uint32_t s = 3; s <= knownLimit; s += 2)
-					if (remainingSpace >= s)
-						processRepresentatives(allRepresentatives[s]);
-
-				// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
-				stack.push_back(A);
-				me(prefix, stack, me);
-			} else if (symbol == A) {
-				uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
-				if (remainingSpace < knownLimit + 2)
-					return; // cancel already if adding the below sequences would exceed the word length limit
-				// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
-				// ...
-				// |combinations|/|combinations| : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
-				prefix += "D"; // same terminal for all cases, so all prefix already
-				stack.pop_back(); // pop already for all cases
-				vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				string prefix_copy; //          but the last option, in order to restore the parameters.
-				for (unsigned i = 0; i < combinations.size() - 1; i++) {
-					const pair<array<uint32_t, 2>, unsigned>& p = combinations[i];
-					if (remainingSpace < p.second)
-						return; // cancel already if adding the following sequences would exceed the word length limit
-					stack_copy = stack;
-					prefix_copy = prefix;
-					stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
-					me(prefix_copy, stack_copy, me);
-				}
-				const pair<array<uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
-				if (remainingSpace < p.second)
-					return; // cancel already if adding the final sequence would exceed the word length limit
-				stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
-				me(prefix, stack, me);
 			} else {
-				if (symbol > 1 && prefix.length() + symbol + stack.size() - 1 > wordLengthLimit)
-					return; // cancel already if adding the below sequences would exceed the word length limit
-				stack.pop_back(); // pop already for all cases
-				// 1/1 : {w | w is known representative of length <knownLimit>}, N<symbol>, [] ; stack: pop current symbol, push nothing
-				processN(allRepresentatives[symbol]);
+				{
+					lock_guard<mutex> lock(mtxs[t]);
+					queue.push_back(prefix);
+				}
+				processed = true;
+				break;
 			}
 		}
-	};
-	recurse(prefix, stack, recurse);
+		if (!processed) {
+			lock_guard<mutex> lock(mtxs[bestIndex]);
+			queues[bestIndex].push_back(prefix);
+		}
+	} else {
+		auto processN = [&](const vector<string>& representatives) {
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			vector<string>::const_iterator last = prev(representatives.end());
+			for (vector<string>::const_iterator it = representatives.begin(); it != last; ++it) {
+				stack_copy = stack;
+				prefix_copy = prefix;
+				prefix_copy += *it;
+				recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+			}
+			prefix += *last;
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		};
+		uint32_t symbol = stack.back();
+		if (symbol == S) {
+			stack.pop_back(); // pop already for all cases
+			// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			auto processRepresentatives = [&](const vector<string>& representatives) {
+				for (const string& sequence : representatives) {
+					stack_copy = stack;
+					prefix_copy = prefix;
+					prefix_copy += sequence;
+					recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+				}
+			};
+			processRepresentatives(allRepresentatives[1]);
+			uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+			for (uint32_t s = 3; s <= knownLimit; s += 2)
+				if (remainingSpace >= s)
+					processRepresentatives(allRepresentatives[s]);
+
+			// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
+			stack.push_back(A);
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		} else if (symbol == A) {
+			uint32_t remainingSpace = wordLengthLimit - static_cast<uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+			if (remainingSpace < knownLimit + 2)
+				return; // cancel already if adding the below sequences would exceed the word length limit
+			// 1/|combinations| : D, A, [N1,N<knownLimit>] ; stack: pop current symbol, push [N1,N<knownLimit>] on top of stack
+			// ...
+			// |combinations|/|combinations| : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
+			prefix += "D"; // same terminal for all cases, so all prefix already
+			stack.pop_back(); // pop already for all cases
+			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			string prefix_copy; //          but the last option, in order to restore the parameters.
+			for (unsigned i = 0; i < combinations.size() - 1; i++) {
+				const pair<array<uint32_t, 2>, unsigned>& p = combinations[i];
+				if (remainingSpace < p.second)
+					return; // cancel already if adding the following sequences would exceed the word length limit
+				stack_copy = stack;
+				prefix_copy = prefix;
+				stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
+				recurse_loadCondensedDetachmentPlProofs_generic_par(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+			}
+			const pair<array<uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
+			if (remainingSpace < p.second)
+				return; // cancel already if adding the final sequence would exceed the word length limit
+			stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
+			recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
+		} else {
+			if (symbol > 1 && prefix.length() + symbol + stack.size() - 1 > wordLengthLimit)
+				return; // cancel already if adding the below sequences would exceed the word length limit
+			stack.pop_back(); // pop already for all cases
+			// 1/1 : {w | w is known representative of length <knownLimit>}, N<symbol>, [] ; stack: pop current symbol, push nothing
+			processN(allRepresentatives[symbol]);
+		}
+	}
+};
+}
+void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
+	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
+	recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
 }
 
 void DlProofEnumerator::_loadCondensedDetachmentPlProofs_naive_par(string& prefix, unsigned stackSize, uint32_t wordLengthLimit, vector<deque<string>>& queues, vector<mutex>& mtxs) {
-	auto recurse = [&](string& prefix, unsigned stackSize, const auto& me) -> void {
-		if (prefix.length() + stackSize > wordLengthLimit)
-			return;
-		if (!stackSize) {
-			bool processed = false;
-			unsigned bestIndex = 0;
-			size_t bestSize = SIZE_MAX;
-			for (unsigned t = 0; t < queues.size(); t++) {
-				deque<string>& queue = queues[t];
-				size_t size = queue.size();
-				if (size) {
-					if (size < bestSize) {
-						bestIndex = t;
-						bestSize = size;
-					}
-				} else {
-					{
-						lock_guard<mutex> lock(mtxs[t]);
-						queue.push_back(prefix);
-					}
-					processed = true;
-					break;
+	if (prefix.length() + stackSize > wordLengthLimit)
+		return;
+	if (!stackSize) {
+		bool processed = false;
+		unsigned bestIndex = 0;
+		size_t bestSize = SIZE_MAX;
+		for (unsigned t = 0; t < queues.size(); t++) {
+			deque<string>& queue = queues[t];
+			size_t size = queue.size();
+			if (size) {
+				if (size < bestSize) {
+					bestIndex = t;
+					bestSize = size;
 				}
+			} else {
+				{
+					lock_guard<mutex> lock(mtxs[t]);
+					queue.push_back(prefix);
+				}
+				processed = true;
+				break;
 			}
-			if (!processed) {
-				lock_guard<mutex> lock(mtxs[bestIndex]);
-				queues[bestIndex].push_back(prefix);
-			}
-		} else {
-			// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
-			string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
-			prefix_copy += "1";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "2";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "3";
-			me(prefix_copy, stackSize - 1, me);
-
-			// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
-			prefix += "D";
-			me(prefix, stackSize + 1, me);
 		}
-	};
-	recurse(prefix, stackSize, recurse);
+		if (!processed) {
+			lock_guard<mutex> lock(mtxs[bestIndex]);
+			queues[bestIndex].push_back(prefix);
+		}
+	} else {
+		// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
+		string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
+		prefix_copy += "1";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "2";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "3";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix_copy, stackSize - 1, wordLengthLimit, queues, mtxs);
+
+		// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
+		prefix += "D";
+		_loadCondensedDetachmentPlProofs_naive_par(prefix, stackSize + 1, wordLengthLimit, queues, mtxs);
+	}
 }
 
 }
