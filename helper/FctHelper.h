@@ -48,6 +48,10 @@ struct FctHelper {
 	static bool mpi_recvBool(int rank, int source, bool debug = false);
 	static bool mpi_tryRecvBool(int rank, int source, bool& result, bool debug = false);
 
+	static void mpi_sendUint64(int rank, const std::uint64_t num, int dest, bool debug = false);
+	static std::uint64_t mpi_recvUint64(int rank, int source, bool debug = false);
+	static bool mpi_tryRecvUint64(int rank, int source, std::uint64_t& result, bool debug = false);
+
 	static void mpi_sendUint64Pair(int rank, const std::array<std::uint64_t, 2>& arr, int dest, bool debug = false);
 	static std::array<std::uint64_t, 2> mpi_recvUint64Pair(int rank, int source, bool debug = false);
 	static bool mpi_tryRecvUint64Pair(int rank, int source, std::array<std::uint64_t, 2>& result, bool debug = false);

@@ -101,6 +101,7 @@ enum mpi_tag : int {
 	mpi_tag_unspecified = 0, // not used by any helper function
 	mpi_tag_bool,
 	mpi_tag_string,
+	mpi_tag_uint64,
 	mpi_tag_uint64_pair
 };
 
@@ -150,6 +151,18 @@ bool FctHelper::mpi_tryRecvBool(int rank, int source, bool& result, bool debug) 
 		return true;
 	}
 	return false;
+}
+
+void FctHelper::mpi_sendUint64(int rank, const uint64_t num, int dest, bool debug) {
+	mpi_send(rank, 1, MPI_LONG_LONG_INT, &num, dest, mpi_tag_uint64, debug, [](const uint64_t* x) { return to_string(*x); });
+}
+
+uint64_t FctHelper::mpi_recvUint64(int rank, int source, bool debug) {
+	return mpi_recvValue<uint64_t>(rank, MPI_LONG_LONG_INT, source, mpi_tag_uint64, debug, [](const uint64_t x) { return to_string(x); });
+}
+
+bool FctHelper::mpi_tryRecvUint64(int rank, int source, uint64_t& result, bool debug) {
+	return mpi_tryRecvValue(rank, MPI_LONG_LONG_INT, source, mpi_tag_uint64, result, debug, [](const uint64_t x) { return to_string(x); });
 }
 
 void FctHelper::mpi_sendUint64Pair(int rank, const array<uint64_t, 2>& arr, int dest, bool debug) {
