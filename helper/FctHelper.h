@@ -3,10 +3,12 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <set>
@@ -54,52 +56,41 @@ struct FctHelper {
 	static std::array<std::uint64_t, 2> mpi_recvUint64Pair(int rank, int source, bool debug = false);
 	static bool mpi_tryRecvUint64Pair(int rank, int source, std::array<std::uint64_t, 2>& result, bool debug = false);
 
+	// from_chars does not work as desired (i.e. accepts invalid inputs), so we use it with some additional argument checks
 	template<typename T>
-	static bool toUInt(const std::string& str, T& value) {
-		if (*str.c_str() == '0' && str.length() != 1)
-			return false;
-		T num = 0;
-		for (char c : str) {
-			T before = num;
-			switch (c) {
+	static constexpr std::from_chars_result charsToUInt(const char* begin, const char* end, T& value) {
+		std::from_chars_result result;
+		if (begin > end) {
+			result.ec = std::errc::invalid_argument;
+			return result;
+		}
+		if (*begin == '0' && begin + 1 != end) {
+			result.ec = std::errc::invalid_argument;
+			return result;
+		}
+		for (const char* it = begin; it < end; it++)
+			switch (*it) {
 			case '0':
-				num = 10 * num;
-				break;
 			case '1':
-				num = 10 * num + 1;
-				break;
 			case '2':
-				num = 10 * num + 2;
-				break;
 			case '3':
-				num = 10 * num + 3;
-				break;
 			case '4':
-				num = 10 * num + 4;
-				break;
 			case '5':
-				num = 10 * num + 5;
-				break;
 			case '6':
-				num = 10 * num + 6;
-				break;
 			case '7':
-				num = 10 * num + 7;
-				break;
 			case '8':
-				num = 10 * num + 8;
-				break;
 			case '9':
-				num = 10 * num + 9;
 				break;
 			default:
-				return false;
+				result.ec = std::errc::invalid_argument;
+				return result;
 			}
-			if (num < before) // overflow
-				return false;
-		}
-		value = num;
-		return true;
+		result = std::from_chars(begin, end, value);
+		return result;
+	}
+	template<typename T>
+	static constexpr std::from_chars_result toUInt(const std::string& str, T& value) {
+		return charsToUInt(str.c_str(), str.c_str() + str.length(), value);
 	}
 
 	// Functions to quickly calculate to_string(n).length()
@@ -121,7 +112,10 @@ struct FctHelper {
 
 	static bool writeToFile(const std::string& file, const std::string& content, std::fstream::openmode mode = std::fstream::out | std::fstream::binary);
 	static bool readFile(const std::string& file, std::string& out_content, std::fstream::openmode mode = std::fstream::in | std::fstream::binary);
-
+private:
+	static bool _writeToFile(const std::filesystem::path& file, const std::string& content, std::fstream::openmode mode = std::fstream::out | std::fstream::binary);
+	static bool _readFile(const std::filesystem::path& file, std::string& out_content, std::fstream::openmode mode = std::fstream::in | std::fstream::binary);
+public:
 	static std::wstring utf8toWide(const std::string& in);
 	static std::wstring utf8toWide(const char* in);
 	static std::vector<std::string> stringSplit(const std::string& str, const std::string& sep);
@@ -141,8 +135,8 @@ struct FctHelper {
 		return ss.str();
 	}
 
-	template<typename T, typename U, typename Func>
-	static std::string vectorStringF(const std::vector<T, U>& v, const Func& f, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
+	template<typename T, typename U>
+	static std::string vectorStringF(const std::vector<T, U>& v, const auto& f, const std::string& leftDelimiter = "[", const std::string& rightDelimiter = "]", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
 		for (std::size_t i = 0; i < v.size(); ++i) {
@@ -167,8 +161,8 @@ struct FctHelper {
 		return ss.str();
 	}
 
-	template<typename T, typename U, typename V, typename W, typename Func>
-	static std::string mapStringF(const std::map<T, U, V, W>& m, const Func& f, const std::string& leftDelimiter = "{", const std::string& rightDelimiter = "}", const std::string& sep = ", ") {
+	template<typename T, typename U, typename V, typename W>
+	static std::string mapStringF(const std::map<T, U, V, W>& m, const auto& f, const std::string& leftDelimiter = "{", const std::string& rightDelimiter = "}", const std::string& sep = ", ") {
 		std::stringstream ss;
 		ss << leftDelimiter;
 		for (typename std::map<T, U, V, W>::const_iterator it = m.begin(); it != m.end(); ++it) {

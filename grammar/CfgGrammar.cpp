@@ -2,7 +2,7 @@
 
 #include "../helper/FctHelper.h"
 
-#include <boost/algorithm/string.hpp>
+#include <regex>
 
 using namespace std;
 using namespace xamid::helper;
@@ -13,7 +13,7 @@ namespace grammar {
 CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarString) :
 		_elementCounter(0), _startSymbolString(startSymbolString), _grammarString(grammarString) {
 	// 1. Replace "\r\n" with "\n" in the grammar string
-	boost::replace_all(_grammarString, "\r\n", "\n");
+	_grammarString = regex_replace(_grammarString, regex("\\r\\n"), "\n");
 
 	// 2. Build up nonterminals and production rules
 	istringstream reader1(_grammarString);
