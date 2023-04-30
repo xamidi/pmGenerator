@@ -145,6 +145,7 @@ digraph {
 	DlProofEnumerator -> concurrent_unordered_set [color=blue]
 	DlProofEnumerator -> concurrent_vector [color=blue]
 	DlProofEnumerator -> parallel_for [color=blue]
+	DlProofEnumerator -> parallel_sort [color=blue]
 	DlProofEnumerator -> cstring [color=blue]
 	DlProofEnumerator -> iostream [color=blue]
 	DlProofEnumerator -> mpi [color=blue]

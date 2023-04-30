@@ -15,6 +15,7 @@
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
 
 #include <cstring>
 #include <iostream>
@@ -783,19 +784,18 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		MPI_Abort(MPI_COMM_WORLD, 1);
 		return;
 	}
-	string myData = to_string(allRepresentativesCount);
 	if (isMainProc) {
 		for (int source = 1; source < mpi_size; source++) {
-			string data = FctHelper::mpi_recvString(0, source);
-			if (myData != data) {
-				cerr << "Uniform loading failed: " + data + " representatives loaded on rank 0, but " + myData + " representatives loaded on rank " + to_string(source) + ". Aborting." << endl;
+			uint64_t data = FctHelper::mpi_recvUint64(0, source);
+			if (allRepresentativesCount != data) {
+				cerr << "Uniform loading failed: " + to_string(data) + " representatives loaded on rank 0, but " + to_string(allRepresentativesCount) + " representatives loaded on rank " + to_string(source) + ". Aborting." << endl;
 				MPI_Abort(MPI_COMM_WORLD, 1);
 				return;
 			}
 		}
 		cout << myTime() + ": Representative collections were initialized successfully on all ranks." << endl;
 	} else
-		FctHelper::mpi_sendString(mpi_rank, myData, 0);
+		FctHelper::mpi_sendUint64(mpi_rank, allRepresentativesCount, 0);
 
 	// 2. Initialize and prepare progress data.
 	bool showProgress = isMainProc && allRepresentatives.size() > 15;
@@ -820,7 +820,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	const vector<string>& recentConclusionSequence = allConclusions[wordLengthLimit];
 	if (isMainProc)
 		startTime = chrono::steady_clock::now();
-	tbb::concurrent_unordered_set<string> redundant = _mpi_findRedundantConclusionsForProofsOfMaxLength(mpi_rank, mpi_size, wordLengthLimit, representativeProofs, recentConclusionSequence, isMainProc ? &removalProgress : nullptr, smoothProgress);
+	tbb::concurrent_unordered_set<uint64_t> redundant = _mpi_findRedundantConclusionsForProofsOfMaxLength(mpi_rank, mpi_size, wordLengthLimit, representativeProofs, recentConclusionSequence, isMainProc ? &removalProgress : nullptr, smoothProgress);
 	if (isMainProc)
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to detect " + to_string(redundant.size()) + " conclusions for which there are more general variants proven in lower or equal amounts of steps." << endl;
 
@@ -837,9 +837,8 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		// 6.1 Order information.
 		startTime = chrono::steady_clock::now();
 		tbb::parallel_for(size_t(0), recentRepresentativeSequence.size(), [&recentRepresentativeSequence, &recentConclusionSequence, &redundant, &newContent](size_t i) { // NOTE: Counts from i = start := 0 until i < end := recentRepresentativeSequence.size().
-			const string& conclusion = recentConclusionSequence[i];
-			if (!redundant.count(conclusion))
-				newContent.emplace(recentRepresentativeSequence[i], conclusion);
+			if (!redundant.count(i))
+				newContent.emplace(recentRepresentativeSequence[i], recentConclusionSequence[i]);
 		});
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " taken to filter and order new representative proofs." << endl;
 
@@ -1249,17 +1248,32 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
 
-tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, helper::ProgressData* const progressData, bool smoothProgress) {
+tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, helper::ProgressData* const progressData, bool smoothProgress) {
 	bool isMainProc = mpi_rank == 0;
 	size_t n = recentConclusionSequence.size();
 
+	// Reorders indices according to affine ciphered values (https://en.wikipedia.org/wiki/Affine_cipher),
+	// using a factor with good spectral results (https://en.wikipedia.org/wiki/Spectral_test).
+	auto distributeIndices = [](uint64_t size) -> vector<uint64_t> {
+		// NOTE: 0x9e3779b97f4a7c15 = 0b1001111000110111011110011011100101111111010010100111110000010101 = 11400714819323198485 = 5*139*199*82431689521877
+		//       is coprime with 2^64 (as required for 64-bit affine cipher), and has well-distributed bits ; 2^64 / golden ratio = 1.14007148193231984859...
+		auto ac = [](uint64_t x) -> uint64_t { return 0x9e3779b97f4a7c15uLL * x + 1; };
+		auto cmp_ac = [&ac](uint64_t a, uint64_t b) -> bool { return ac(a) < ac(b); };
+		vector<uint64_t> v(size);
+		tbb::parallel_for(uint64_t(0), size, [&v](uint64_t i) { v[i] = i; });
+		tbb::parallel_sort(v.begin(), v.end(), cmp_ac);
+		return v;
+	};
+	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	const vector<uint64_t> indexDistribution = smoothProgress ? distributeIndices(n) : vector<uint64_t> { };
+	//#if (smoothProgress) cout << "[Rank " + to_string(mpi_rank) + "] " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to prepare index distribution of size " << n << "." << endl;
+	// e.g. (..., 27, 29, 31): (..., 18.83, 55.38, 166.21) ms taken to prepare index distribution of size (6649, 19416, 56321, 165223, 490604, 1459555, 4375266, 13194193).
+
 	size_t first = mpi_rank * n / mpi_size;
 	size_t end = mpi_rank + 1 == mpi_size ? n : (mpi_rank + 1) * n / mpi_size; // first index that is not contained
-	// NOTE: Using unordered structure to reduce fluctuations (since then the candidates are in a pseudo-random order).
-	tbb::concurrent_unordered_set<string> myRange = tbb::concurrent_unordered_set<string>(recentConclusionSequence.begin() + first, recentConclusionSequence.begin() + end); // empty in case first == end
 	//#if (isMainProc) this_thread::sleep_for(2s);
-	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Interval: [" + to_string(first) + ", " + (end ? to_string(end - 1) : "-1") + "] (size " + to_string(end - first) + "), |myRange| = " + to_string(myRange.size()) << endl;
-	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Interval: [" + to_string(first) + ", " + (end ? to_string(end - 1) : "-1") + "] (size " + to_string(end - first) + ")" << endl;
+	//#startTime = chrono::steady_clock::now();
 	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
 	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
 		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
@@ -1269,8 +1283,8 @@ tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConcl
 	});
 	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
 	//#if (isMainProc) cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const size_t, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
-	tbb::concurrent_queue<string> toErase;
-	tbb::concurrent_unordered_set<string> toErase_mainProc;
+	tbb::concurrent_queue<uint64_t> toErase;
+	tbb::concurrent_unordered_set<uint64_t> toErase_mainProc;
 	mutex mtx;
 	unique_lock<mutex> condLock(mtx);
 	condition_variable cond;
@@ -1279,47 +1293,46 @@ tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConcl
 	atomic<uint64_t> localCounter { 0 };
 	if (progressData)
 		progressData->setStartTime();
-	auto worker = [](int mpi_rank, size_t n, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_unordered_set<string>& myRange, tbb::concurrent_queue<string>& toErase, tbb::concurrent_unordered_set<string>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
-		tbb::parallel_for(myRange.range(), [&isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](tbb::concurrent_unordered_set<string>::range_type& range) {
-			for (tbb::concurrent_unordered_set<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
-				const string& formula = *it;
-				atomic<bool> redundant { false };
-				size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
-				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
-					for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
-						if (redundant)
-							return;
-						else if (it->first <= formulaLen)
-							for (const string* const potentialSchema : it->second)
-								if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
-									redundant = true;
-									return;
-								}
-				});
-				if (redundant) {
-					localCounter++;
-					if (isMainProc)
-						toErase_mainProc.insert(*it);
-					else {
-						toErase.push(*it);
-						cond.notify_one();
-					}
-
-					// Show progress if requested
-					if (progressData) {
-						if (progressData->nextStep()) {
-							uint64_t percentage;
-							string progress;
-							string etc;
-							if (progressData->nextState(percentage, progress, etc)) {
-								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-								cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
+	auto worker = [&recentConclusionSequence, &indexDistribution](int mpi_rank, size_t first, size_t end, size_t n, bool smoothProgress, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_queue<uint64_t>& toErase, tbb::concurrent_unordered_set<uint64_t>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
+		tbb::parallel_for(first, end, [&recentConclusionSequence, &indexDistribution, &smoothProgress, &isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](size_t i) {
+			uint64_t index = smoothProgress ? indexDistribution[i] : i;
+			const string& formula = recentConclusionSequence[index];
+			atomic<bool> redundant { false };
+			size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+			tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+				for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+					if (redundant)
+						return;
+					else if (it->first <= formulaLen)
+						for (const string* const potentialSchema : it->second)
+							if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
+								redundant = true;
+								return;
 							}
+			});
+			if (redundant) {
+				localCounter++;
+				if (isMainProc)
+					toErase_mainProc.insert(index);
+				else {
+					toErase.push(index);
+					cond.notify_one();
+				}
+
+				// Show progress if requested
+				if (progressData) {
+					if (progressData->nextStep()) {
+						uint64_t percentage;
+						string progress;
+						string etc;
+						if (progressData->nextState(percentage, progress, etc)) {
+							time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+							cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
 						}
 					}
-				} else if (!toErase.empty())
-					cond.notify_one();
-			}
+				}
+			} else if (!toErase.empty())
+				cond.notify_one();
 		});
 		workerDone = true;
 		if (!isMainProc)
@@ -1329,17 +1342,17 @@ tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConcl
 			}
 		cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Worker complete." << endl;
 	};
-	thread workerThread(worker, mpi_rank, n, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(myRange), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
+	thread workerThread(worker, mpi_rank, first, end, n, smoothProgress, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
 	if (isMainProc) {
 		int numComplete = 0;
-		string f;
+		uint64_t index;
 		while (communicate) {
 			for (int source = 1; source < mpi_size; source++)
-				while (FctHelper::mpi_tryRecvString(mpi_rank, source, f)) {
-					if (f == ";")
+				while (FctHelper::mpi_tryRecvUint64(mpi_rank, source, index)) {
+					if (index == UINT64_MAX) // notification that the process is done
 						numComplete++;
 					else {
-						toErase_mainProc.insert(f);
+						toErase_mainProc.insert(index);
 
 						// Show progress if requested
 						if (progressData) {
@@ -1365,11 +1378,11 @@ tbb::concurrent_unordered_set<string> DlProofEnumerator::_mpi_findRedundantConcl
 	} else
 		while (communicate) {
 			cond.wait(condLock);
-			string f;
-			while (toErase.try_pop(f)) // send and clear 'toErase'
-				FctHelper::mpi_sendString(mpi_rank, f, 0);
+			uint64_t index;
+			while (toErase.try_pop(index)) // send and clear 'toErase'
+				FctHelper::mpi_sendUint64(mpi_rank, index, 0);
 			if (workerDone && toErase.empty()) {
-				FctHelper::mpi_sendString(mpi_rank, ";", 0); // notify main process that this process is done
+				FctHelper::mpi_sendUint64(mpi_rank, UINT64_MAX, 0); // notify main process that this process is done
 				communicate = false;
 			}
 		}
