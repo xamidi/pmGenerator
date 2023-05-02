@@ -11,7 +11,6 @@ digraph {
 	}
 	FctHelper -> iostream [color=blue]
 	FctHelper -> math [color=blue]
-	FctHelper -> mpi [color=blue]
 	FctHelper -> algorithm [color=red]
 	FctHelper -> array [color=red]
 	FctHelper -> charconv [color=red]
@@ -22,6 +21,7 @@ digraph {
 	FctHelper -> filesystem [color=red]
 	FctHelper -> fstream [color=red]
 	FctHelper -> map [color=red]
+	FctHelper -> mpi [color=red]
 	FctHelper -> set [color=red]
 	FctHelper -> sstream [color=red]
 	FctHelper -> string [color=red]
@@ -69,7 +69,6 @@ digraph {
 	main -> cstring [color=blue]
 	main -> ctime [color=blue]
 	main -> iostream [color=blue]
-	main -> mpi [color=blue]
 	main -> unistd [color=blue]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
 		main
@@ -149,7 +148,6 @@ digraph {
 	DlProofEnumerator -> parallel_sort [color=blue]
 	DlProofEnumerator -> cstring [color=blue]
 	DlProofEnumerator -> iostream [color=blue]
-	DlProofEnumerator -> mpi [color=blue]
 	DlProofEnumerator -> FwdTbb [color=red]
 	DlProofEnumerator -> ProgressData [color=red]
 	DlProofEnumerator -> array [color=red]
