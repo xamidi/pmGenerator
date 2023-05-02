@@ -5,7 +5,6 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
-#include <mpi.h>
 #include <unistd.h>
 
 using namespace std;

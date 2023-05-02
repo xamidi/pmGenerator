@@ -19,7 +19,6 @@
 
 #include <cstring>
 #include <iostream>
-#include <mpi.h>
 
 using namespace std;
 using namespace xamid::helper;
@@ -293,7 +292,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 			representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
 			// Show progress if requested
-			if (progressData) {
+			if (progressData)
 				if (progressData->nextStep()) {
 					uint64_t percentage;
 					string progress;
@@ -303,7 +302,6 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 						cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
 					}
 				}
-			}
 		}
 	});
 	return representativeProofs;
@@ -324,7 +322,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 				representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
 				// Show progress if requested
-				if (progressData) {
+				if (progressData)
 					if (progressData->nextStep()) {
 						uint64_t percentage;
 						string progress;
@@ -334,7 +332,6 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 							cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
 						}
 					}
-				}
 			}
 		});
 	}
@@ -357,7 +354,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]);
 
 			// Show progress if requested
-			if (progressData) {
+			if (progressData)
 				if (progressData->nextStep()) {
 					uint64_t percentage;
 					string progress;
@@ -367,7 +364,6 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 						cout << strtok(ctime(&time), "\n") << ": Inserted " << (percentage < 10 ? " " : "") << percentage << "% of D-proof conclusions. [" << progress << "] (" << etc << ")" << endl;
 					}
 				}
-			}
 		});
 	}
 	return representativeProofs;
@@ -785,17 +781,17 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		return;
 	}
 	if (isMainProc) {
-		for (int source = 1; source < mpi_size; source++) {
-			uint64_t data = FctHelper::mpi_recvUint64(0, source);
-			if (allRepresentativesCount != data) {
-				cerr << "Uniform loading failed: " + to_string(data) + " representatives loaded on rank 0, but " + to_string(allRepresentativesCount) + " representatives loaded on rank " + to_string(source) + ". Aborting." << endl;
+		ManagedArray<uint64_t> recvbuf(mpi_size);
+		MPI_Gather(&allRepresentativesCount, 1, MPI_UNSIGNED_LONG_LONG, recvbuf.data, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+		for (int source = 1; source < mpi_size; source++)
+			if (allRepresentativesCount != recvbuf.data[source]) {
+				cerr << "Uniform loading failed: " + to_string(allRepresentativesCount) + " representatives loaded on rank 0, but " + to_string(recvbuf.data[source]) + " representatives loaded on rank " + to_string(source) + ". Aborting." << endl;
 				MPI_Abort(MPI_COMM_WORLD, 1);
 				return;
 			}
-		}
 		cout << myTime() + ": Representative collections were initialized successfully on all ranks." << endl;
 	} else
-		FctHelper::mpi_sendUint64(mpi_rank, allRepresentativesCount, 0);
+		MPI_Gather(&allRepresentativesCount, 1, MPI_UNSIGNED_LONG_LONG, nullptr, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 
 	// 2. Initialize and prepare progress data.
 	bool showProgress = isMainProc && allRepresentatives.size() > 15;
@@ -1152,7 +1148,7 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 			invalidCounter++;
 
 		// Show progress if requested
-		if (progressData) {
+		if (progressData)
 			if (progressData->nextStep()) {
 				uint64_t percentage;
 				string progress;
@@ -1162,7 +1158,6 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 					cout << strtok(ctime(&time), "\n") << ": Iterated " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
 				}
 			}
-		}
 	};
 	switch (mode) {
 	case DlProofEnumeratorMode::Generic:
@@ -1224,7 +1219,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 					toErase.emplace(&it->first, it);
 
 					// Show progress if requested
-					if (progressData) {
+					if (progressData)
 						if (progressData->nextStep()) {
 							uint64_t percentage;
 							string progress;
@@ -1234,7 +1229,6 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 								cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
 							}
 						}
-					}
 				}
 			}
 		}
@@ -1266,13 +1260,63 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	};
 	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 	const vector<uint64_t> indexDistribution = smoothProgress ? distributeIndices(n) : vector<uint64_t> { };
-	//#if (smoothProgress) cout << "[Rank " + to_string(mpi_rank) + "] " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to prepare index distribution of size " << n << "." << endl;
+	//#if (smoothProgress) cout << "[Rank " + to_string(mpi_rank) + "] " + FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) + " ms taken to prepare index distribution of size " + to_string(n) + "." << endl;
 	// e.g. (..., 27, 29, 31): (..., 18.83, 55.38, 166.21) ms taken to prepare index distribution of size (6649, 19416, 56321, 165223, 490604, 1459555, 4375266, 13194193).
 
-	size_t first = mpi_rank * n / mpi_size;
-	size_t end = mpi_rank + 1 == mpi_size ? n : (mpi_rank + 1) * n / mpi_size; // first index that is not contained
-	//#if (isMainProc) this_thread::sleep_for(2s);
-	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Interval: [" + to_string(first) + ", " + (end ? to_string(end - 1) : "-1") + "] (size " + to_string(end - first) + ")" << endl;
+	// To register what workload is reservable, and optionally to assign a new workload.
+	auto split = [](size_t first, size_t end, array<uint64_t, 2>* reg, array<uint64_t, 2>* load) {
+		// NOTE: The balancing strategy involves to request reservable workloads from other processes when the own workload is complete, and to grant reservable workloads to others whenever they request them.
+		//       Reservable workloads are set to 1/d parts of the available owned index range, for d := 'reserveDenominator', but they are omitted when smaller than m := 'minWorkloadSize'.
+		//       For instance, when process P requests indices from process Q, and the reservable range is [a, b), P sends a pair { a, b } to Q, and Q responds with a boolean whether the request is granted.
+		//       If it is granted, P now reduces its reservable range from [a, b) to [b-floor((b-a)/d), b), except when floor((b-a)/d) < m, in which case it is reduced to empty.
+		//       Q also updates knowledge about P's reservable range by doing the same calculation, and starts working on [a, b-floor((b-a)/d)) or [a, b), respectively.
+		//       Note that P, due to Q's request, also updates knowledge about Q's reservable range, which is thereby empty.
+		//       Whenever a process completes its own index range, it requests to update reservable ranges from all other processes that according to its own list, may still have non-empty reservable ranges.
+		//       Then, after receiving all responses and updating its own list, it starts with requesting the biggest reservable range. Upon rejection, it updates the requested range as if it was requested
+		//       once in the meantime, then again requests the biggest reservable range. This is repeated until a request is approved, or all reservable ranges are known to be empty.
+		//       Since for each process, communication is only performed by the main thread, all kinds of requests and responses are asynchronous and looped.
+		uint64_t minWorkloadSize = 400;
+		uint64_t reserveDenominator = 3;
+		size_t size = end - first;
+		size_t reservableSize = size / reserveDenominator;
+		if (reservableSize < minWorkloadSize) { // no splitting
+			if (load) {
+				(*load)[0] = first;
+				(*load)[1] = end;
+			}
+			if (reg) {
+				(*reg)[0] = UINT64_MAX; // no reservable workload
+				(*reg)[1] = 0;
+			}
+		} else { // splitting
+			size_t workloadSize = size - reservableSize;
+			if (load) {
+				(*load)[0] = first;
+				(*load)[1] = first + workloadSize;
+			}
+			if (reg) {
+				(*reg)[0] = first + workloadSize;
+				(*reg)[1] = end;
+			}
+		}
+	};
+	array<uint64_t, 2> workload;
+	vector<array<uint64_t, 2>> reservableWorkloads(mpi_size);
+	mutex mtx_reservations;
+	atomic<bool> checkRequests { false };
+	atomic<bool> loading { false };
+	//#MPI_Barrier(MPI_COMM_WORLD);
+	for (int rank = 0; rank < mpi_size; rank++) {
+		size_t first = rank * n / mpi_size;
+		size_t end = rank + 1 == mpi_size ? n : (rank + 1) * n / mpi_size; // first index that is not contained
+		split(first, end, &reservableWorkloads[rank], rank == mpi_rank ? &workload : nullptr); // initialize 'workload' and 'reservableWorkloads'
+		//#if (rank == mpi_rank) cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Interval: [" + to_string(first) + ", " + (end ? to_string(end - 1) : "-1") + "] (size " + to_string(end - first) + ")" << endl;
+	}
+	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Workload: [" + to_string(workload[0]) + ", " + (workload[1] ? to_string(workload[1] - 1) : "-1") + "]" << endl;
+	if (isMainProc) {
+		int r = 0;
+		cout << "Reservable workloads: " + FctHelper::vectorStringF(reservableWorkloads, [&](const array<uint64_t, 2>& a) { return to_string(r++) + ":[" + to_string(a[0]) + ", " + (a[1] ? to_string(a[1] - 1) : "-1") + "]"; }, "{ ", " }") << endl;
+	}
 	//#startTime = chrono::steady_clock::now();
 	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
 	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
@@ -1281,7 +1325,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
 		}
 	});
-	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
+	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) + " ms taken to create " + to_string(formulasByStandardLength.size()) + " classes of formulas by their standard length." << endl;
 	//#if (isMainProc) cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& m) { stringstream ss; for (const pair<const size_t, tbb::concurrent_vector<const string*>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
 	tbb::concurrent_queue<uint64_t> toErase;
 	tbb::concurrent_unordered_set<uint64_t> toErase_mainProc;
@@ -1289,109 +1333,295 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	unique_lock<mutex> condLock(mtx);
 	condition_variable cond;
 	atomic<bool> communicate { true };
+	atomic<bool> waitTermination { false };
 	atomic<bool> workerDone { false };
 	atomic<uint64_t> localCounter { 0 };
 	if (progressData)
 		progressData->setStartTime();
-	auto worker = [&recentConclusionSequence, &indexDistribution](int mpi_rank, size_t first, size_t end, size_t n, bool smoothProgress, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_queue<uint64_t>& toErase, tbb::concurrent_unordered_set<uint64_t>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
-		tbb::parallel_for(first, end, [&recentConclusionSequence, &indexDistribution, &smoothProgress, &isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](size_t i) {
-			uint64_t index = smoothProgress ? indexDistribution[i] : i;
-			const string& formula = recentConclusionSequence[index];
-			atomic<bool> redundant { false };
-			size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
-			tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
-				for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
-					if (redundant)
-						return;
-					else if (it->first <= formulaLen)
-						for (const string* const potentialSchema : it->second)
-							if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
-								redundant = true;
-								return;
+	auto worker = [&recentConclusionSequence, &indexDistribution, &split](int mpi_rank, array<uint64_t, 2>& workload, vector<array<uint64_t, 2>>& reservableWorkloads, mutex& mtx_reservations, atomic<bool>& checkRequests, atomic<bool>& loading, size_t n, bool smoothProgress, bool isMainProc, atomic<uint64_t>& localCounter, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& workerDone, tbb::concurrent_queue<uint64_t>& toErase, tbb::concurrent_unordered_set<uint64_t>& toErase_mainProc, tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>& formulasByStandardLength, helper::ProgressData* const progressData) {
+		// The main thread also reads and writes 'workload' and 'reservableWorkloads', which thereby require locks.
+		// When 'workload' is modified by the main thread, the worker requested more work and is looping in 'loading' state, so reading it here is fine.
+		uint64_t first = workload[0];
+		uint64_t end = workload[1];
+		auto moreWork = [&](uint64_t& first, uint64_t& end) -> bool {
+			//#cout << "[Rank " + to_string(mpi_rank) + "] Completed workload [" + to_string(workload[0]) + ", " + (workload[1] ? to_string(workload[1] - 1) : "-1") + "]." << endl;
+			{
+				unique_lock<mutex> lock(mtx_reservations);
+				array<uint64_t, 2>& owned = reservableWorkloads[mpi_rank];
+				if (owned[0] == UINT64_MAX) {
+					loading = true; // tell the main thread that the worker requires updating
+					//#cout << "[Rank " + to_string(mpi_rank) + "] Workload complete. Requesting more from other processes." << endl;
+					//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+					lock.unlock();
+
+					// Tell the main thread to check requests immediately.
+					checkRequests = true;
+					if (!isMainProc)
+						cond.notify_one();
+
+					// Wait for update.
+					while (loading && communicate) // no request will be answered when communication is already disabled, so need to check that as well
+						this_thread::yield();
+					lock.lock(); // the update was performed or unnecessary
+					//#cout << "[Rank " + to_string(mpi_rank) + "] " + FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) + " ms taken to gather and request workloads from other process." << endl;
+
+					// NOTE: Current workload was updated by the main thread.
+					if (workload[0] == UINT64_MAX || !communicate)
+						return false; // still nothing to do => the worker is done
+				} else
+					split(owned[0], owned[1], &owned, &workload); // update current workload and owned reservable workload
+				first = workload[0];
+				end = workload[1];
+			}
+			return true;
+		};
+		do
+			tbb::parallel_for(first, end, [&recentConclusionSequence, &indexDistribution, &smoothProgress, &isMainProc, &localCounter, &cond, &progressData, &formulasByStandardLength, &toErase, &toErase_mainProc](size_t i) {
+				uint64_t index = smoothProgress ? indexDistribution[i] : i;
+				const string& formula = recentConclusionSequence[index];
+				atomic<bool> redundant { false };
+				size_t formulaLen = DlCore::standardLen_polishNotation_noRename_numVars(formula);
+				tbb::parallel_for(formulasByStandardLength.range(), [&formulaLen, &redundant, &formula](tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::range_type& range) {
+					for (tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>>::const_iterator it = range.begin(); it != range.end(); ++it)
+						if (redundant)
+							return;
+						else if (it->first <= formulaLen)
+							for (const string* const potentialSchema : it->second)
+								if (formula != *potentialSchema && DlCore::isSchemaOf_polishNotation_noRename_numVars(*potentialSchema, formula)) { // formula redundant
+									redundant = true;
+									return;
+								}
+				});
+				if (redundant) {
+					localCounter++;
+					if (isMainProc)
+						toErase_mainProc.insert(index);
+					else {
+						toErase.push(index);
+						cond.notify_one();
+					}
+
+					// Show progress if requested ; NOTE: Shouldn't be requested for non-main processes.
+					if (progressData)
+						if (progressData->nextStep()) {
+							uint64_t percentage;
+							string progress;
+							string etc;
+							if (progressData->nextState(percentage, progress, etc)) {
+								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+								cout << string(strtok(ctime(&time), "\n")) + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
 							}
-			});
-			if (redundant) {
-				localCounter++;
-				if (isMainProc)
-					toErase_mainProc.insert(index);
-				else {
-					toErase.push(index);
+						}
+				} else if (!isMainProc && !toErase.empty())
 					cond.notify_one();
+			});
+		while (moreWork(first, end));
+		workerDone = true;
+		//#cout << "[Rank " + to_string(mpi_rank) + "] Worker complete." << endl;
+	};
+	thread workerThread(worker, mpi_rank, ref(workload), ref(reservableWorkloads), ref(mtx_reservations), ref(checkRequests), ref(loading), n, smoothProgress, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
+	auto queryTimer = [](bool isMainProc, condition_variable& cond, atomic<bool>& communicate, atomic<bool>& checkRequests) {
+		// Only the main thread should make MPI queries. When not on the main process, the main thread has to be notified whenever communication
+		//  should happen. Each main thread should check for incoming balancing requests from other processes up to 20 times a second.
+		while (communicate) {
+			this_thread::sleep_for(chrono::milliseconds(50));
+			checkRequests = true;
+			if (!isMainProc)
+				cond.notify_one();
+		}
+	};
+	thread timerThread(queryTimer, isMainProc, ref(cond), ref(communicate), ref(checkRequests));
+	constexpr int mpi_tag_request_reservable = 0;
+	constexpr int mpi_tag_respond_reservable = 1;
+	constexpr int mpi_tag_attempt_reservation = 2;
+	constexpr int mpi_tag_respond_reservation = 3;
+	constexpr int mpi_tag_terminate = 4;
+	auto handleBalancingRequests = [&]() {
+		// NOTE: It might be preferable to use collective operations, but they require all members of the communicator to participate, thus
+		//       cannot be probed for. But apart from merely listening, gathering operations should rarely occur. Consequently, without
+		//       global synchronization and periodical network transactions, we are bound to using MPI_Send and MPI_Recv (with MPI_Iprobe).
+		checkRequests = false;
+		if (unique_lock<mutex> lock = unique_lock<mutex>(mtx_reservations, try_to_lock)) {
+			array<uint64_t, 2>& owned = reservableWorkloads[mpi_rank];
+			bool needToRequest = loading;
+			set<int> pendingSources;
+			int requestedSource = -1;
+			array<uint64_t, 2> requestingWorkload;
+			do {
+				bool sink;
+				if (waitTermination && FctHelper::mpi_tryRecvBool(mpi_rank, 0, sink, FctHelper::mpi_tag_custom + mpi_tag_terminate)) {
+					//#cout << "[Rank " + to_string(mpi_rank) + "] WHO'S \"THE FUCK\"?" << endl;
+					communicate = false; // the main process is shutting down communication for all processes => the task is complete
+					return;
 				}
 
-				// Show progress if requested
-				if (progressData) {
-					if (progressData->nextStep()) {
-						uint64_t percentage;
-						string progress;
-						string etc;
-						if (progressData->nextState(percentage, progress, etc)) {
-							time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-							cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
+				// NOTE: Communication strategy explained in the 'split' lambda function above.
+
+				// 1. Answer any requests from other processes.
+				{
+					// 1.1 Requests to gain ownership of the reservable workload of this process
+					array<uint64_t, 2> requestedWorkload;
+					MPI_Status status;
+					while (FctHelper::mpi_tryRecvPairUint64(mpi_rank, MPI_ANY_SOURCE, requestedWorkload, FctHelper::mpi_tag_custom + mpi_tag_attempt_reservation, &status)) {
+						if (requestedWorkload == owned) {
+							FctHelper::mpi_sendBool(mpi_rank, true, status.MPI_SOURCE, FctHelper::mpi_tag_custom + mpi_tag_respond_reservation); // transfer workload
+							split(owned[0], owned[1], &owned, nullptr); // update owned reservable workload
+						} else
+							FctHelper::mpi_sendBool(mpi_rank, false, status.MPI_SOURCE, FctHelper::mpi_tag_custom + mpi_tag_respond_reservation);
+
+						// Update reservable workload that is owned by the requesting process to empty.
+						array<uint64_t, 2>& reservableInfo = reservableWorkloads[status.MPI_SOURCE];
+						reservableInfo[0] = UINT64_MAX;
+						reservableInfo[1] = 0;
+					}
+				}
+				{
+					// 1.2 Requests of what is reservable
+					MPI_Status status;
+					while (FctHelper::mpi_tryRecvBool(mpi_rank, MPI_ANY_SOURCE, sink, FctHelper::mpi_tag_custom + mpi_tag_request_reservable, &status)) {
+						FctHelper::mpi_sendPairUint64(mpi_rank, owned, status.MPI_SOURCE, FctHelper::mpi_tag_custom + mpi_tag_respond_reservable);
+
+						// Update reservable workload that is owned by the requesting process to empty.
+						array<uint64_t, 2>& reservableInfo = reservableWorkloads[status.MPI_SOURCE];
+						reservableInfo[0] = UINT64_MAX;
+						reservableInfo[1] = 0;
+					}
+				}
+
+				// 2. Gather workloads from other processes and request reservation when required.
+				if (loading) {
+					if (needToRequest) {
+						// 2.1 Request workloads from other processes
+						for (int source = 0; source < mpi_size; source++) {
+							if (source != mpi_rank && reservableWorkloads[source][0] != UINT64_MAX) {
+								FctHelper::mpi_sendBool(mpi_rank, true, source, FctHelper::mpi_tag_custom + mpi_tag_request_reservable);
+								pendingSources.insert(source);
+							}
+						}
+						needToRequest = false;
+						//#int r = 0; cout << "[Rank " + to_string(mpi_rank) + "] Requested workloads from ranks " + FctHelper::setString(pendingSources) + ". Old reservable workloads: " + FctHelper::vectorStringF(reservableWorkloads, [&](const array<uint64_t, 2>& a) { return to_string(r++) + ":[" + to_string(a[0]) + ", " + (a[1] ? to_string(a[1] - 1) : "-1") + "]"; }, "{ ", " }") + "." << endl;
+						if (pendingSources.empty()) { // all other processes are done as well
+							workload[0] = UINT64_MAX; // signal to the worker, that there is nothing left to do
+							loading = false; // the worker thread may now continue
+						}
+					} else if (!pendingSources.empty()) {
+
+						// 2.2 Gather responses from other processes
+						array<uint64_t, 2> requestedWorkload;
+						MPI_Status status;
+						while (FctHelper::mpi_tryRecvPairUint64(mpi_rank, MPI_ANY_SOURCE, requestedWorkload, FctHelper::mpi_tag_custom + mpi_tag_respond_reservable, &status)) {
+							pendingSources.erase(status.MPI_SOURCE);
+							reservableWorkloads[status.MPI_SOURCE] = requestedWorkload; // update reservable workload that is owned by the requested process
+						}
+					} else if (requestedSource == -1) { // gathering completed, need a reservation request
+						//#int r = 0; cout << "[Rank " + to_string(mpi_rank) + "] Reservable workloads updated to " + FctHelper::vectorStringF(reservableWorkloads, [&](const array<uint64_t, 2>& a) { return to_string(r++) + ":[" + to_string(a[0]) + ", " + (a[1] ? to_string(a[1] - 1) : "-1") + "]"; }, "{ ", " }") + "." << endl;
+
+						// 2.3 Attempt to reserve the biggest workload from all other processes
+						int bestSource = -1;
+						uint64_t maxSize = 0;
+						for (int source = 0; source < mpi_size; source++) {
+							array<uint64_t, 2>& reservableInfo = reservableWorkloads[source];
+							if (source != mpi_rank && reservableInfo[0] != UINT64_MAX) {
+								uint64_t size = reservableInfo[1] - reservableInfo[0];
+								if (size > maxSize) {
+									bestSource = source;
+									maxSize = size;
+								}
+							}
+						}
+						if (maxSize) { // found something to reserve
+							requestedSource = bestSource;
+							requestingWorkload = reservableWorkloads[requestedSource];
+							FctHelper::mpi_sendPairUint64(mpi_rank, requestingWorkload, requestedSource, FctHelper::mpi_tag_custom + mpi_tag_attempt_reservation); // request to transfer workload
+						} else { // all other processes are done as well
+							workload[0] = UINT64_MAX; // signal to the worker, that there is nothing left to do
+							loading = false; // the worker thread may now continue
+						}
+					} else {
+
+						// 2.4 Handle rejection or approval of reservation request
+						bool approved;
+						if (FctHelper::mpi_tryRecvBool(mpi_rank, requestedSource, approved, FctHelper::mpi_tag_custom + mpi_tag_respond_reservation)) {
+							//#cout << "[Rank " + to_string(mpi_rank) + "] Request for [" + to_string(requestingWorkload[0]) + ", " + (requestingWorkload[1] ? to_string(requestingWorkload[1] - 1) : "-1") + "] handled by rank " + to_string(requestedSource) + "." << endl;
+
+							// 2.4.1 Extract actual workload from requested slot
+							if (requestingWorkload == reservableWorkloads[requestedSource]) {
+								// Also update requestedSource's reservable workload according to the best knowledge, if it was not updated in the meantime.
+								split(requestingWorkload[0], requestingWorkload[1], &reservableWorkloads[requestedSource], &requestingWorkload);
+							} else
+								split(requestingWorkload[0], requestingWorkload[1], nullptr, &requestingWorkload);
+
+							// 2.4.2 Apply workload and finish loading, or continue with more requests if case of rejection
+							if (approved) {
+								cout << "[Rank " + to_string(mpi_rank) + "] Workload transfer approved. Starting to work on " + to_string(requestedSource) + ":[" + to_string(requestingWorkload[0]) + ", " + (requestingWorkload[1] ? to_string(requestingWorkload[1] - 1) : "-1") + "]." << endl;
+								workload = requestingWorkload; // update current workload
+								loading = false; // the worker thread may now continue
+							} else
+								requestedSource = -1; // need another reservation request ; the workload in question has been given to another process in the meantime
 						}
 					}
 				}
-			} else if (!toErase.empty())
-				cond.notify_one();
-		});
-		workerDone = true;
-		if (!isMainProc)
-			while (communicate) {
-				cond.notify_one();
-				this_thread::yield();
-			}
-		cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Worker complete." << endl;
+			} while (loading); // a gathering and reserve operation is ongoing
+		} else
+			this_thread::yield(); // reservations are currently being accessed => try again next time
 	};
-	thread workerThread(worker, mpi_rank, first, end, n, smoothProgress, isMainProc, ref(localCounter), ref(cond), ref(communicate), ref(workerDone), ref(toErase), ref(toErase_mainProc), ref(formulasByStandardLength), progressData);
 	if (isMainProc) {
 		int numComplete = 0;
 		uint64_t index;
 		while (communicate) {
-			for (int source = 1; source < mpi_size; source++)
-				while (FctHelper::mpi_tryRecvUint64(mpi_rank, source, index)) {
-					if (index == UINT64_MAX) // notification that the process is done
-						numComplete++;
-					else {
-						toErase_mainProc.insert(index);
+			while (FctHelper::mpi_tryRecvUint64(mpi_rank, MPI_ANY_SOURCE, index)) {
+				if (index == UINT64_MAX) // notification that the process is done
+					numComplete++;
+				else {
+					toErase_mainProc.insert(index);
 
-						// Show progress if requested
-						if (progressData) {
-							if (progressData->nextStep()) {
-								uint64_t percentage;
-								string progress;
-								string etc;
-								if (progressData->nextState(percentage, progress, etc)) {
-									time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-									cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
-								}
+					// Show progress if requested
+					if (progressData)
+						if (progressData->nextStep()) {
+							uint64_t percentage;
+							string progress;
+							string etc;
+							if (progressData->nextState(percentage, progress, etc)) {
+								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+								cout << string(strtok(ctime(&time), "\n")) + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
 							}
 						}
-					}
 				}
+			}
 			if (numComplete + 1 == mpi_size) {
 				// NOTE: The MPI standard guarantees that messages are received in the order they are sent ("non-overtaking messages", https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node41.html).
-				//       Therefore, since ";" is the last message for each rank, all messages have been received.
+				//       Therefore, since UINT64_MAX is the last message for each rank, all messages have been received.
+				//#cerr << "[ARNOLD] EVERYONE, SHUT THE FUCK DOWN!" << endl;
+				for (int dest = 1; dest < mpi_size; dest++) // tell everyone to shut down
+					FctHelper::mpi_sendBool(mpi_rank, true, dest, FctHelper::mpi_tag_custom + mpi_tag_terminate);
 				communicate = false;
-			} else
+			} else if (checkRequests) // timed notification to check for incoming balancing requests from other processes
+				handleBalancingRequests();
+			else
 				this_thread::yield();
 		}
-	} else
+	} else {
 		while (communicate) {
 			cond.wait(condLock);
 			uint64_t index;
 			while (toErase.try_pop(index)) // send and clear 'toErase'
 				FctHelper::mpi_sendUint64(mpi_rank, index, 0);
-			if (workerDone && toErase.empty()) {
+			if (workerDone && !waitTermination && toErase.empty()) {
 				FctHelper::mpi_sendUint64(mpi_rank, UINT64_MAX, 0); // notify main process that this process is done
-				communicate = false;
+				waitTermination = true; // stay responsive to balancing requests in order to avoid deadlocks ; communication ends only when the main process says so
+				//#cout << "[Rank " + to_string(mpi_rank) + "] WHERE'S ARNOLD?" << endl;
 			}
+			if (checkRequests) // timed notification to check for incoming balancing requests from other processes
+				handleBalancingRequests();
 		}
-	//#cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Communication complete, waiting for worker to join main thread." << endl;
+	}
+	//#cout << "[Rank " + to_string(mpi_rank) + "] Communication complete, waiting for worker to join main thread." << endl;
 	workerThread.join();
-	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
+	timerThread.join();
+	//#if (isMainProc) cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) + " ms taken for data iteration." << endl;
 
 	//#MPI_Barrier(MPI_COMM_WORLD);
-	cout << "[Rank " + to_string(mpi_rank) + ", n = " + to_string(n) + "] Done. Candidates registered: " + to_string(localCounter) << endl;
+	//#cout << "[Rank " + to_string(mpi_rank) + "] Done. Candidates registered: " + to_string(localCounter) << endl;
 	return toErase_mainProc;
 }
 

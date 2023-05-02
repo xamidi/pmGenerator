@@ -9,6 +9,7 @@
 #include <deque>
 #include <fstream>
 #include <map>
+#include <mpi.h>
 #include <set>
 #include <sstream>
 #include <string>
@@ -38,21 +39,35 @@ struct ManagedArray { // for RAII on dynamic arrays
 };
 
 struct FctHelper {
-	static void mpi_sendString(int rank, const std::string& s, int dest, bool debug = false);
-	static std::string mpi_recvString(int rank, int source, bool debug = false);
-	static bool mpi_tryRecvString(int rank, int source, std::string& result, bool debug = false);
+	enum mpi_tag : int {
+		mpi_tag_unspecified = 0, // not used by any helper function
+		mpi_tag_bool = 1,
+		mpi_tag_int = 2,
+		mpi_tag_uint64 = 3,
+		mpi_tag_string = 4,
+		mpi_tag_pair_uint64 = 5,
+		mpi_tag_custom = 6 // highest value ; to be added upon for custom tags
+	};
 
-	static void mpi_sendBool(int rank, const bool num, int dest, bool debug = false);
-	static bool mpi_recvBool(int rank, int source, bool debug = false);
-	static bool mpi_tryRecvBool(int rank, int source, bool& result, bool debug = false);
+	static void mpi_sendBool(int rank, const bool num, int dest, int tag = mpi_tag_bool, bool debug = false);
+	static bool mpi_recvBool(int rank, int source, int tag = mpi_tag_bool, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+	static bool mpi_tryRecvBool(int rank, int source, bool& result, int tag = mpi_tag_bool, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
 
-	static void mpi_sendUint64(int rank, const std::uint64_t num, int dest, bool debug = false);
-	static std::uint64_t mpi_recvUint64(int rank, int source, bool debug = false);
-	static bool mpi_tryRecvUint64(int rank, int source, std::uint64_t& result, bool debug = false);
+	static void mpi_sendInt(int rank, const int num, int dest, int tag = mpi_tag_int, bool debug = false);
+	static int mpi_recvInt(int rank, int source, int tag = mpi_tag_int, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+	static bool mpi_tryRecvInt(int rank, int source, int& result, int tag = mpi_tag_int, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
 
-	static void mpi_sendUint64Pair(int rank, const std::array<std::uint64_t, 2>& arr, int dest, bool debug = false);
-	static std::array<std::uint64_t, 2> mpi_recvUint64Pair(int rank, int source, bool debug = false);
-	static bool mpi_tryRecvUint64Pair(int rank, int source, std::array<std::uint64_t, 2>& result, bool debug = false);
+	static void mpi_sendUint64(int rank, const std::uint64_t num, int dest, int tag = mpi_tag_uint64, bool debug = false);
+	static std::uint64_t mpi_recvUint64(int rank, int source, int tag = mpi_tag_uint64, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+	static bool mpi_tryRecvUint64(int rank, int source, std::uint64_t& result, int tag = mpi_tag_uint64, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+
+	static void mpi_sendString(int rank, const std::string& s, int dest, int tag = mpi_tag_string, bool debug = false);
+	static std::string mpi_recvString(int rank, int source, int tag = mpi_tag_string, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+	static bool mpi_tryRecvString(int rank, int source, std::string& result, int tag = mpi_tag_string, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+
+	static void mpi_sendPairUint64(int rank, const std::array<std::uint64_t, 2>& arr, int dest, int tag = mpi_tag_pair_uint64, bool debug = false);
+	static std::array<std::uint64_t, 2> mpi_recvPairUint64(int rank, int source, int tag = mpi_tag_pair_uint64, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
+	static bool mpi_tryRecvPairUint64(int rank, int source, std::array<std::uint64_t, 2>& result, int tag = mpi_tag_pair_uint64, MPI_Status* optOut_status = MPI_STATUS_IGNORE, bool debug = false);
 
 	template<typename T>
 	static bool toUInt(const std::string& str, T& value) {
