@@ -1,0 +1,148 @@
+Thu May  4 07:52:29 2023: Process started. [pid: 735631, tid:23288960632704]
+Thu May  4 07:52:29 2023: Process started. [pid: 2337710, tid:22761419761536]
+Thu May  4 07:52:29 2023: Process started. [pid: 2345207, tid:22917611571072]
+Thu May  4 07:52:29 2023: Process started. [pid: 2369089, tid:22897368516480]
+Thu May  4 07:52:29 2023: Process started. [pid: 4112130, tid:22456397735808]
+Thu May  4 07:52:29 2023: Process started. [pid: 866418, tid:22886616409984]
+Tasks:
+1. mpi_filterDProofRepresentativeFile(31, true)
+
+[Rank 0; pid: 735631 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+[Rank 1; pid: 866418 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+[Rank 2; pid: 4112130 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+[Rank 3; pid: 2369089 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+[Rank 4; pid: 2345207 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+[Rank 5; pid: 2337710 ; 6 processes] Calling mpi_filterDProofRepresentativeFile(31, true).
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 0 on "ncm0297.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 1 on "ncm0306.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 2 on "ncm0307.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 3 on "ncm0315.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 4 on "ncm0320.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Thu May  4 07:52:29 2023: MPI-based D-proof representative filter started. [rank 5 on "ncm0321.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+0.36 ms taken to load built-in representatives.
+57.46 ms taken to read 5221 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs17.txt. [tid:23288798263040]
+73.79 ms taken to read 15275 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs19.txt. [tid:23288796161792]
+121.67 ms taken to read 44206 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs21.txt. [tid:23288794060544]
+667.55 ms taken to read 129885 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs23.txt. [tid:23288791959296]
+5717.91 ms (5 s 717.91 ms) taken to read 385789 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs25.txt. [tid:23288587745024]
+592.32 ms taken to read 1149058 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs27.txt. [tid:23288585643776]
+1402.91 ms (1 s 402.91 ms) taken to read 3449251 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs29.txt. [tid:23288583542528]
+5724.10 ms (5 s 724.10 ms) total read duration.
+Loaded 15 representative collections of sizes:
+1 : 3
+3 : 6
+5 : 12
+7 : 38
+9 : 89
+11 : 229
+13 : 672
+15 : 1844
+17 : 5221
+19 : 15275
+21 : 44206
+23 : 129885
+25 : 385789
+27 : 1149058
+29 : 3449251
+5181578 representatives in total.
+4736.55 ms (4 s 736.55 ms) taken to read 13194193 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs31-unfiltered31+.txt. [tid:23288583542528]
+4737.84 ms (4 s 737.84 ms) additional read duration.
+Loaded 1 more representative collection of size:
+31 : 13194193
+18375771 representatives in total.
+Thu May  4 07:52:40 2023: Representative collections were initialized successfully on all ranks.
+Estimated removal count set to 2761713, based on last known pair (27:310497, 29:926015) with 926015/310497 ≈ 2.98236 and 926015 * (926015/310497)^1 ≈ 2761713.58.
+Thu May  4 07:52:41 2023: Inserted  5% of D-proof conclusions. [  918788 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 9 s 203.36 ms remaining ; 9 s 687.75 ms total)
+Thu May  4 07:52:41 2023: Inserted 10% of D-proof conclusions. [ 1837577 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 8 s 968.85 ms remaining ; 9 s 965.39 ms total)
+Thu May  4 07:52:42 2023: Inserted 15% of D-proof conclusions. [ 2756365 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 8 s 181.37 ms remaining ; 9 s 625.14 ms total)
+Thu May  4 07:52:42 2023: Inserted 20% of D-proof conclusions. [ 3675154 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 7 s 606.01 ms remaining ; 9 s 507.52 ms total)
+Thu May  4 07:52:43 2023: Inserted 25% of D-proof conclusions. [ 4593942 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 7 s 598.74 ms remaining ; 10 s 131.65 ms total)
+Thu May  4 07:52:43 2023: Inserted 30% of D-proof conclusions. [ 5512731 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 7 s  10.58 ms remaining ; 10 s  15.11 ms total)
+Thu May  4 07:52:44 2023: Inserted 35% of D-proof conclusions. [ 6431519 of 18375771] (ETC: Thu May  4 07:52:50 2023 ; 6 s 166.60 ms remaining ; 9 s 487.08 ms total)
+Thu May  4 07:52:44 2023: Inserted 40% of D-proof conclusions. [ 7350308 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 5 s 459.32 ms remaining ; 9 s  98.87 ms total)
+Thu May  4 07:52:44 2023: Inserted 45% of D-proof conclusions. [ 8269096 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 4 s 850.35 ms remaining ; 8 s 818.82 ms total)
+Thu May  4 07:52:45 2023: Inserted 50% of D-proof conclusions. [ 9187885 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 4 s 323.55 ms remaining ; 8 s 647.10 ms total)
+Thu May  4 07:52:45 2023: Inserted 55% of D-proof conclusions. [10106674 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 3 s 798.78 ms remaining ; 8 s 441.72 ms total)
+Thu May  4 07:52:45 2023: Inserted 60% of D-proof conclusions. [11025462 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 3 s 321.35 ms remaining ; 8 s 303.36 ms total)
+Thu May  4 07:52:46 2023: Inserted 65% of D-proof conclusions. [11944251 of 18375771] (ETC: Thu May  4 07:52:49 2023 ; 2 s 853.95 ms remaining ; 8 s 154.15 ms total)
+Thu May  4 07:52:46 2023: Inserted 70% of D-proof conclusions. [12863039 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 2 s 400.54 ms remaining ; 8 s   1.81 ms total)
+Thu May  4 07:52:46 2023: Inserted 75% of D-proof conclusions. [13781828 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 1 s 962.32 ms remaining ; 7 s 849.27 ms total)
+Thu May  4 07:52:47 2023: Inserted 80% of D-proof conclusions. [14700616 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 1 s 547.80 ms remaining ; 7 s 739.00 ms total)
+Thu May  4 07:52:47 2023: Inserted 85% of D-proof conclusions. [15619405 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 1 s 143.14 ms remaining ; 7 s 620.95 ms total)
+Thu May  4 07:52:47 2023: Inserted 90% of D-proof conclusions. [16538193 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 756.89 ms remaining ; 7 s 568.93 ms total)
+Thu May  4 07:52:48 2023: Inserted 95% of D-proof conclusions. [17456982 of 18375771] (ETC: Thu May  4 07:52:48 2023 ; 382.50 ms remaining ; 7 s 649.98 ms total)
+7613.28 ms (7 s 613.28 ms) total insertion duration.
+Reservable workloads: { 0:[1466022, 2199031], 1:[3665054, 4398063], 2:[5864086, 6597095], 3:[8063118, 8796127], 4:[10262150, 10995159], 5:[12461182, 13194192] }
+Thu May  4 08:47:48 2023: Removed ≈ 2% of redundant conclusions. [  55234 of approximately 2761713] (ETC: Sat May  6 05:42:09 2023 ; 1 d 20 h 54 min 21 s  31.18 ms remaining ; 1 d 21 h 49 min 20 s 220.05 ms total)
+Thu May  4 09:40:10 2023: Removed ≈ 4% of redundant conclusions. [ 110468 of approximately 2761713] (ETC: Sat May  6 04:36:47 2023 ; 1 d 18 h 56 min 36 s 407.91 ms remaining ; 1 d 20 h 43 min 57 s 893.32 ms total)
+Thu May  4 10:32:07 2023: Removed ≈ 6% of redundant conclusions. [ 165702 of approximately 2761713] (ETC: Sat May  6 04:07:47 2023 ; 1 d 17 h 35 min 40 s 598.96 ms remaining ; 1 d 20 h 14 min 58 s 461.67 ms total)
+Thu May  4 11:24:07 2023: Removed ≈ 8% of redundant conclusions. [ 220937 of approximately 2761713] (ETC: Sat May  6 03:54:07 2023 ; 1 d 16 h 30 min      327.84 ms remaining ; 1 d 20 h  1 min 18 s 614.72 ms total)
+Thu May  4 12:16:15 2023: Removed ≈10% of redundant conclusions. [ 276171 of approximately 2761713] (ETC: Sat May  6 03:47:08 2023 ; 1 d 15 h 30 min 53 s 563.05 ms remaining ; 1 d 19 h 54 min 19 s 495.42 ms total)
+Thu May  4 13:08:08 2023: Removed ≈12% of redundant conclusions. [ 331405 of approximately 2761713] (ETC: Sat May  6 03:40:29 2023 ; 1 d 14 h 32 min 20 s 907.48 ms remaining ; 1 d 19 h 47 min 40 s  85.81 ms total)
+Thu May  4 13:59:44 2023: Removed ≈14% of redundant conclusions. [ 386639 of approximately 2761713] (ETC: Sat May  6 03:33:39 2023 ; 1 d 13 h 33 min 55 s 477.81 ms remaining ; 1 d 19 h 40 min 50 s 501.30 ms total)
+Thu May  4 14:51:53 2023: Removed ≈16% of redundant conclusions. [ 441874 of approximately 2761713] (ETC: Sat May  6 03:32:03 2023 ; 1 d 12 h 40 min  9 s 329.56 ms remaining ; 1 d 19 h 39 min 13 s 958.34 ms total)
+Thu May  4 15:43:39 2023: Removed ≈18% of redundant conclusions. [ 497108 of approximately 2761713] (ETC: Sat May  6 03:28:31 2023 ; 1 d 11 h 44 min 53 s  32.09 ms remaining ; 1 d 19 h 35 min 42 s 698.50 ms total)
+Thu May  4 16:35:20 2023: Removed ≈20% of redundant conclusions. [ 552342 of approximately 2761713] (ETC: Sat May  6 03:25:26 2023 ; 1 d 10 h 50 min  5 s 755.88 ms remaining ; 1 d 19 h 32 min 37 s 152.28 ms total)
+Thu May  4 17:27:05 2023: Removed ≈22% of redundant conclusions. [ 607576 of approximately 2761713] (ETC: Sat May  6 03:23:10 2023 ; 1 d  9 h 56 min  4 s 723.49 ms remaining ; 1 d 19 h 30 min 21 s 377.84 ms total)
+Thu May  4 18:18:56 2023: Removed ≈24% of redundant conclusions. [ 662811 of approximately 2761713] (ETC: Sat May  6 03:21:39 2023 ; 1 d  9 h  2 min 43 s 225.22 ms remaining ; 1 d 19 h 28 min 50 s 550.55 ms total)
+Thu May  4 19:10:48 2023: Removed ≈26% of redundant conclusions. [ 718045 of approximately 2761713] (ETC: Sat May  6 03:20:26 2023 ; 1 d  8 h  9 min 38 s 223.90 ms remaining ; 1 d 19 h 27 min 37 s  30.23 ms total)
+Thu May  4 20:02:46 2023: Removed ≈28% of redundant conclusions. [ 773279 of approximately 2761713] (ETC: Sat May  6 03:19:48 2023 ; 1 d  7 h 17 min  1 s 864.39 ms remaining ; 1 d 19 h 26 min 59 s 205.75 ms total)
+Thu May  4 20:54:39 2023: Removed ≈30% of redundant conclusions. [ 828513 of approximately 2761713] (ETC: Sat May  6 03:18:57 2023 ; 1 d  6 h 24 min 18 s 169.93 ms remaining ; 1 d 19 h 26 min  8 s 741.39 ms total)
+Thu May  4 21:46:51 2023: Removed ≈32% of redundant conclusions. [ 883748 of approximately 2761713] (ETC: Sat May  6 03:19:10 2023 ; 1 d  5 h 32 min 19 s 515.50 ms remaining ; 1 d 19 h 26 min 21 s 627.12 ms total)
+Thu May  4 22:38:46 2023: Removed ≈34% of redundant conclusions. [ 938982 of approximately 2761713] (ETC: Sat May  6 03:18:34 2023 ; 1 d  4 h 39 min 47 s 834.76 ms remaining ; 1 d 19 h 25 min 45 s 168.16 ms total)
+Thu May  4 23:30:54 2023: Removed ≈36% of redundant conclusions. [ 994216 of approximately 2761713] (ETC: Sat May  6 03:18:37 2023 ; 1 d  3 h 47 min 42 s 992.97 ms remaining ; 1 d 19 h 25 min 48 s 366.37 ms total)
+Fri May  5 00:23:00 2023: Removed ≈38% of redundant conclusions. [1049450 of approximately 2761713] (ETC: Sat May  6 03:18:33 2023 ; 1 d  2 h 55 min 33 s 391.22 ms remaining ; 1 d 19 h 25 min 44 s  93.56 ms total)
+Fri May  5 01:15:08 2023: Removed ≈40% of redundant conclusions. [1104685 of approximately 2761713] (ETC: Sat May  6 03:18:37 2023 ; 1 d  2 h  3 min 28 s 872.39 ms remaining ; 1 d 19 h 25 min 48 s 101.79 ms total)
+Fri May  5 02:07:14 2023: Removed ≈42% of redundant conclusions. [1159919 of approximately 2761713] (ETC: Sat May  6 03:18:35 2023 ; 1 d  1 h 11 min 20 s 952.67 ms remaining ; 1 d 19 h 25 min 46 s 425.21 ms total)
+Fri May  5 02:59:22 2023: Removed ≈44% of redundant conclusions. [1215153 of approximately 2761713] (ETC: Sat May  6 03:18:38 2023 ; 1 d      19 min 15 s 460.51 ms remaining ; 1 d 19 h 25 min 48 s 963.84 ms total)
+Fri May  5 03:52:23 2023: Removed ≈46% of redundant conclusions. [1270387 of approximately 2761713] (ETC: Sat May  6 03:20:35 2023 ; 23 h 28 min 12 s  66.39 ms remaining ; 1 d 19 h 27 min 46 s 686.79 ms total)
+Fri May  5 04:45:11 2023: Removed ≈48% of redundant conclusions. [1325622 of approximately 2761713] (ETC: Sat May  6 03:21:56 2023 ; 22 h 36 min 44 s 550.02 ms remaining ; 1 d 19 h 29 min  7 s 185.42 ms total)
+Fri May  5 05:37:52 2023: Removed ≈50% of redundant conclusions. [1380856 of approximately 2761713] (ETC: Sat May  6 03:22:54 2023 ; 21 h 45 min  2 s 695.11 ms remaining ; 1 d 19 h 30 min  5 s 333.52 ms total)
+Fri May  5 06:30:39 2023: Removed ≈52% of redundant conclusions. [1436090 of approximately 2761713] (ETC: Sat May  6 03:24:03 2023 ; 20 h 53 min 23 s 725.99 ms remaining ; 1 d 19 h 31 min 14 s 339.32 ms total)
+Fri May  5 07:23:30 2023: Removed ≈54% of redundant conclusions. [1491325 of approximately 2761713] (ETC: Sat May  6 03:25:12 2023 ; 20 h  1 min 41 s 773.98 ms remaining ; 1 d 19 h 32 min 22 s 984.45 ms total)
+Fri May  5 08:16:22 2023: Removed ≈56% of redundant conclusions. [1546559 of approximately 2761713] (ETC: Sat May  6 03:26:19 2023 ; 19 h  9 min 56 s 467.37 ms remaining ; 1 d 19 h 33 min 30 s 116.99 ms total)
+Fri May  5 09:09:03 2023: Removed ≈58% of redundant conclusions. [1601793 of approximately 2761713] (ETC: Sat May  6 03:27:01 2023 ; 18 h 17 min 57 s 999.57 ms remaining ; 1 d 19 h 34 min 12 s 306.90 ms total)
+Fri May  5 10:01:54 2023: Removed ≈60% of redundant conclusions. [1657027 of approximately 2761713] (ETC: Sat May  6 03:27:57 2023 ; 17 h 26 min  3 s 352.01 ms remaining ; 1 d 19 h 35 min  8 s 266.40 ms total)
+Fri May  5 10:54:58 2023: Removed ≈62% of redundant conclusions. [1712262 of approximately 2761713] (ETC: Sat May  6 03:29:11 2023 ; 16 h 34 min 13 s 203.72 ms remaining ; 1 d 19 h 36 min 22 s 106.07 ms total)
+Fri May  5 11:47:52 2023: Removed ≈64% of redundant conclusions. [1767496 of approximately 2761713] (ETC: Sat May  6 03:30:05 2023 ; 15 h 42 min 13 s  83.24 ms remaining ; 1 d 19 h 37 min 16 s 291.78 ms total)
+Fri May  5 12:41:04 2023: Removed ≈66% of redundant conclusions. [1822730 of approximately 2761713] (ETC: Sat May  6 03:31:22 2023 ; 14 h 50 min 18 s 623.22 ms remaining ; 1 d 19 h 38 min 33 s 500.67 ms total)
+Fri May  5 13:35:02 2023: Removed ≈68% of redundant conclusions. [1877964 of approximately 2761713] (ETC: Sat May  6 03:33:44 2023 ; 13 h 58 min 41 s 700.55 ms remaining ; 1 d 19 h 40 min 55 s 164.74 ms total)
+Fri May  5 14:27:01 2023: Removed ≈70% of redundant conclusions. [1933199 of approximately 2761713] (ETC: Sat May  6 03:33:06 2023 ; 13 h  6 min  5 s 239.80 ms remaining ; 1 d 19 h 40 min 17 s 447.02 ms total)
+Fri May  5 15:18:51 2023: Removed ≈72% of redundant conclusions. [1988433 of approximately 2761713] (ETC: Sat May  6 03:32:18 2023 ; 12 h 13 min 27 s 320.60 ms remaining ; 1 d 19 h 39 min 28 s 928.99 ms total)
+Fri May  5 16:10:40 2023: Removed ≈74% of redundant conclusions. [2043667 of approximately 2761713] (ETC: Sat May  6 03:31:32 2023 ; 11 h 20 min 52 s  70.04 ms remaining ; 1 d 19 h 38 min 43 s 210.63 ms total)
+Fri May  5 17:02:25 2023: Removed ≈76% of redundant conclusions. [2098901 of approximately 2761713] (ETC: Sat May  6 03:30:43 2023 ; 10 h 28 min 17 s 925.92 ms remaining ; 1 d 19 h 37 min 54 s 482.78 ms total)
+Fri May  5 17:54:16 2023: Removed ≈78% of redundant conclusions. [2154136 of approximately 2761713] (ETC: Sat May  6 03:30:04 2023 ; 9 h 35 min 47 s 756.28 ms remaining ; 1 d 19 h 37 min 15 s 219.65 ms total)
+Fri May  5 18:46:15 2023: Removed ≈80% of redundant conclusions. [2209370 of approximately 2761713] (ETC: Sat May  6 03:29:37 2023 ; 8 h 43 min 21 s 625.33 ms remaining ; 1 d 19 h 36 min 48 s  12.93 ms total)
+Fri May  5 19:38:17 2023: Removed ≈82% of redundant conclusions. [2264604 of approximately 2761713] (ETC: Sat May  6 03:29:14 2023 ; 7 h 50 min 57 s 431.65 ms remaining ; 1 d 19 h 36 min 25 s 522.98 ms total)
+Fri May  5 20:30:23 2023: Removed ≈84% of redundant conclusions. [2319838 of approximately 2761713] (ETC: Sat May  6 03:28:58 2023 ; 6 h 58 min 35 s  89.37 ms remaining ; 1 d 19 h 36 min  8 s 981.75 ms total)
+Fri May  5 21:22:57 2023: Removed ≈86% of redundant conclusions. [2375073 of approximately 2761713] (ETC: Sat May  6 03:29:15 2023 ; 6 h  6 min 18 s  76.21 ms remaining ; 1 d 19 h 36 min 26 s 185.58 ms total)
+Fri May  5 22:15:32 2023: Removed ≈88% of redundant conclusions. [2430307 of approximately 2761713] (ETC: Sat May  6 03:29:33 2023 ; 5 h 14 min      523.89 ms remaining ; 1 d 19 h 36 min 44 s 157.28 ms total)
+Fri May  5 23:07:51 2023: Removed ≈90% of redundant conclusions. [2485541 of approximately 2761713] (ETC: Sat May  6 03:29:32 2023 ; 4 h 21 min 40 s 317.81 ms remaining ; 1 d 19 h 36 min 42 s 780.18 ms total)
+Sat May  6 00:00:13 2023: Removed ≈92% of redundant conclusions. [2540775 of approximately 2761713] (ETC: Sat May  6 03:29:33 2023 ; 3 h 29 min 20 s 408.77 ms remaining ; 1 d 19 h 36 min 44 s 427.42 ms total)
+Sat May  6 00:52:12 2023: Removed ≈94% of redundant conclusions. [2596010 of approximately 2761713] (ETC: Sat May  6 03:29:11 2023 ; 2 h 36 min 58 s 972.42 ms remaining ; 1 d 19 h 36 min 22 s 665.17 ms total)
+Sat May  6 01:44:32 2023: Removed ≈96% of redundant conclusions. [2651244 of approximately 2761713] (ETC: Sat May  6 03:29:12 2023 ; 1 h 44 min 39 s 341.70 ms remaining ; 1 d 19 h 36 min 22 s 860.46 ms total)
+Sat May  6 02:36:39 2023: Removed ≈98% of redundant conclusions. [2706478 of approximately 2761713] (ETC: Sat May  6 03:28:59 2023 ; 52 min 19 s 445.13 ms remaining ; 1 d 19 h 36 min 10 s 153.63 ms total)
+[Rank 1] Workload transfer approved. Starting to work on 0:[2117587, 2171883].
+[Rank 3] Workload transfer approved. Starting to work on 2:[6569948, 6588046].
+[Rank 2] Workload transfer approved. Starting to work on 4:[10968012, 10986110].
+[Rank 0] Workload transfer approved. Starting to work on 4:[10986111, 10992143].
+[Rank 3] Workload transfer approved. Starting to work on 4:[10992144, 10994154].
+[Rank 5] Workload transfer approved. Starting to work on 4:[10994155, 10995159].
+Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 1 on "ncm0306.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 2 on "ncm0307.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 3 on "ncm0315.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 4 on "ncm0320.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 5 on "ncm0321.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+158481944.49 ms (1 d 20 h 1 min 21 s 944.49 ms) taken to detect 2782763 conclusions for which there are more general variants proven in lower or equal amounts of steps.
+Found 10411430 representative and 2782763 redundant condensed detachment proof strings.
+[Copy] Removal count: { 31, 2782763 }
+2964.96 ms (2 s 964.96 ms) taken to filter and order new representative proofs.
+Sat May  6 03:54:13 2023: Starting to write 10411430 entries to data/dProofs-withConclusions/dProofs31.txt.
+4745.40 ms (4 s 745.40 ms) taken to print and save 1741338664 bytes of representative condensed detachment proof strings to data/dProofs-withConclusions/dProofs31.txt.
+Sat May  6 03:54:18 2023: MPI-based D-proof representative filter complete. [rank 0 on "ncm0297.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 866418, tid:22886616409984]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 4112130, tid:22456397735808]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 2369089, tid:22897368516480]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 2337710, tid:22761419761536]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 2345207, tid:22917611571072]
+Sat May  6 03:54:30 2023: Process terminated. [pid: 735631, tid:23288960632704]

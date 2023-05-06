@@ -3,10 +3,10 @@
      Update instructions:
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
-     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (249 occurences)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (289 occurences)
      4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<img src\=\"icon\/icon-readme\.png\" align\=\"left\">[/REPLACE] (1 occurence)
      5. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
-     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (494 occurences)
+     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (570 occurences)
      (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4, 5 and 6.)
      -->
 <html>
@@ -214,7 +214,7 @@ b, strong {
 </head>
 <body><div class="markdown-container ltr"><div id="readme"><img src="icon/icon-readme.png" align="left">
 <h1 id="xamidi-pmgenerator">@xamidi/pmGenerator</h1>
-<p>Code extracted from <a href="https://github.com/deontic-logic/proof-tool" title="GitHub repository">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>.<br>Eligible for high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.<br>The following table exemplary shows progress that has already been made.</p>
+<p>Code initially extracted from <a href="https://github.com/deontic-logic/proof-tool" title="GitHub repository">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>.<br>Eligible for high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.<br>The following table exemplary shows progress that has already been made.</p>
 <table>
 <thead>
 <tr>
@@ -238,16 +238,34 @@ b, strong {
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=2161632450%2F516720692" title="size(dProofs31-unfiltered31+.txt) / size(dProofs29.txt)">4.1833...</a></td>
 </tr>
 <tr>
+<td><a href="https://mega.nz/file/P1ki0IKQ#mb0QCboSu0Ofgr9nxspZTdcGUaAHPLzt-rQ8y0TN27k" title="1'741'338'664 bytes compressed into 89'327'496 bytes (ratio approx. 19.4939)">dProofs31.txt</a><sup>✻</sup></td>
+<td style="text-align:right">2 477 015 626</td>
+<td style="text-align:right">7.95</td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=1741338664%2F516720692" title="size(dProofs31.txt) / size(dProofs29.txt)">3.3699...</a></td>
+</tr>
+<tr>
 <td><a href="https://mega.nz/file/3gVQSIJL#Qfa9CoUwsHWYYNHXYaP1mg61QQSJ1NSl1CHudK4g7BA" title="8'349'023'875 bytes compressed into 402'886'507 bytes (ratio approx. 20.7230)">dProofs33‑unfiltered31+.txt</a></td>
 <td style="text-align:right">11 246 333 287</td>
 <td style="text-align:right">36.49</td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=8349023875%2F2161632450" title="size(dProofs33-unfiltered31+.txt) / size(dProofs31-unfiltered31+.txt)">3.8623...</a></td>
 </tr>
 <tr>
+<td><a href="https://mega.nz/file/ixshHB7S#ktigbEzeOvCvFP8pruhC0NFfeK91p__eS_uZxBtIy0w" title="7'295'621'951 bytes compressed into 352'588'174 bytes (ratio approx. 20.6916)">dProofs33‑unfiltered33+.txt</a></td>
+<td style="text-align:right">10 192 931 363</td>
+<td style="text-align:right">29.43</td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=7295621951%2F1741338664" title="size(dProofs33-unfiltered33+.txt) / size(dProofs31.txt)">4.1896...</a></td>
+</tr>
+<tr>
 <td><a href="https://mega.nz/file/2893yZ7S#JlCHv4uOajgBJPPE2W87F_LAPzkH0-FlF4_2OrccuC4" title="30'717'801'573 bytes compressed into 1'400'853'331 bytes (ratio approx. 21.9279)">dProofs35‑unfiltered31+.txt</a></td>
 <td style="text-align:right">41 964 134 860</td>
 <td style="text-align:right">130.52</td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=30717801573%2F8349023875" title="size(dProofs35-unfiltered31+.txt) / size(dProofs33-unfiltered31+.txt)">3.6792...</a></td>
+</tr>
+<tr>
+<td><a href="https://mega.nz/file/WwNViKRa#UBiPOFN4wRkMgetY60eAQi1oXVQ3fQdkcg7hFxB-Dfk" title="28'223'320'428 bytes compressed into 1'290'589'236 bytes (ratio approx. 21.8686)">dProofs35‑unfiltered33+.txt</a></td>
+<td style="text-align:right">38 416 251 791</td>
+<td style="text-align:right">108.87</td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=28223320428%2F7295621951" title="size(dProofs35-unfiltered33+.txt) / size(dProofs33-unfiltered33+.txt)">3.8685...</a></td>
 </tr>
 <tr>
 <td><a href="https://mega.nz/file/6wUyDQzT#DQIJOLd5dCn-6V9sJWiJXeGRPUTUaA-7LqbGfLStjV0" title="113'174'356'461 bytes compressed into 4'897'020'927 bytes (ratio approx. 23.1109)">dProofs37‑unfiltered31+.txt</a><sup>✻</sup></td>
@@ -295,7 +313,27 @@ pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d
 pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d
 pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
 pmGenerator -m 17 -s
-</code></pre><h4 id="navigation">Navigation</h4>
+</code></pre><h4 id="multi-node-computing">Multi-node Computing</h4>
+<p>For MPI-based filtering, each spawned process is multithreaded and attempts to use as many threads as the hardware specifies as concurrent. Therefore, it is ideal to spawn the same amount of processes and nodes.<br>The following exemplary <a href="https://slurm.schedmd.com/documentation.html">Slurm</a> batch script has been used via <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> in order to reduce <code>dProofs31‑unfiltered31+.txt</code> to <code>dProofs31.txt</code>.</p>
+<pre><code>#!/bin/zsh
+#SBATCH --job-name=pmGen-20
+#SBATCH --output=output_%J.txt
+#SBATCH --partition=c18m
+#SBATCH --account=rwth1392
+#SBATCH --time=3-00:00:00
+#SBATCH --mem-per-cpu=3900M
+#SBATCH --cpus-per-task=48
+#SBATCH --mail-user=&lt;email&gt;
+#SBATCH --mail-type=END,FAIL,TIME_LIMIT
+## Number of nodes to use ; Also update #processes (via srun)!
+#SBATCH --nodes=6
+srun -n 6 ./pmGenerator -m 31
+</code></pre><p>A subsequent query with <a href="https://slurm.schedmd.com/squeue.html">squeue</a> would then reveal the following information:</p>
+<pre><code>$ squeue -o "%.9i %.8j %.9P %.11a %.8u %.5C %.5D %.8T %.10M %.10l %.19S %R" -u &lt;userID&gt;
+    JOBID     NAME PARTITION     ACCOUNT     USER  CPUS NODES    STATE       TIME TIME_LIMIT          START_TIME NODELIST(REASON)
+ 34762453 pmGen-20      c18m    rwth1392 &lt;userID&gt;   288     6  RUNNING       3:34 3-00:00:00 2023-05-04T07:52:24 ncm[0297,0306-0307,0315,0320-0321]
+</code></pre><p>You may have a look at the <a href="log/dProofs31_6node_288cpu.log">log file</a> generated by that computation.</p>
+<h4 id="navigation">Navigation</h4>
 <ul>
 <li><a href="https://github.com/xamidi/pmGenerator/tree/c++11">C++11 branch</a></li>
 <li><a href="https://github.com/xamidi/pmGenerator/tree/master">C++20 branch</a></li>
