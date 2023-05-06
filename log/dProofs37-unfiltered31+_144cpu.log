@@ -1,0 +1,122 @@
+Tue Apr 11 08:00:11 2023: Process started. [pid: 109324, tid:47422293318528]
+Tasks:
+1. generateDProofRepresentativeFiles(37, false, true)
+
+[Main] Calling generateDProofRepresentativeFiles(37, false, true).
+Tue Apr 11 08:00:11 2023: Limited D-proof representative generator started. [parallel ; 144 hardware thread contexts, limit: 37, unfiltered]
+0.13 ms taken to load built-in representatives.
+61.86 ms taken to read 5221 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs17.txt. [tid:47422320940800]
+48.79 ms taken to read 15275 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs19.txt. [tid:47422323042048]
+137.88 ms taken to read 44206 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs21.txt. [tid:47422325143296]
+760.53 ms taken to read 129885 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs23.txt. [tid:47422327244544]
+6142.79 ms (6 s 142.79 ms) taken to read 385789 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs25.txt. [tid:47422329345792]
+949.70 ms taken to read 1149058 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs27.txt. [tid:47422331447040]
+2085.21 ms (2 s 85.21 ms) taken to read 3449251 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs29.txt. [tid:47422333548288]
+6148.63 ms (6 s 148.63 ms) total read duration.
+Loaded 15 representative collections of sizes:
+1 : 3
+3 : 6
+5 : 12
+7 : 38
+9 : 89
+11 : 229
+13 : 672
+15 : 1844
+17 : 5221
+19 : 15275
+21 : 44206
+23 : 129885
+25 : 385789
+27 : 1149058
+29 : 3449251
+5181578 representatives in total.
+18371.20 ms (18 s 371.20 ms) taken to read 13194193 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs31-unfiltered31+.txt. [tid:47422333548288]
+52373.40 ms (52 s 373.40 ms) taken to read 45774890 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs33-unfiltered31+.txt. [tid:47422331447040]
+111406.79 ms (1 min 51 s 406.79 ms) taken to read 151768744 condensed detachment proofs and conclusions from data/dProofs-withConclusions/dProofs35-unfiltered31+.txt. [tid:47422329345792]
+111422.30 ms (1 min 51 s 422.30 ms) additional read duration.
+Loaded 3 more representative collections of sizes:
+31 : 13194193
+33 : 45774890
+35 : 151768744
+215919405 representatives in total.
+Tue Apr 11 08:02:14 2023: Inserted  5% of D-proof conclusions. [ 10795970 of 215919405] (ETC: Tue Apr 11 08:03:56 2023 ; 1 min 42 s 583.38 ms remaining ; 1 min 47 s 982.50 ms total)
+Tue Apr 11 08:02:19 2023: Inserted 10% of D-proof conclusions. [ 21591940 of 215919405] (ETC: Tue Apr 11 08:03:53 2023 ; 1 min 34 s  38.32 ms remaining ; 1 min 44 s 487.02 ms total)
+Tue Apr 11 08:02:24 2023: Inserted 15% of D-proof conclusions. [ 32387910 of 215919405] (ETC: Tue Apr 11 08:03:51 2023 ; 1 min 27 s 429.64 ms remaining ; 1 min 42 s 858.40 ms total)
+Tue Apr 11 08:02:29 2023: Inserted 20% of D-proof conclusions. [ 43183881 of 215919405] (ETC: Tue Apr 11 08:03:51 2023 ; 1 min 21 s 796.01 ms remaining ; 1 min 42 s 245.01 ms total)
+Tue Apr 11 08:02:34 2023: Inserted 25% of D-proof conclusions. [ 53979851 of 215919405] (ETC: Tue Apr 11 08:03:49 2023 ; 1 min 15 s 734.98 ms remaining ; 1 min 40 s 979.97 ms total)
+Tue Apr 11 08:02:39 2023: Inserted 30% of D-proof conclusions. [ 64775821 of 215919405] (ETC: Tue Apr 11 08:03:50 2023 ; 1 min 10 s 886.72 ms remaining ; 1 min 41 s 266.74 ms total)
+Tue Apr 11 08:02:44 2023: Inserted 35% of D-proof conclusions. [ 75571791 of 215919405] (ETC: Tue Apr 11 08:03:49 2023 ; 1 min  5 s 683.61 ms remaining ; 1 min 41 s  51.71 ms total)
+Tue Apr 11 08:02:48 2023: Inserted 40% of D-proof conclusions. [ 86367762 of 215919405] (ETC: Tue Apr 11 08:03:49 2023 ; 1 min      123.85 ms remaining ; 1 min 40 s 206.42 ms total)
+Tue Apr 11 08:02:53 2023: Inserted 45% of D-proof conclusions. [ 97163732 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 54 s 687.74 ms remaining ; 1 min 39 s 432.26 ms total)
+Tue Apr 11 08:02:58 2023: Inserted 50% of D-proof conclusions. [107959702 of 215919405] (ETC: Tue Apr 11 08:03:47 2023 ; 49 s 434.46 ms remaining ; 1 min 38 s 868.93 ms total)
+Tue Apr 11 08:03:02 2023: Inserted 55% of D-proof conclusions. [118755672 of 215919405] (ETC: Tue Apr 11 08:03:47 2023 ; 44 s 234.81 ms remaining ; 1 min 38 s 299.57 ms total)
+Tue Apr 11 08:03:07 2023: Inserted 60% of D-proof conclusions. [129551643 of 215919405] (ETC: Tue Apr 11 08:03:46 2023 ; 39 s  79.44 ms remaining ; 1 min 37 s 698.59 ms total)
+Tue Apr 11 08:03:12 2023: Inserted 65% of D-proof conclusions. [140347613 of 215919405] (ETC: Tue Apr 11 08:03:47 2023 ; 34 s 404.44 ms remaining ; 1 min 38 s 298.39 ms total)
+Tue Apr 11 08:03:18 2023: Inserted 70% of D-proof conclusions. [151143583 of 215919405] (ETC: Tue Apr 11 08:03:47 2023 ; 29 s 667.60 ms remaining ; 1 min 38 s 892.00 ms total)
+Tue Apr 11 08:03:23 2023: Inserted 75% of D-proof conclusions. [161939553 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 24 s 867.89 ms remaining ; 1 min 39 s 471.57 ms total)
+Tue Apr 11 08:03:28 2023: Inserted 80% of D-proof conclusions. [172735524 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 19 s 970.41 ms remaining ; 1 min 39 s 852.08 ms total)
+Tue Apr 11 08:03:33 2023: Inserted 85% of D-proof conclusions. [183531494 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 15 s  14.15 ms remaining ; 1 min 40 s  94.33 ms total)
+Tue Apr 11 08:03:38 2023: Inserted 90% of D-proof conclusions. [194327464 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 10 s   7.66 ms remaining ; 1 min 40 s  76.56 ms total)
+Tue Apr 11 08:03:43 2023: Inserted 95% of D-proof conclusions. [205123434 of 215919405] (ETC: Tue Apr 11 08:03:48 2023 ; 5 s   4.78 ms remaining ; 1 min 40 s  95.65 ms total)
+100101.62 ms (1 min 40 s 101.61 ms) total insertion duration.
+Estimated iteration count set to 2932877059, based on last known pair (33:260604052, 35:874253765) with 874253765/260604052 ≈ 3.35472, and 874253765 * (874253765/260604052)^1 ≈ 2932877059.09.
+Tue Apr 11 08:03:48 2023: Starting to generate D-proof representatives of length 37.
+Tue Apr 11 11:36:40 2023: Iterated ≈ 2% of D-proof candidates. [  58657541 of approximately 2932877059] (ETC: Tue Apr 18 17:26:51 2023 ; 7 d  5 h 50 min 11 s 200.69 ms remaining ; 7 d  9 h 23 min  2 s 857.81 ms total)
+Tue Apr 11 15:28:09 2023: Iterated ≈ 4% of D-proof candidates. [ 117315082 of approximately 2932877059] (ETC: Wed Apr 19 01:12:15 2023 ; 7 d  9 h 44 min  6 s 624.89 ms remaining ; 7 d 17 h  8 min 26 s 900.85 ms total)
+Tue Apr 11 18:40:13 2023: Iterated ≈ 6% of D-proof candidates. [ 175972623 of approximately 2932877059] (ETC: Tue Apr 18 16:50:37 2023 ; 6 d 22 h 10 min 24 s 321.60 ms remaining ; 7 d  8 h 46 min 48 s 852.64 ms total)
+Tue Apr 11 23:00:24 2023: Iterated ≈ 8% of D-proof candidates. [ 234630164 of approximately 2932877059] (ETC: Wed Apr 19 02:51:15 2023 ; 7 d  3 h 50 min 51 s  46.01 ms remaining ; 7 d 18 h 47 min 26 s 788.96 ms total)
+Wed Apr 12 02:41:10 2023: Iterated ≈10% of D-proof candidates. [ 293287705 of approximately 2932877059] (ETC: Wed Apr 19 02:17:26 2023 ; 6 d 23 h 36 min 15 s 418.46 ms remaining ; 7 d 18 h 13 min 37 s 131.40 ms total)
+Wed Apr 12 05:42:50 2023: Iterated ≈12% of D-proof candidates. [ 351945247 of approximately 2932877059] (ETC: Tue Apr 18 20:29:01 2023 ; 6 d 14 h 46 min 10 s 721.86 ms remaining ; 7 d 12 h 25 min 12 s 183.91 ms total)
+Wed Apr 12 08:41:34 2023: Iterated ≈14% of D-proof candidates. [ 410602788 of approximately 2932877059] (ETC: Tue Apr 18 15:59:16 2023 ; 6 d  7 h 17 min 41 s 859.60 ms remaining ; 7 d  7 h 55 min 27 s 743.65 ms total)
+Wed Apr 12 11:22:01 2023: Iterated ≈16% of D-proof candidates. [ 469260329 of approximately 2932877059] (ETC: Tue Apr 18 10:42:35 2023 ; 5 d 23 h 20 min 34 s 380.96 ms remaining ; 7 d  2 h 38 min 46 s 643.89 ms total)
+Wed Apr 12 14:25:41 2023: Iterated ≈18% of D-proof candidates. [ 527917870 of approximately 2932877059] (ETC: Tue Apr 18 08:45:23 2023 ; 5 d 18 h 19 min 41 s 194.91 ms remaining ; 7 d      41 min 34 s 139.98 ms total)
+Wed Apr 12 17:13:27 2023: Iterated ≈20% of D-proof candidates. [ 586575411 of approximately 2932877059] (ETC: Tue Apr 18 05:52:03 2023 ; 5 d 12 h 38 min 35 s 913.06 ms remaining ; 6 d 21 h 48 min 14 s 891.12 ms total)
+Wed Apr 12 20:38:51 2023: Iterated ≈22% of D-proof candidates. [ 645232952 of approximately 2932877059] (ETC: Tue Apr 18 06:21:18 2023 ; 5 d  9 h 42 min 26 s 948.55 ms remaining ; 6 d 22 h 17 min 29 s 933.79 ms total)
+Thu Apr 13 00:24:30 2023: Iterated ≈24% of D-proof candidates. [ 703890494 of approximately 2932877059] (ETC: Tue Apr 18 08:10:00 2023 ; 5 d  7 h 45 min 30 s 264.50 ms remaining ; 7 d       6 min 11 s 400.61 ms total)
+Thu Apr 13 03:28:21 2023: Iterated ≈26% of D-proof candidates. [ 762548035 of approximately 2932877059] (ETC: Tue Apr 18 07:01:18 2023 ; 5 d  3 h 32 min 56 s 334.38 ms remaining ; 6 d 22 h 57 min 29 s 100.42 ms total)
+Thu Apr 13 06:13:57 2023: Iterated ≈28% of D-proof candidates. [ 821205576 of approximately 2932877059] (ETC: Tue Apr 18 04:57:11 2023 ; 4 d 22 h 43 min 13 s 890.48 ms remaining ; 6 d 20 h 53 min 22 s 625.52 ms total)
+Thu Apr 13 08:49:44 2023: Iterated ≈30% of D-proof candidates. [ 879863117 of approximately 2932877059] (ETC: Tue Apr 18 02:36:53 2023 ; 4 d 17 h 47 min  9 s  17.55 ms remaining ; 6 d 18 h 33 min  4 s 310.59 ms total)
+Thu Apr 13 11:30:25 2023: Iterated ≈32% of D-proof candidates. [ 938520658 of approximately 2932877059] (ETC: Tue Apr 18 00:49:29 2023 ; 4 d 13 h 19 min  3 s 660.00 ms remaining ; 6 d 16 h 45 min 40 s 676.21 ms total)
+Thu Apr 13 14:32:19 2023: Iterated ≈34% of D-proof candidates. [ 997178200 of approximately 2932877059] (ETC: Tue Apr 18 00:17:05 2023 ; 4 d  9 h 44 min 46 s  16.25 ms remaining ; 6 d 16 h 13 min 16 s 994.30 ms total)
+Thu Apr 13 17:31:12 2023: Iterated ≈36% of D-proof candidates. [1055835741 of approximately 2932877059] (ETC: Mon Apr 17 23:39:55 2023 ; 4 d  6 h  8 min 42 s 759.32 ms remaining ; 6 d 15 h 36 min  6 s 811.37 ms total)
+Thu Apr 13 20:48:10 2023: Iterated ≈38% of D-proof candidates. [1114493282 of approximately 2932877059] (ETC: Mon Apr 17 23:54:13 2023 ; 4 d  3 h  6 min  2 s 999.81 ms remaining ; 6 d 15 h 50 min 24 s 193.11 ms total)
+Thu Apr 13 23:50:32 2023: Iterated ≈40% of D-proof candidates. [1173150823 of approximately 2932877059] (ETC: Mon Apr 17 23:30:37 2023 ; 3 d 23 h 40 min  5 s 368.88 ms remaining ; 6 d 15 h 26 min 48 s 947.94 ms total)
+Fri Apr 14 02:40:01 2023: Iterated ≈42% of D-proof candidates. [1231808364 of approximately 2932877059] (ETC: Mon Apr 17 22:38:34 2023 ; 3 d 19 h 58 min 33 s 895.60 ms remaining ; 6 d 14 h 34 min 46 s  26.64 ms total)
+Fri Apr 14 05:49:12 2023: Iterated ≈44% of D-proof candidates. [1290465905 of approximately 2932877059] (ETC: Mon Apr 17 22:36:04 2023 ; 3 d 16 h 46 min 51 s 879.22 ms remaining ; 6 d 14 h 32 min 15 s 498.27 ms total)
+Fri Apr 14 08:39:13 2023: Iterated ≈46% of D-proof candidates. [1349123447 of approximately 2932877059] (ETC: Mon Apr 17 21:52:06 2023 ; 3 d 13 h 12 min 52 s 638.41 ms remaining ; 6 d 13 h 48 min 17 s 478.48 ms total)
+Fri Apr 14 11:17:19 2023: Iterated ≈48% of D-proof candidates. [1407780988 of approximately 2932877059] (ETC: Mon Apr 17 20:46:58 2023 ; 3 d  9 h 29 min 38 s 647.45 ms remaining ; 6 d 12 h 43 min  9 s 706.51 ms total)
+Fri Apr 14 13:45:52 2023: Iterated ≈50% of D-proof candidates. [1466438529 of approximately 2932877059] (ETC: Mon Apr 17 19:27:56 2023 ; 3 d  5 h 42 min  4 s  37.26 ms remaining ; 6 d 11 h 24 min  8 s  74.34 ms total)
+Fri Apr 14 16:17:55 2023: Iterated ≈52% of D-proof candidates. [1525096070 of approximately 2932877059] (ETC: Mon Apr 17 18:21:43 2023 ; 3 d  2 h  3 min 47 s 824.93 ms remaining ; 6 d 10 h 17 min 54 s 635.00 ms total)
+Fri Apr 14 18:56:09 2023: Iterated ≈54% of D-proof candidates. [1583753611 of approximately 2932877059] (ETC: Mon Apr 17 17:31:50 2023 ; 2 d 22 h 35 min 41 s 572.88 ms remaining ; 6 d  9 h 28 min  1 s 679.83 ms total)
+Fri Apr 14 21:37:07 2023: Iterated ≈56% of D-proof candidates. [1642411153 of approximately 2932877059] (ETC: Mon Apr 17 16:50:27 2023 ; 2 d 19 h 13 min 19 s 248.16 ms remaining ; 6 d  8 h 46 min 38 s 291.26 ms total)
+Sat Apr 15 00:05:38 2023: Iterated ≈58% of D-proof candidates. [1701068694 of approximately 2932877059] (ETC: Mon Apr 17 15:50:25 2023 ; 2 d 15 h 44 min 46 s 409.30 ms remaining ; 6 d  7 h 46 min 36 s 212.53 ms total)
+Sat Apr 15 02:25:37 2023: Iterated ≈60% of D-proof candidates. [1759726235 of approximately 2932877059] (ETC: Mon Apr 17 14:40:09 2023 ; 2 d 12 h 14 min 32 s 362.31 ms remaining ; 6 d  6 h 36 min 20 s 905.59 ms total)
+Sat Apr 15 04:48:26 2023: Iterated ≈62% of D-proof candidates. [1818383776 of approximately 2932877059] (ETC: Mon Apr 17 13:39:00 2023 ; 2 d  8 h 50 min 34 s 430.53 ms remaining ; 6 d  5 h 35 min 11 s 659.01 ms total)
+Sat Apr 15 07:03:36 2023: Iterated ≈64% of D-proof candidates. [1877041317 of approximately 2932877059] (ETC: Mon Apr 17 12:29:44 2023 ; 2 d  5 h 26 min  8 s 111.85 ms remaining ; 6 d  4 h 25 min 55 s 865.87 ms total)
+Sat Apr 15 09:23:03 2023: Iterated ≈66% of D-proof candidates. [1935698858 of approximately 2932877059] (ETC: Mon Apr 17 11:31:08 2023 ; 2 d  2 h  8 min  5 s 598.67 ms remaining ; 6 d  3 h 27 min 19 s 995.60 ms total)
+Sat Apr 15 11:39:10 2023: Iterated ≈68% of D-proof candidates. [1994356400 of approximately 2932877059] (ETC: Mon Apr 17 10:31:07 2023 ; 1 d 22 h 51 min 56 s 222.19 ms remaining ; 6 d  2 h 27 min 18 s 194.29 ms total)
+Sat Apr 15 13:47:41 2023: Iterated ≈70% of D-proof candidates. [2053013941 of approximately 2932877059] (ETC: Mon Apr 17 09:23:38 2023 ; 1 d 19 h 35 min 56 s 873.74 ms remaining ; 6 d  1 h 19 min 49 s 578.95 ms total)
+Sat Apr 15 15:53:50 2023: Iterated ≈72% of D-proof candidates. [2111671482 of approximately 2932877059] (ETC: Mon Apr 17 08:16:37 2023 ; 1 d 16 h 22 min 47 s 203.89 ms remaining ; 6 d      12 min 48 s 585.00 ms total)
+Sat Apr 15 17:50:41 2023: Iterated ≈74% of D-proof candidates. [2170329023 of approximately 2932877059] (ETC: Mon Apr 17 07:00:40 2023 ; 1 d 13 h  9 min 58 s 999.31 ms remaining ; 5 d 22 h 56 min 51 s 535.37 ms total)
+Sat Apr 15 19:55:23 2023: Iterated ≈76% of D-proof candidates. [2228986564 of approximately 2932877059] (ETC: Mon Apr 17 05:59:02 2023 ; 1 d 10 h  3 min 39 s 182.14 ms remaining ; 5 d 21 h 55 min 13 s 258.32 ms total)
+Sat Apr 15 21:54:40 2023: Iterated ≈78% of D-proof candidates. [2287644106 of approximately 2932877059] (ETC: Mon Apr 17 04:53:38 2023 ; 1 d  6 h 58 min 57 s 646.58 ms remaining ; 5 d 20 h 49 min 49 s 302.64 ms total)
+Sat Apr 15 23:53:13 2023: Iterated ≈80% of D-proof candidates. [2346301647 of approximately 2932877059] (ETC: Mon Apr 17 03:50:34 2023 ; 1 d  3 h 57 min 21 s  71.80 ms remaining ; 5 d 19 h 46 min 45 s 358.83 ms total)
+Sun Apr 16 01:41:51 2023: Iterated ≈82% of D-proof candidates. [2404959188 of approximately 2932877059] (ETC: Mon Apr 17 02:38:29 2023 ; 1 d      56 min 38 s 590.51 ms remaining ; 5 d 18 h 34 min 41 s  58.04 ms total)
+Sun Apr 16 03:27:37 2023: Iterated ≈84% of D-proof candidates. [2463616729 of approximately 2932877059] (ETC: Mon Apr 17 01:26:26 2023 ; 21 h 58 min 49 s 254.66 ms remaining ; 5 d 17 h 22 min 37 s 841.00 ms total)
+Sun Apr 16 05:14:20 2023: Iterated ≈86% of D-proof candidates. [2522274270 of approximately 2932877059] (ETC: Mon Apr 17 00:18:51 2023 ; 19 h  4 min 30 s 332.41 ms remaining ; 5 d 16 h 15 min  2 s 373.50 ms total)
+Sun Apr 16 06:55:21 2023: Iterated ≈88% of D-proof candidates. [2580931811 of approximately 2932877059] (ETC: Sun Apr 16 23:07:50 2023 ; 16 h 12 min 28 s 994.31 ms remaining ; 5 d 15 h  4 min  1 s 617.99 ms total)
+Sun Apr 16 08:34:58 2023: Iterated ≈90% of D-proof candidates. [2639589353 of approximately 2932877059] (ETC: Sun Apr 16 21:58:25 2023 ; 13 h 23 min 27 s 702.13 ms remaining ; 5 d 13 h 54 min 37 s  21.19 ms total)
+Sun Apr 16 10:18:39 2023: Iterated ≈92% of D-proof candidates. [2698246894 of approximately 2932877059] (ETC: Sun Apr 16 20:56:28 2023 ; 10 h 37 min 48 s 747.36 ms remaining ; 5 d 12 h 52 min 39 s 341.48 ms total)
+Sun Apr 16 12:02:53 2023: Iterated ≈94% of D-proof candidates. [2756904435 of approximately 2932877059] (ETC: Sun Apr 16 19:57:43 2023 ; 7 h 54 min 50 s  97.71 ms remaining ; 5 d 11 h 53 min 54 s 960.60 ms total)
+Sun Apr 16 13:41:36 2023: Iterated ≈96% of D-proof candidates. [2815561976 of approximately 2932877059] (ETC: Sun Apr 16 18:55:40 2023 ; 5 h 14 min  4 s 480.61 ms remaining ; 5 d 10 h 51 min 52 s  12.66 ms total)
+Sun Apr 16 15:24:09 2023: Iterated ≈98% of D-proof candidates. [2874219517 of approximately 2932877059] (ETC: Sun Apr 16 18:00:04 2023 ; 2 h 35 min 55 s 519.29 ms remaining ; 5 d  9 h 56 min 15 s 958.25 ms total)
+462703300.75 ms (5 d 8 h 31 min 43 s 300.75 ms) taken to collect 506656999 D-proofs of length 37. [iterated 2917037256 condensed detachment proof strings]
+[Copy] Static filtered iteration counts: { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, { 31, 78896376 } }
+[Copy] Static unfiltered iteration counts: { 31, { { 33, 260604052 }, { 35, 874253765 }, { 37, 2917037256 } } },
+7251311.03 ms (2 h 51 s 311.03 ms) taken to filter and order new representative proofs.
+Found 506656999 representative, 1155718565 redundant, and 1254661692 invalid condensed detachment proof strings.
+lengths up to 37 ; amounts per length: {(1,3), (3,6), (5,12), (7,38), (9,89), (11,229), (13,672), (15,1844), (17,5221), (19,15275), (21,44206), (23,129885), (25,385789), (27,1149058), (29,3449251), (31,13194193), (33,45774890), (35,151768744), (37,506656999)} ; 506656999 new representative proofs (1155718565 redundant, 1254661692 invalid)
+Sun Apr 16 18:42:01 2023: Starting to write 506656999 entries to data/dProofs-withConclusions/dProofs37-unfiltered31+.txt.
+1087472.33 ms (18 min 7 s 472.33 ms) taken to print and save 113174356461 bytes of representative condensed detachment proof strings to data/dProofs-withConclusions/dProofs37-unfiltered31+.txt.
+Sun Apr 16 19:08:31 2023: Limited D-proof representative generator complete. [parallel ; 144 hardware thread contexts, limit: 37, unfiltered]
+Sun Apr 16 19:46:36 2023: Process terminated. [pid: 109324, tid:47422293318528]

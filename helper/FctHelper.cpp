@@ -28,6 +28,13 @@ bool cmpStringGrow::operator()(const string& a, const string& b) const {
 		return a < b;
 }
 
+string FctHelper::mpi_nodeName() {
+	int len;
+	ManagedArray<char> arr(MPI_MAX_PROCESSOR_NAME);
+	MPI_Get_processor_name(arr.data, &len);
+	return arr.data;
+}
+
 // Templates for using values, static arrays and dynamic arrays on MPI_Send and MPI_Recv ("block until received", with extra mode "receive only if sent")
 template<typename T, typename Func> void mpi_send(int rank, int count, MPI_Datatype type, const T* val, int dest, int tag, bool debug, Func printer) {
 	if (debug)

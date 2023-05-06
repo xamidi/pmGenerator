@@ -462,7 +462,7 @@ bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_
 }
 
 map<uint32_t, uint64_t>& DlProofEnumerator::iterationCounts_filtered() {
-	static map<uint32_t, uint64_t> _ = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, { 31, 78896376 } };
+	static map<uint32_t, uint64_t> _ = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, { 31, 78896376 }, { 33, 243907474 } };
 	return _;
 }
 
@@ -476,12 +476,13 @@ map<uint32_t, map<uint32_t, uint64_t>>& DlProofEnumerator::iterationCounts_unfil
 			{ 27, {                                                                                     { 29, 27452198 }, { 31, 92103906 } } },
 			{ 29, {                                                                                                       { 31, 84452466 }, { 33, 283384726 } } },
 			{ 31, {                                                                                                                         { 33, 260604052 }, { 35, 874253765 }, { 37, 2917037256 }, { 39, 9795199165 } } },
+			{ 33, {                                                                                                                                            { 35, 805814039 }, { 37, 2703737502 } } },
 	};
 	return _;
 }
 
 map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
-	static map<uint32_t, uint64_t> _ = { { 1, 0 }, { 3, 0 }, { 5, 3 }, { 7, 6 }, { 9, 24 }, { 11, 59 }, { 13, 171 }, { 15, 504 }, { 17, 1428 }, { 19, 4141 }, { 21, 12115 }, { 23, 35338 }, { 25, 104815 }, { 27, 310497 }, { 29, 926015 } };
+	static map<uint32_t, uint64_t> _ = { { 1, 0 }, { 3, 0 }, { 5, 3 }, { 7, 6 }, { 9, 24 }, { 11, 59 }, { 13, 171 }, { 15, 504 }, { 17, 1428 }, { 19, 4141 }, { 21, 12115 }, { 23, 35338 }, { 25, 104815 }, { 27, 310497 }, { 29, 926015 }, { 31, 2782763 } };
 	return _;
 }
 
@@ -749,7 +750,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	auto myTime = []() -> string { time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now()); return strtok(ctime(&time), "\n"); };
 	auto myInfo = [&]() -> string {
 		stringstream ss;
-		ss << "[rank " << mpi_rank << " ; " << mpi_size << " process" << (mpi_size == 1 ? "" : "es") << " ; " << thread::hardware_concurrency() << " local hardware thread contexts]";
+		ss << "[rank " << mpi_rank << " on \"" << FctHelper::mpi_nodeName() << "\" ; " << mpi_size << " process" << (mpi_size == 1 ? "" : "es") << " ; " << thread::hardware_concurrency() << " local hardware thread contexts]";
 		return ss.str();
 	};
 	cout << myTime() + ": MPI-based D-proof representative filter started. " + myInfo() << endl;
@@ -1263,7 +1264,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	//#if (smoothProgress) cout << "[Rank " + to_string(mpi_rank) + "] " + FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) + " ms taken to prepare index distribution of size " + to_string(n) + "." << endl;
 	// e.g. (..., 27, 29, 31): (..., 18.83, 55.38, 166.21) ms taken to prepare index distribution of size (6649, 19416, 56321, 165223, 490604, 1459555, 4375266, 13194193).
 
-	// To register what workload is reservable, and optionally to assign a new workload.
+	// To register what workload is reservable, and / or to assign a new workload.
 	auto split = [](size_t first, size_t end, array<uint64_t, 2>* reg, array<uint64_t, 2>* load) {
 		// NOTE: The balancing strategy involves to request reservable workloads from other processes when the own workload is complete, and to grant reservable workloads to others whenever they request them.
 		//       Reservable workloads are set to 1/d parts of the available owned index range, for d := 'reserveDenominator', but they are omitted when smaller than m := 'minWorkloadSize'.
@@ -1551,7 +1552,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 							} else
 								split(requestingWorkload[0], requestingWorkload[1], nullptr, &requestingWorkload);
 
-							// 2.4.2 Apply workload and finish loading, or continue with more requests if case of rejection
+							// 2.4.2 Apply workload and finish loading, or continue with more requests in case of rejection
 							if (approved) {
 								cout << "[Rank " + to_string(mpi_rank) + "] Workload transfer approved. Starting to work on " + to_string(requestedSource) + ":[" + to_string(requestingWorkload[0]) + ", " + (requestingWorkload[1] ? to_string(requestingWorkload[1] - 1) : "-1") + "]." << endl;
 								workload = requestingWorkload; // update current workload
@@ -1603,7 +1604,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 	} else {
 		while (communicate) {
 			cond.wait(condLock);
-			uint64_t index;
+			uint64_t index = 0;
 			while (toErase.try_pop(index)) // send and clear 'toErase'
 				FctHelper::mpi_sendUint64(mpi_rank, index, 0);
 			if (workerDone && !waitTermination && toErase.empty()) {

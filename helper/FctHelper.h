@@ -34,11 +34,12 @@ struct ManagedArray { // for RAII on dynamic arrays
 	ManagedArray() : data(nullptr) { }
 	ManagedArray(std::size_t size) : data(new T[size]) { }
 	ManagedArray(ManagedArray<T>&& old) : data(old.data) { old.data = nullptr; } // move ; prohibit copying ; data shall be managed by a single object
-	~ManagedArray() { delete data; }
-	void alloc(std::size_t size) { delete data; data = new T[size]; }
+	~ManagedArray() { delete[] data; }
+	void alloc(std::size_t size) { delete[] data; data = new T[size]; }
 };
 
 struct FctHelper {
+	static std::string mpi_nodeName();
 	enum mpi_tag : int {
 		mpi_tag_unspecified = 0, // not used by any helper function
 		mpi_tag_bool = 1,

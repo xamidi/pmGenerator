@@ -25,7 +25,7 @@ struct A {
 
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
 	//#cout << "argc = " << argc << ", argv = { " << [&]() { string s; for (int i = 0; i < argc; i++) { if (i) s += ", "; s += string { argv[i] }; } return s; }() << " }" << endl;
-	auto printUsage = [](const string& error = "") {
+	auto printUsage = [](const string& error) {
 		if (!error.empty())
 			cerr << error << endl;
 		cout << "Usage:\n"
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				"    pmGenerator -a SD data/pmproofs-reducer.txt data/pmproofs.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
 				"    pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d\n"
 				"    pmGenerator -f 0 -o data/dProofs-withoutConclusions_ALL/dProofs -d\n"
-				"    pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt"
+				"    pmGenerator -p -s -d -p -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt\n"
 				"    pmGenerator -m 17 -s" << endl;
 		return 0;
 	};
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	}
 #endif
 	if (argc <= 1)
-		return printUsage();
+		return printUsage("");
 	enum class Task {
 		Generate, // get<1> = limit, get<6> = redundantSchemaRemoval, get<7> = withConclusions, get<8> : whether -i was called
 		CreateReplacements, // get<4> = inputFilePrefix, get<6> = debug, get<7> = withConclusions
@@ -327,7 +327,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				break;
 			case Task::MpiFilter:
 				stringstream ss;
-				ss << "[Main; pid: " << getpid() << ", tid:" << this_thread::get_id() << ", rank " << mpi_rank << " (" << mpi_size << " proc" << (mpi_size == 1 ? "" : "s") << ")] Calling mpi_filterDProofRepresentativeFile(" << get<1>(t) << ", " << bstr(get<6>(t)) << ").";
+				ss << "[Rank " << mpi_rank << " ; pid: " << getpid() << " ; " << mpi_size << " process" << (mpi_size == 1 ? "" : "es") << "] Calling mpi_filterDProofRepresentativeFile(" << get<1>(t) << ", " << bstr(get<6>(t)) << ").";
 				cout << ss.str() << endl;
 				DlProofEnumerator::mpi_filterDProofRepresentativeFile(get<1>(t), get<6>(t));
 				break;
