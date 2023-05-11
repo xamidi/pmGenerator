@@ -1047,9 +1047,8 @@ string::size_type DlCore::traverseFormulas_polishNotation_noRename_numVars(const
 		default:
 			throw domain_error("Unknown Łukasiewicz operator '" + string { c } + "'.");
 		}
-		if (!formulasToTraverse) {
+		if (!formulasToTraverse)
 			break;
-		}
 	}
 	return distance(formula.cbegin(), strIt);
 }

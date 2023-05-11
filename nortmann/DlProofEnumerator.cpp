@@ -25,6 +25,13 @@ using namespace xamid::metamath;
 namespace xamid {
 namespace nortmann {
 
+namespace {
+inline string myTime() {
+	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	return strtok(ctime(&time), "\n");
+}
+}
+
 const vector<const vector<string>*>& DlProofEnumerator::builtinRepresentatives() {
 	static const vector<const vector<string>*> _builtinRepresentatives = { &Resources::dProofRepresentatives1, &Resources::dProofRepresentatives3, &Resources::dProofRepresentatives5, &Resources::dProofRepresentatives7, &Resources::dProofRepresentatives9, &Resources::dProofRepresentatives11, &Resources::dProofRepresentatives13, &Resources::dProofRepresentatives15 };
 	return _builtinRepresentatives;
@@ -217,15 +224,13 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 
 vector<pair<array<uint32_t, 2>, unsigned>> DlProofEnumerator::proofLengthCombinations(unsigned knownLimit) {
 	vector<array<uint32_t, 2>> combinations;
-	for (unsigned i = 1; i <= knownLimit; i += 2) {
-		for (unsigned j = 1; j <= knownLimit; j += 2) {
+	for (unsigned i = 1; i <= knownLimit; i += 2)
+		for (unsigned j = 1; j <= knownLimit; j += 2)
 			if (i <= j && i + j > knownLimit) {
 				combinations.push_back( { i, j });
 				if (i != j)
 					combinations.push_back( { j, i });
 			}
-		}
-	}
 	unsigned a = knownLimit + 2;
 	for (unsigned i = 1; i <= knownLimit; i += 2) {
 		combinations.push_back( { i, a });
@@ -290,16 +295,13 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 			representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
 			// Show progress if requested
-			if (progressData)
-				if (progressData->nextStep()) {
-					uint64_t percentage;
-					string progress;
-					string etc;
-					if (progressData->nextState(percentage, progress, etc)) {
-						time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-						cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
-					}
-				}
+			if (progressData && progressData->nextStep()) {
+				uint64_t percentage;
+				string progress;
+				string etc;
+				if (progressData->nextState(percentage, progress, etc))
+					cout << myTime() << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+			}
 		}
 	});
 	return representativeProofs;
@@ -320,16 +322,13 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 				representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), s);
 
 				// Show progress if requested
-				if (progressData)
-					if (progressData->nextStep()) {
-						uint64_t percentage;
-						string progress;
-						string etc;
-						if (progressData->nextState(percentage, progress, etc)) {
-							time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-							cout << strtok(ctime(&time), "\n") << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
-						}
-					}
+				if (progressData && progressData->nextStep()) {
+					uint64_t percentage;
+					string progress;
+					string etc;
+					if (progressData->nextState(percentage, progress, etc))
+						cout << myTime() << ": Parsed " << (percentage < 10 ? " " : "") << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+				}
 			}
 		});
 	}
@@ -352,16 +351,13 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]);
 
 			// Show progress if requested
-			if (progressData)
-				if (progressData->nextStep()) {
-					uint64_t percentage;
-					string progress;
-					string etc;
-					if (progressData->nextState(percentage, progress, etc)) {
-						time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-						cout << strtok(ctime(&time), "\n") << ": Inserted " << (percentage < 10 ? " " : "") << percentage << "% of D-proof conclusions. [" << progress << "] (" << etc << ")" << endl;
-					}
-				}
+			if (progressData && progressData->nextStep()) {
+				uint64_t percentage;
+				string progress;
+				string etc;
+				if (progressData->nextState(percentage, progress, etc))
+					cout << myTime() << ": Inserted " << (percentage < 10 ? " " : "") << percentage << "% of D-proof conclusions. [" << progress << "] (" << etc << ")" << endl;
+			}
 		});
 	}
 	return representativeProofs;
@@ -371,8 +367,12 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
-	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Next iteration amount counter started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+	auto myInfo = [&]() -> string {
+		stringstream ss;
+		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]";
+		return ss.str();
+	};
+	cout << myTime() << ": Next iteration amount counter started. " << myInfo() << endl;
 	string filePrefix = withConclusions ? "data/dProofs-withConclusions/dProofs" : "data/dProofs-withoutConclusions/dProofs";
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
@@ -400,8 +400,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << endl;
 
 	// 4. Iterate and count candidates of length 'wordLengthLimit'.
-	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Starting to iterate D-proof candidates of length " << wordLengthLimit << "." << endl;
+	cout << myTime() << ": Starting to iterate D-proof candidates of length " << wordLengthLimit << "." << endl;
 	uint64_t counter;
 	const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 	const unsigned knownLimit = wordLengthLimit - 2;
@@ -429,8 +428,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	//      31              :  35628.12 ms (      35 s 628.12 ms) taken to iterate  78896376 ;  78896376 / 44934432 ≈ 1.75581 ;  35628.12 / 19397.85 ≈ 1.83670
 	//      33-unfiltered31+: 106942.91 ms (1 min 46 s 942.90 ms) taken to iterate 260604052 ; 260604052 / 78896376 ≈ 3.30312 ; 106942.91 / 35628.12 ≈ 3.00164
 	cout << "[Copy] Next iteration count (" << (redundantSchemaRemoval || unfilteredStart == wordLengthLimit ? "filtered" : "unfiltered" + to_string(unfilteredStart) + "+") << "): { " << wordLengthLimit << ", " << counter << " }" << endl;
-	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Next iteration amount counter complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+	cout << myTime() << ": Next iteration amount counter complete. " << myInfo() << endl;
 }
 
 bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration) {
@@ -488,8 +486,12 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
-	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+	auto myInfo = [&]() -> string {
+		stringstream ss;
+		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]";
+		return ss.str();
+	};
+	cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. " << myInfo() << endl;
 	string filePrefix = withConclusions ? "data/dProofs-withConclusions/dProofs" : "data/dProofs-withoutConclusions/dProofs";
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
@@ -533,8 +535,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			return;
 	}
 	if (start > limit) {
-		time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator skipped. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+		cout << myTime() << ": Limited D-proof representative generator skipped. " << myInfo() << endl;
 		return;
 	}
 
@@ -592,8 +593,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			}
 		}
 
-		time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Starting to generate D-proof representatives of length " << wordLengthLimit << "." << endl;
+		cout << myTime() << ": Starting to generate D-proof representatives of length " << wordLengthLimit << "." << endl;
 
 		// 4.2 Iterate proofs of length 'wordLengthLimit' and generate their conclusions.
 		uint64_t counter;
@@ -699,8 +699,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		{
 			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
 				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
-			time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives.back().size() << " entries to " << file.string() << "." << endl;
+			cout << myTime() << ": Starting to write " << allRepresentatives.back().size() << " entries to " << file.string() << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			if (withConclusions)
@@ -729,8 +728,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		}
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 	}
-	time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	cout << strtok(ctime(&time), "\n") << ": Limited D-proof representative generator complete. [parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]" << endl;
+	cout << myTime() << ": Limited D-proof representative generator complete. " << myInfo() << endl;
 }
 
 void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLimit, bool smoothProgress) {
@@ -745,7 +743,6 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		cerr << "Single-process call. Utilize multiple processes via \"mpiexec -n <np> ./pmGenerator <args>\" or \"srun -n <np> ./pmGenerator <args>\" (or similar), for np > 1." << endl;
 
 	// 1. Load representative D-proof strings.
-	auto myTime = []() -> string { time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now()); return strtok(ctime(&time), "\n"); };
 	auto myInfo = [&]() -> string {
 		stringstream ss;
 		ss << "[rank " << mpi_rank << " on \"" << FctHelper::mpi_nodeName() << "\" ; " << mpi_size << " process" << (mpi_size == 1 ? "" : "es") << " ; " << thread::hardware_concurrency() << " local hardware thread contexts]";
@@ -908,8 +905,7 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& inputF
 		{
 			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
 				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
-			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << result.size() << " entries to " << file.string() << "." << endl;
+			cout << myTime() << ": Starting to write " << result.size() << " entries to " << file.string() << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			for (const pair<const string, string>& p : result) {
@@ -961,8 +957,7 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& inp
 		{
 			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
 				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
-			time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-			cout << strtok(ctime(&time), "\n") << ": Starting to write " << allRepresentatives[wordLengthLimit].size() << " entries to " << file.string() << "." << endl;
+			cout << myTime() << ": Starting to write " << allRepresentatives[wordLengthLimit].size() << " entries to " << file.string() << "." << endl;
 			ofstream fout(file, fstream::out | fstream::binary);
 			bool first = true;
 			for (const string& s : allRepresentatives[wordLengthLimit])
@@ -1147,16 +1142,13 @@ void DlProofEnumerator::_findProvenFormulas(tbb::concurrent_unordered_map<string
 			invalidCounter++;
 
 		// Show progress if requested
-		if (progressData)
-			if (progressData->nextStep()) {
-				uint64_t percentage;
-				string progress;
-				string etc;
-				if (progressData->nextState(percentage, progress, etc)) {
-					time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-					cout << strtok(ctime(&time), "\n") << ": Iterated " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
-				}
-			}
+		if (progressData && progressData->nextStep()) {
+			uint64_t percentage;
+			string progress;
+			string etc;
+			if (progressData->nextState(percentage, progress, etc))
+				cout << myTime() << ": Iterated " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
+		}
 	};
 	switch (mode) {
 	case DlProofEnumeratorMode::Generic:
@@ -1224,16 +1216,13 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 					toErase.emplace(&it->first, it);
 
 					// Show progress if requested
-					if (progressData)
-						if (progressData->nextStep()) {
-							uint64_t percentage;
-							string progress;
-							string etc;
-							if (progressData->nextState(percentage, progress, etc)) {
-								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-								cout << strtok(ctime(&time), "\n") << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
-							}
-						}
+					if (progressData && progressData->nextStep()) {
+						uint64_t percentage;
+						string progress;
+						string etc;
+						if (progressData->nextState(percentage, progress, etc))
+							cout << myTime() << ": Removed " << (progressData->maximumEstimated ? "≈" : "") << (percentage < 10 ? " " : "") << percentage << "% of redundant conclusions. [" << progress << "] (" << etc << ")" << endl;
+					}
 				}
 			}
 		}
@@ -1413,16 +1402,13 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 					}
 
 					// Show progress if requested ; NOTE: Shouldn't be requested for non-main processes.
-					if (progressData)
-						if (progressData->nextStep()) {
-							uint64_t percentage;
-							string progress;
-							string etc;
-							if (progressData->nextState(percentage, progress, etc)) {
-								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-								cout << string(strtok(ctime(&time), "\n")) + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
-							}
-						}
+					if (progressData && progressData->nextStep()) {
+						uint64_t percentage;
+						string progress;
+						string etc;
+						if (progressData->nextState(percentage, progress, etc))
+							cout << myTime() + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
+					}
 				} else if (!isMainProc && !toErase.empty())
 					cond.notify_one();
 			});
@@ -1503,12 +1489,11 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 				if (loading) {
 					if (needToRequest) {
 						// 2.1 Request workloads from other processes
-						for (int source = 0; source < mpi_size; source++) {
+						for (int source = 0; source < mpi_size; source++)
 							if (source != mpi_rank && reservableWorkloads[source][0] != UINT64_MAX) {
 								FctHelper::mpi_sendBool(mpi_rank, true, source, FctHelper::mpi_tag_custom + mpi_tag_request_reservable);
 								pendingSources.insert(source);
 							}
-						}
 						needToRequest = false;
 						//#int r = 0; cout << "[Rank " + to_string(mpi_rank) + "] Requested workloads from ranks " + FctHelper::setString(pendingSources) + ". Old reservable workloads: " + FctHelper::vectorStringF(reservableWorkloads, [&](const array<uint64_t, 2>& a) { return to_string(r++) + ":[" + to_string(a[0]) + ", " + (a[1] ? to_string(a[1] - 1) : "-1") + "]"; }, "{ ", " }") + "." << endl;
 						if (pendingSources.empty()) { // all other processes are done as well
@@ -1580,25 +1565,21 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 		int numComplete = 0;
 		uint64_t index;
 		while (communicate) {
-			while (FctHelper::mpi_tryRecvUint64(mpi_rank, MPI_ANY_SOURCE, index)) {
+			while (FctHelper::mpi_tryRecvUint64(mpi_rank, MPI_ANY_SOURCE, index))
 				if (index == UINT64_MAX) // notification that the process is done
 					numComplete++;
 				else {
 					toErase_mainProc.insert(index);
 
 					// Show progress if requested
-					if (progressData)
-						if (progressData->nextStep()) {
-							uint64_t percentage;
-							string progress;
-							string etc;
-							if (progressData->nextState(percentage, progress, etc)) {
-								time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-								cout << string(strtok(ctime(&time), "\n")) + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
-							}
-						}
+					if (progressData && progressData->nextStep()) {
+						uint64_t percentage;
+						string progress;
+						string etc;
+						if (progressData->nextState(percentage, progress, etc))
+							cout << myTime() + ": Removed " + (progressData->maximumEstimated ? "≈" : "") + (percentage < 10 ? " " : "") + to_string(percentage) + "% of redundant conclusions. [" + progress + "] (" + etc + ")" << endl;
+					}
 				}
-			}
 			if (numComplete + 1 == mpi_size) {
 				// NOTE: The MPI standard guarantees that messages are received in the order they are sent ("non-overtaking messages", https://www.mpi-forum.org/docs/mpi-1.1/mpi-11-html/node41.html).
 				//       Therefore, since UINT64_MAX is the last message for each rank, all messages have been received.
@@ -1611,7 +1592,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 			else
 				this_thread::yield();
 		}
-	} else {
+	} else
 		while (communicate) {
 			cond.wait(condLock);
 			uint64_t index = 0;
@@ -1625,7 +1606,6 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 			if (checkRequests) // timed notification to check for incoming balancing requests from other processes
 				handleBalancingRequests();
 		}
-	}
 	//#cout << "[Rank " + to_string(mpi_rank) + "] Communication complete, waiting for worker to join main thread." << endl;
 	workerThread.join();
 	timerThread.join();

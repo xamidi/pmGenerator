@@ -312,7 +312,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 		}
 		bool shortening = true;
 		string line;
-		while (getline(fin, line)) {
+		while (getline(fin, line))
 			if (line.empty()) {
 				if (shortening)
 					shortening = false;
@@ -328,7 +328,6 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 				else
 					stylingReplacements.emplace_back(line.substr(0, i), line.substr(i + 1));
 			}
-		}
 		if (debug)
 			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to read " << shorteningReplacements.size() << " shortening replacements and " << stylingReplacements.size() << " styling replacements." << endl;
 		//#cout << "shorteningReplacements = " << FctHelper::vectorStringF(shorteningReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
