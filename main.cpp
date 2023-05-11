@@ -13,14 +13,17 @@ using namespace xamid::metamath;
 using namespace xamid::nortmann;
 
 struct A {
-	A() {
+	string myTime() {
 		time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Process started. [pid: " << getpid() << ", tid:" << this_thread::get_id() << "]" << endl;
+		return strtok(ctime(&time), "\n");
 	}
-	~A() {
-		time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-		cout << strtok(ctime(&time), "\n") << ": Process terminated. [pid: " << getpid() << ", tid:" << this_thread::get_id() << "]" << endl;
+	string myInfo() {
+		stringstream ss;
+		ss << "[pid: " << getpid() << ", tid:" << this_thread::get_id() << "]";
+		return ss.str();
 	}
+	A() { cout << myTime() << ": Process started. " << myInfo() << endl; }
+	~A() { cout << myTime() << ": Process terminated. " << myInfo() << endl; }
 } a;
 
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
@@ -245,12 +248,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		if (tasks.size() > 1)
 			return printUsage("Invalid argument \"" + mpiArg + "\": Cannot be combined with further commands.");
 
-		// Initialize the MPI library
+		// Initialize the MPI library.
 		int provided;
 		MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
 		if (provided < MPI_THREAD_FUNNELED) {
 			cerr << "Missing MPI support. (provided: " << provided << ", requested: " << MPI_THREAD_FUNNELED << ") Aborting." << endl;
-			MPI_Finalize(); // Finalize the MPI library
+			MPI_Finalize(); // Finalize the MPI library.
 			return 0;
 		}
 
@@ -336,6 +339,6 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		cerr << "ERROR exception thrown: " << e.what() << endl;
 	}
 	if (!mpiArg.empty())
-		MPI_Finalize(); // Finalize the MPI library
+		MPI_Finalize(); // Finalize the MPI library.
 	return 0;
 }
