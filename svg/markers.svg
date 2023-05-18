@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="33px" height="8px">
+<defs>
+	<style><![CDATA[
+		.a { fill: #dcdcdc; }
+		.b { stroke: #dcdcdc; stroke-width: 1px; }
+		.s { display: none; }
+		.s:target { display: inline; }
+		]]>
+	</style>
+	<circle id="d2" cx="4" cy="4" r="1.5" class="a"/>
+	<circle id="d1" cx="16" cy="4" r="1.5" class="a"/>
+	<circle id="d0" cx="28" cy="4" r="1.5" class="a"/>
+	<rect id="f2" x=".5" y=".5" width="7" height="7" fill="#32cd32" class="b"/>
+	<rect id="f1" x="12.5" y=".5" width="7" height="7" fill="#00a2e8" class="b"/>
+	<rect id="f0" x="24.5" y=".5" width="7" height="7" fill="#ff7f27" class="b"/>
+</defs>
+<use xlink:href="#d0"/>
+<use xlink:href="#d1"/>
+<use xlink:href="#d2"/>
+<!-- The bits of the id as a number indicate which rectangles are filled. -->
+<g id="1" class="s">
+	<use xlink:href="#f0"/>
+</g>
+<g id="2" class="s">
+	<use xlink:href="#f1"/>
+</g>
+<g id="3" class="s">
+	<use xlink:href="#f0"/>
+	<use xlink:href="#f1"/>
+</g>
+<g id="4" class="s">
+	<use xlink:href="#f2"/>
+</g>
+<g id="5" class="s">
+	<use xlink:href="#f0"/>
+	<use xlink:href="#f2"/>
+</g>
+<g id="6" class="s">
+	<use xlink:href="#f1"/>
+	<use xlink:href="#f2"/>
+</g>
+<g id="7" class="s">
+	<use xlink:href="#f0"/>
+	<use xlink:href="#f1"/>
+	<use xlink:href="#f2"/>
+</g>
+</svg>

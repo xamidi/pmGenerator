@@ -29,6 +29,8 @@ data/*
 !data/dProofs-with*/dProofs*.7z
 log/*
 !log/*.log
+svg/*
+!svg/*.svg
 Debug*/
 Release*/
 
