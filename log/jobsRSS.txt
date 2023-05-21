@@ -90,3 +90,21 @@ $ sacct -j 34332378 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,M
 > 34332378.ba+                   144  COMPLETED      0:0 5-11:46:50 508686924K 
 > 34332378.ex+                   144  COMPLETED      0:0 5-11:46:50          0 
 508686924 / 1024^2 = 485.121654510498046875 ≈ 485.12
+
+37-33:
+$ sacct -j 34922296 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 34922296       c16s_low        144  COMPLETED      0:0 4-03:31:48            
+> 34922296.ba+                   144  COMPLETED      0:0 4-03:31:48 468187880K 
+> 34922296.ex+                   144  COMPLETED      0:0 4-03:31:49          0 
+468187880 / 1024^2 = 446.49875640869140625 ≈ 446.50
+
+37-35:
+$ sacct -j 34923301 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 34923301       c16s_low        144  COMPLETED      0:0 4-06:22:26            
+> 34923301.ba+                   144  COMPLETED      0:0 4-06:22:26 428217508K 
+> 34923301.ex+                   144  COMPLETED      0:0 4-06:22:26          0 
+428217508 / 1024^2 = 408.380039215087890625 ≈ 408.38
