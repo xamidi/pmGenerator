@@ -27,8 +27,9 @@ data/*
 !data/pmproofs-old.txt
 !data/dProofs-with*/
 !data/dProofs-with*/dProofs*.7z
-log/*
+!log/jobsRSS.txt
 !log/*.log
+!log/utilization/*.log
 svg/*
 !svg/*.svg
 Debug*/
