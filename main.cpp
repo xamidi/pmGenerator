@@ -1,4 +1,5 @@
 #include "helper/FctHelper.h"
+#include "helper/Version.h"
 #include "metamath/DRuleReducer.h"
 #include "nortmann/DlProofEnumerator.h"
 
@@ -31,7 +32,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	auto printUsage = [](const string& error = "") {
 		if (!error.empty())
 			cerr << error << endl;
-		cout << "Usage:\n"
+		cout << "\n" << xamid::version << " ; repository at " << xamid::repository;
+		cout << "\nUsage:\n"
 				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit> [-s]\n"
 				"    -g: Generate proof files\n"
 				"        -u: unfiltered (significantly faster, but generates redundant proofs)\n"

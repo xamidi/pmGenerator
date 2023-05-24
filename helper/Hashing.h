@@ -1,7 +1,7 @@
 #ifndef XAMID_HELPER_HASHING_H
 #define XAMID_HELPER_HASHING_H
 
-// Idea: http://stackoverflow.com/questions/7110301/generic-hash-for-tuples-in-unordered-map-unordered-set
+// Idea: http://stackoverflow.com/q/7110301
 
 #include <cstddef>
 #include <functional>
@@ -16,7 +16,7 @@ namespace helper {
 // Reciprocal of the golden ratio helps spread entropy
 //     and handles duplicates.
 // See Mike Seymour in magic-numbers-in-boosthash-combine:
-//     http://stackoverflow.com/questions/4948780
+//     http://stackoverflow.com/q/4948780
 
 // General function to combine sets of hashable values to one hash
 template<class T>
