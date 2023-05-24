@@ -49,6 +49,9 @@ digraph {
 	ProgressData -> vector [color=red]
 	Resources -> string [color=red]
 	Resources -> vector [color=red]
+	Version -> cstddef [color=red]
+	Version -> cstdint [color=red]
+	Version -> type_traits [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\helper" {
 		FctHelper
 		FctHelper
@@ -61,8 +64,10 @@ digraph {
 		ProgressData
 		Resources
 		Resources
+		Version
 	}
 	main -> FctHelper [color=blue]
+	main -> Version [color=blue]
 	main -> DRuleReducer [color=blue]
 	main -> DlProofEnumerator [color=blue]
 	main -> cstring [color=blue]
