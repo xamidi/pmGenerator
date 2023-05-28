@@ -552,7 +552,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 		};
 		auto updatePrimitives = [&]() {
 			for (set<shared_ptr<DlFormula>>::iterator it = usedPrimitives.begin(); it != usedPrimitives.end();)
-				if (it->unique()) { // default: used by freePrimitives or primitives
+				if (it->use_count() == 1) {
 					freePrimitives.emplace(*it);
 					it = usedPrimitives.erase(it);
 				} else
@@ -941,7 +941,7 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 		string_view::size_type opEndOffset = source.find(' ', opBeginOffset);
 		if (opEndOffset == string_view::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". There should be a binary operator ending with ' '.");
-		binOp = string(source.begin() + opBeginOffset, opEndOffset - opBeginOffset);
+		binOp = string(source.data() + opBeginOffset, opEndOffset - opBeginOffset);
 		return opEndOffset;
 	};
 	auto applyUnaryOperators = [&](shared_ptr<DlFormula>& target, const vector<DlOperator>& unaryOperators) -> void {
@@ -968,7 +968,7 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmPlFormula(const string& strCo
 		string_view::size_type varEndOffset = source.find(' ', varBeginOffset);
 		if (varEndOffset == string_view::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain a variable ending with ' '.");
-		assignVariableTerm(target, string(varBegin, varEndOffset - varBeginOffset), unaryOperators);
+		assignVariableTerm(target, string(&*varBegin, varEndOffset - varBeginOffset), unaryOperators);
 		return varEndOffset;
 	};
 	auto readAndAssignEndingVariableTerm = [&](const string_view& source, shared_ptr<DlFormula>& target) -> void {

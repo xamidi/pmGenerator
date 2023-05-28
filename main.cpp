@@ -6,7 +6,11 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#ifdef _MSC_VER
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 
 using namespace std;
 using namespace xamid::helper;
@@ -116,7 +120,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Missing parameter for \"-g\".");
 			try {
 				tasks.emplace_back(Task::Generate, stoi(argv[++i]), "", "", "", "", true, true, false, false, 0, 0);
-			} catch (exception& e) {
+			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-g\".");
 			}
 			break;
@@ -211,7 +215,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Missing parameter for \"-x\".");
 			try {
 				get<10>(tasks.back()) = stoll(argv[++i]); // get<10> = cutX
-			} catch (exception& e) {
+			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-x\".");
 			}
 			break;
@@ -222,7 +226,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Missing parameter for \"-y\".");
 			try {
 				get<11>(tasks.back()) = stoll(argv[++i]); // get<11> = cutY
-			} catch (exception& e) {
+			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-y\".");
 			}
 			break;

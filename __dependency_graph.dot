@@ -76,6 +76,7 @@ digraph {
 	main -> cstring [color=blue]
 	main -> ctime [color=blue]
 	main -> iostream [color=blue]
+	main -> process [color=blue]
 	main -> unistd [color=blue]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
 		main
