@@ -613,7 +613,7 @@ vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<siz
 		};
 		auto updatePrimitives = [&]() {
 			for (set<shared_ptr<DlFormula>>::iterator it = usedPrimitives.begin(); it != usedPrimitives.end();)
-				if (it->unique()) { // default: used by freePrimitives or primitives
+				if (it->unique()) {
 					freePrimitives.emplace(*it);
 					it = usedPrimitives.erase(it);
 				} else

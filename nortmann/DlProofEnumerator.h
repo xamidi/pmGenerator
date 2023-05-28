@@ -141,7 +141,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	std::condition_variable cond;
 	std::vector<std::thread> threads;
 	std::atomic<bool> incomplete { true }; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
-	auto worker = [&process, &queues, &cond, &mtxs, &incomplete](unsigned t) {
+	auto worker = [&process, &queues, &tinyBound, &cond, &mtxs, &incomplete](unsigned t) {
 		std::deque<std::string>& queue = queues[t];
 		std::size_t size = 0;
 		// NOTE: It is important that we update 'size' here in case !incomplete, since 'queue' might become
