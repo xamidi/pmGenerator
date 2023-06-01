@@ -4,14 +4,16 @@
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
      3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (289 occurences)
-     4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<img src\=\"icon\/icon-readme\.png\" align\=\"left\">[/REPLACE] (1 occurence)
-     5. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
-     6. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (570 occurences)
-     7. [FIND]≈\  [/FIND], [REPLACE]≈  [/REPLACE] (24 occurences)
-     8. [FIND]  \  [/FIND], [REPLACE]    [/REPLACE] (15+4 occurences)
-     (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4 to 8.)
+     4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<article class\=\"container-lg\"><img src\=\"icon\/icon-readme\.png\" alt\=\"icon\" style=\"float: left; padding-right: 20px; margin-top: -24px;\">[/REPLACE] (1 occurence)
+     5. RegEx replace-all: [FIND]<\/div><\/div><\/body>[/FIND], [REPLACE]<\/article><\/div><\/div><\/body>[/REPLACE] (1 occurence)
+     6. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidi-pmgenerator\"[/REPLACE] (1 occurence)
+     7. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (570 occurences)
+     8. RegEx replace-all: [FIND]≈\  [/FIND], [REPLACE]≈  [/REPLACE] (24 occurences)
+     9. RegEx replace-all: [FIND]  \  [/FIND], [REPLACE]    [/REPLACE] (15+4 occurences)
+     (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4 to 9.)
      -->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>README</title>
@@ -21,19 +23,19 @@
  * Gained from https://github.com/KrauseFx/markdown-to-html-github-style/blob/master/style.css (partly modified)
  */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
-    font-size: 16px;
-    line-height: 1.5;
-    word-wrap: break-word;
-    box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  box-sizing: border-box;
   color: #111;
   background-color: #fff;
-  /*-webkit-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
   -webkit-font-feature-settings: "kern" 1;
   -moz-font-feature-settings: "kern" 1;
   -o-font-feature-settings: "kern" 1;
   font-feature-settings: "kern" 1;
-  font-kerning: normal;*/
+  font-kerning: normal;
   padding: 30px;
 }
 body > #content {
@@ -57,15 +59,19 @@ hr {
 }
 a {
   color: #0366d6;
-  text-decoration: none; }
-  a:visited {
-    color: #0366d6; }
-  a:hover {
-    color: #0366d6;
-    text-decoration: underline; }
+  text-decoration: none;
+}
+a:visited {
+  color: #0366d6;
+}
+a:hover {
+  color: #0366d6;
+  text-decoration: underline;
+}
 pre {
   background-color: #f6f8fa;
   border-radius: 3px;
+  font-size: 85%;
   line-height: 1.45;
   overflow: auto;
   padding: 16px;
@@ -83,6 +89,7 @@ pre > code {
   background-color: transparent;
   border: 0;
   display: inline;
+  font-size: inherit;
   line-height: inherit;
   margin: 0;
   overflow: visible;
@@ -108,8 +115,8 @@ blockquote * {
   color: #6a737d !important;
 }
 table {
-    width: max-content;
-    max-width: 100%;
+  width: max-content;
+  max-width: 100%;
   line-height: 1.5;
   border-spacing: 3px;
   display: block;
@@ -139,87 +146,97 @@ img {
 p {
   line-height: 24px;
   font-size: 16px;
-  color: #24292e; }
+  color: #24292e;
+}
 ul {
-  margin-top: 0; }
+  margin-top: 0;
+}
 li {
   color: #24292e;
   font-size: 16px;
-  line-height: 1.5; }
+  line-height: 1.5;
+}
 li + li {
-  margin-top: 0.25em; }
+  margin-top: 0.25em;
+}
 a:visited {
-  color: #0366d6; }
+  color: #0366d6;
+}
 h1, h2 {
   border-bottom: 1px solid #eaecef;
-  color: #111; }
+  color: #111;
+}
 
 /**
  * Gained from analysis in Mozilla Firefox inspector
  */
 .markdown-container {
-    max-width: 1214px;
-    margin: auto;
-    background-color: #fff;
-    border: 1px solid #e1e4e8;
-    border-radius: 6px;
+  max-width: 1214px;
+  margin: auto;
+  background-color: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
 }
 .markdown-container img {
-    background-color: #fff;
+  background-color: #fff;
 }
 .markdown-container table img {
-    background-color: transparent;
+  background-color: transparent;
 }
 #readme {
-    padding-top: 40px !important;
-    padding-bottom: 40px !important;
-    padding-left: 101px !important;
-    padding-right: 101px !important;
+  padding: 40px !important;
+}
+.container-lg {
+  max-width: 1012px;
+  margin-right: auto;
+  margin-left: auto;
 }
 img {
-    border-style: none;
-    box-sizing: initial;
-    margin-left: 0;
-    margin-right: 0;
+  border-style: none;
+  box-sizing: initial;
+  margin-left: 0;
+  margin-right: 0;
 }
 img[align="left"] {
-    padding-right: 20px;
+  padding-right: 20px;
 }
 img[align=right] {
-    padding-left:20px;
+  padding-left:20px;
 }
 h1, h2, h3, h4, h5, h6 {
-    margin-top: 24px;
-    margin-bottom: 16px;
-    font-weight: 600;
-    line-height: 1.25;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 h1, h2 {
-    padding-bottom: .3em;
+  padding-bottom: .3em;
+}
+h1 {
+  font-size: 2em;
 }
 h3 {
-    font-size: 1.25em;
+  font-size: 1.25em;
 }
 ol, ul {
-    padding-left: 2em;
+  padding-left: 2em;
 }
 ol ol, ul ol {
-    list-style-type: lower-roman;
+  list-style-type: lower-roman;
 }
 ol ol ol, ol ul ol, ul ol ol, ul ul ol {
-    list-style-type: lower-alpha;
+  list-style-type: lower-alpha;
 }
 li br {
-    box-sizing: border-box;
-    line-height: 1.5;
-    margin-bottom: 6px;
+  box-sizing: border-box;
+  line-height: 1.5;
 }
 b, strong {
-    font-weight: 600;
+  font-weight: 600;
 }
 </style>
 </head>
-<body><div class="markdown-container ltr"><div id="readme"><img src="icon/icon-readme.png" align="left">
+<body><div class="markdown-container ltr"><div id="readme"><article class="container-lg"><img src="icon/icon-readme.png" alt="icon" style="float: left; padding-right: 20px; margin-top: -24px;">
 <h1 id="xamidi-pmgenerator">@xamidi/pmGenerator</h1>
 <p>Code initially extracted from <a href="https://github.com/deontic-logic/proof-tool" title="GitHub repository">deontic-logic/proof-tool</a> (still private; <a href="https://deontic-logic.github.io/readme.html">readme</a>). Can be used to generate improved versions of <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> of the <a href="https://us.metamath.org/mmsolitaire/mms.html" title="us.metamath.org/mmsolitaire/mms.html">mmsolitaire</a> project.<br>Exemplary generated results are available at <a href="https://github.com/xamidi/mmsolitaire" title="GitHub repository">xamidi/mmsolitaire</a>.<br>Eligible for high-performance computing. If you have access to a powerful computer, please consider to use this tool to further contribute to our knowledge regarding minimal proofs.<br>The following table exemplary shows progress that has already been made.</p>
 <table>
@@ -396,4 +413,4 @@ srun -n 6 ./pmGenerator -m 31
 <li><a href="https://github.com/xamidi/pmGenerator/tree/master">C++20 branch</a></li>
 </ul>
 <p><sup>✻</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project <a href="pdf/rwth1392_abstract.pdf" title="View rwth1392_abstract.pdf">rwth1392</a>.</sub></p>
-</div></div></body></html>
+</article></div></div></body></html>
