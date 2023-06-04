@@ -17,11 +17,10 @@
 
 #define BUILD_YEAR \
 	( \
-		(__DATE__[ 7] >= '0' && __DATE__[ 7] <= '9' && \
-		 __DATE__[ 8] >= '0' && __DATE__[ 8] <= '9' && \
-		 __DATE__[ 9] >= '0' && __DATE__[ 9] <= '9' && \
-		 __DATE__[10] >= '0' && __DATE__[10] <= '9') ? \
-		(__DATE__[7] - '0') * 1000 +  (__DATE__[8] - '0') * 100 + (__DATE__[9] - '0') * 10 + __DATE__[10] - '0' : UINT32_MAX \
+		(__DATE__[10] >= '0' && __DATE__[10] <= '9') ? \
+		(__DATE__[ 7] >= '0' && __DATE__[ 7] <= '9' ? (__DATE__[7] - '0') * 1000 : 0) + \
+		(__DATE__[ 8] >= '0' && __DATE__[ 8] <= '9' ? (__DATE__[8] - '0') * 100 : 0) + \
+		(__DATE__[ 9] >= '0' && __DATE__[ 9] <= '9' ? (__DATE__[9] - '0') * 10 : 0) + (__DATE__[10] - '0') : UINT32_MAX \
 	)
 static_assert(BUILD_YEAR != UINT32_MAX, "indeterminate build year");
 
@@ -45,9 +44,8 @@ static_assert(BUILD_MONTH != UINT32_MAX, "indeterminate build month");
 
 #define BUILD_DAY \
 	( \
-		(__DATE__[4] >= '0' && __DATE__[4] <= '9' && \
-		 __DATE__[5] >= '0' && __DATE__[5] <= '9') ? \
-		(__DATE__[4] - '0') * 10 + __DATE__[5] - '0' : UINT32_MAX \
+		(__DATE__[5] >= '0' && __DATE__[5] <= '9') ? \
+		(__DATE__[4] >= '0' && __DATE__[4] <= '9' ? (__DATE__[4] - '0') * 10 : 0) + (__DATE__[5] - '0') : UINT32_MAX \
 	)
 static_assert(BUILD_DAY != UINT32_MAX, "indeterminate build day");
 
