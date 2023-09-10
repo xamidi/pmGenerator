@@ -1,5 +1,5 @@
-#ifndef XAMID_TREE_TREENODE_H
-#define XAMID_TREE_TREENODE_H
+#ifndef XAMIDI_TREE_TREENODE_H
+#define XAMIDI_TREE_TREENODE_H
 
 #include "../helper/ICloneable.h"
 #include "../helper/IPrintable.h"
@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace tree {
 
 // Represents a tree structure. Nodes are associated with values of type IPrintable.
@@ -22,7 +22,7 @@ namespace tree {
 // Attribute vector<uint32_t> _meaning can be used for information composition such as by PossibilitiesListTreeNode.
 template<typename T>
 class TreeNode: public helper::IPointToPrintableValue<T>, public helper::ICloneable<TreeNode<T>> {
-	static_assert(std::is_base_of<helper::IPrintable, T>::value, "T must derive from xamid::helper::IPrintable.");
+	static_assert(std::is_base_of<helper::IPrintable, T>::value, "T must derive from xamidi::helper::IPrintable.");
 	typedef std::unordered_map<const TreeNode<T>*, std::shared_ptr<TreeNode<T>>> TreeNodeCloneMap;
 	std::shared_ptr<T> _value;
 	std::vector<std::shared_ptr<TreeNode<T>>> _children;
@@ -236,4 +236,4 @@ public:
 }
 }
 
-#endif // XAMID_TREE_TREENODE_H
+#endif // XAMIDI_TREE_TREENODE_H

@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_VERSION_H
-#define XAMID_HELPER_VERSION_H
+#ifndef XAMIDI_HELPER_VERSION_H
+#define XAMIDI_HELPER_VERSION_H
 
 #include <cstddef>
 #include <cstdint>
@@ -71,7 +71,7 @@ static_assert(BUILD_MINUTE != UINT32_MAX, "indeterminate build minute");
 	)
 static_assert(BUILD_SECOND != UINT32_MAX, "indeterminate build second");
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 // NOTE: More features available at https://github.com/xamidi/pmGenerator/blob/dd29163745c38c3e8d6dd871be6e3929f4dcaa45/helper/Version.h?ts=4#L79-L252
 //       The following approach is rather sophisticated (and a proof of concept) for being able to assign concatenated strings to 'constexpr const char*' variables in C++11.
@@ -209,4 +209,4 @@ constexpr const char* repository = helper::__repository::value;
 
 }
 
-#endif // XAMID_HELPER_VERSION_H
+#endif // XAMIDI_HELPER_VERSION_H

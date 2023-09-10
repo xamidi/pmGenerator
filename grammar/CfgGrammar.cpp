@@ -5,9 +5,9 @@
 #include <boost/algorithm/string.hpp>
 
 using namespace std;
-using namespace xamid::helper;
+using namespace xamidi::helper;
 
-namespace xamid {
+namespace xamidi {
 namespace grammar {
 
 CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarString) :

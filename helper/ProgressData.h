@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_PROGRESSDATA_H
-#define XAMID_HELPER_PROGRESSDATA_H
+#ifndef XAMIDI_HELPER_PROGRESSDATA_H
+#define XAMIDI_HELPER_PROGRESSDATA_H
 
 #include <atomic>
 #include <chrono>
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 struct ProgressData {
@@ -30,4 +30,4 @@ struct ProgressData {
 }
 }
 
-#endif // XAMID_HELPER_PROGRESSDATA_H
+#endif // XAMIDI_HELPER_PROGRESSDATA_H

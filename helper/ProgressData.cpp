@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 ProgressData::ProgressData(unsigned percentageStepSize, uint64_t maximum, bool estimated) :

@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_FWDTBB_H
-#define XAMID_HELPER_FWDTBB_H
+#ifndef XAMIDI_HELPER_FWDTBB_H
+#define XAMIDI_HELPER_FWDTBB_H
 
 //#if __has_include(<tbb/version.h>) // NOTE: Change manually if required. There seems to be no alternative for __has_include in C++11.
 #include <tbb/version.h>
@@ -39,7 +39,7 @@ using interface10::concurrent_map;
 #endif
 }
 
-namespace xamid {
+namespace xamidi {
 template<typename T> using tbb_concurrent_vector = tbb::concurrent_vector<T, tbb::cache_aligned_allocator<T>>;
 #if TBB_INTERFACE_VERSION >= 12002 // since v2021.1-beta08
 template<typename Key, typename T> using tbb_concurrent_unordered_map = tbb::concurrent_unordered_map<Key, T, std::hash<Key>, std::equal_to<Key>, tbb::tbb_allocator<std::pair<const Key, T>>>;
@@ -51,4 +51,4 @@ template<typename Key> using tbb_concurrent_unordered_set = tbb::concurrent_unor
 template<typename Key, typename Value> using tbb_concurrent_map = tbb::concurrent_map<Key, Value, std::less<Key>, tbb::tbb_allocator<std::pair<const Key, Value>>>;
 }
 
-#endif // XAMID_HELPER_FWDTBB_H
+#endif // XAMIDI_HELPER_FWDTBB_H

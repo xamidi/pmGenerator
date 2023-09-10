@@ -1,5 +1,5 @@
-#ifndef XAMID_GRAMMAR_CFGGRAMMAR_H
-#define XAMID_GRAMMAR_CFGGRAMMAR_H
+#ifndef XAMIDI_GRAMMAR_CFGGRAMMAR_H
+#define XAMIDI_GRAMMAR_CFGGRAMMAR_H
 
 #include "../helper/IPrintable.h"
 
@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace grammar {
 
 // Represents a context-free grammar
@@ -69,4 +69,4 @@ public:
 }
 }
 
-#endif // XAMID_GRAMMAR_CFGGRAMMAR_H
+#endif // XAMIDI_GRAMMAR_CFGGRAMMAR_H

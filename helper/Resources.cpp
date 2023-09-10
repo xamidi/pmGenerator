@@ -2,7 +2,7 @@
 
 using namespace std;
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 const string Resources::version = "pmGenerator-2022.11.27.1217";

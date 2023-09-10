@@ -1,5 +1,5 @@
-#ifndef XAMID_NORTMANN_DLPROOFENUMERATOR_H
-#define XAMID_NORTMANN_DLPROOFENUMERATOR_H
+#ifndef XAMIDI_LOGIC_DLPROOFENUMERATOR_H
+#define XAMIDI_LOGIC_DLPROOFENUMERATOR_H
 
 #include "../helper/FwdTbb.h"
 #include "../helper/ProgressData.h"
@@ -11,8 +11,8 @@
 #include <map>
 #include <thread>
 
-namespace xamid {
-namespace nortmann {
+namespace xamidi {
+namespace logic {
 
 enum class DlProofEnumeratorMode {
 	Generic, Naive
@@ -367,4 +367,4 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_naive_seq(std::strin
 }
 }
 
-#endif // XAMID_NORTMANN_DLPROOFENUMERATOR_H
+#endif // XAMIDI_LOGIC_DLPROOFENUMERATOR_H

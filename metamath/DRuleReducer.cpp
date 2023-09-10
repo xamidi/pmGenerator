@@ -2,8 +2,8 @@
 
 #include "../helper/FctHelper.h"
 #include "../tree/TreeNode.h"
-#include "../nortmann/DlCore.h"
-#include "../nortmann/DlProofEnumerator.h"
+#include "../logic/DlCore.h"
+#include "../logic/DlProofEnumerator.h"
 #include "DRuleParser.h"
 
 #include <tbb/concurrent_map.h>
@@ -16,10 +16,10 @@
 #include <iostream>
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::nortmann;
+using namespace xamidi::helper;
+using namespace xamidi::logic;
 
-namespace xamid {
+namespace xamidi {
 namespace metamath {
 
 void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, const string& inputFilePrefix, bool withConclusions, bool debug) {

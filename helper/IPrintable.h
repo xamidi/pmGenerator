@@ -1,10 +1,10 @@
-#ifndef XAMID_HELPER_IPRINTABLE_H
-#define XAMID_HELPER_IPRINTABLE_H
+#ifndef XAMIDI_HELPER_IPRINTABLE_H
+#define XAMIDI_HELPER_IPRINTABLE_H
 
 #include <memory>
 #include <string>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 //#######################
@@ -31,7 +31,7 @@ struct IPrintable {
 
 template<typename T>
 class IPointToPrintableValue: public IPrintable {
-	static_assert(std::is_base_of<IPrintable, T>::value, "T must derive from xamid::helper::IPrintable.");
+	static_assert(std::is_base_of<IPrintable, T>::value, "T must derive from xamidi::helper::IPrintable.");
 
 	// Abstract methods
 	virtual const std::shared_ptr<T>& getValue() const = 0;
@@ -65,4 +65,4 @@ struct String: public IPrintable {
 }
 }
 
-#endif // XAMID_HELPER_IPRINTABLE_H
+#endif // XAMIDI_HELPER_IPRINTABLE_H

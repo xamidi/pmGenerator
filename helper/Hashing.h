@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_HASHING_H
-#define XAMID_HELPER_HASHING_H
+#ifndef XAMIDI_HELPER_HASHING_H
+#define XAMIDI_HELPER_HASHING_H
 
 // Idea: http://stackoverflow.com/q/7110301
 
@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 // Code from boost
@@ -88,4 +88,4 @@ struct myhash<std::pair<T, U>> {
 }
 }
 
-#endif // XAMID_HELPER_HASHING_H
+#endif // XAMIDI_HELPER_HASHING_H

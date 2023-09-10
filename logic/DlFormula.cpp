@@ -4,10 +4,10 @@
 #include "DlCore.h"
 
 using namespace std;
-using namespace xamid::helper;
+using namespace xamidi::helper;
 
-namespace xamid {
-namespace nortmann {
+namespace xamidi {
+namespace logic {
 
 string dlFormulaHash::representativeString(const shared_ptr<DlFormula>& f) {
 	stringstream ss;

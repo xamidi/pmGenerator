@@ -1,10 +1,10 @@
-#ifndef XAMID_HELPER_ICLONEABLE_H
-#define XAMID_HELPER_ICLONEABLE_H
+#ifndef XAMIDI_HELPER_ICLONEABLE_H
+#define XAMIDI_HELPER_ICLONEABLE_H
 
 #include <memory>
 #include <unordered_map>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 // T : type of class that becomes cloneable
@@ -133,4 +133,4 @@ struct ICopyable {
 }
 }
 
-#endif // XAMID_HELPER_ICLONEABLE_H
+#endif // XAMIDI_HELPER_ICLONEABLE_H

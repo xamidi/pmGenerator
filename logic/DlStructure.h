@@ -1,13 +1,13 @@
-#ifndef XAMID_NORTMANN_DLSTRUCTURE_H
-#define XAMID_NORTMANN_DLSTRUCTURE_H
+#ifndef XAMIDI_LOGIC_DLSTRUCTURE_H
+#define XAMIDI_LOGIC_DLSTRUCTURE_H
 
 #include <cstdint>
 
-namespace xamid {
+namespace xamidi {
 namespace tree { template<typename T> class TreeNode; }
 namespace grammar { struct CfgGrammar; struct CfgParserState; }
 
-namespace nortmann {
+namespace logic {
 
 struct DlStructure {
 	// ------------------------------------------------------------------------------------------------ //
@@ -65,4 +65,4 @@ struct DlStructure {
 }
 }
 
-#endif // XAMID_NORTMANN_DLSTRUCTURE_H
+#endif // XAMIDI_LOGIC_DLSTRUCTURE_H
