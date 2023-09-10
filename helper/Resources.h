@@ -1,10 +1,10 @@
-#ifndef XAMID_HELPER_RESOURCES_H
-#define XAMID_HELPER_RESOURCES_H
+#ifndef XAMIDI_HELPER_RESOURCES_H
+#define XAMIDI_HELPER_RESOURCES_H
 
 #include <string>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 struct Resources {
@@ -32,4 +32,4 @@ struct Resources {
 }
 }
 
-#endif // XAMID_HELPER_RESOURCES_H
+#endif // XAMIDI_HELPER_RESOURCES_H

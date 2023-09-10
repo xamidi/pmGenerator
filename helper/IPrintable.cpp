@@ -4,7 +4,7 @@
 
 using namespace std;
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 //#######################

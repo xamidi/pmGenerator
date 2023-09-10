@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_VERSION_H
-#define XAMID_HELPER_VERSION_H
+#ifndef XAMIDI_HELPER_VERSION_H
+#define XAMIDI_HELPER_VERSION_H
 
 #include <array>
 #include <cstddef>
@@ -73,7 +73,7 @@ static_assert(BUILD_MINUTE != UINT32_MAX, "indeterminate build minute");
 	)
 static_assert(BUILD_SECOND != UINT32_MAX, "indeterminate build second");
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 // Functional programming with templates to obtain constexpr char arrays
@@ -136,4 +136,4 @@ constexpr const char* repository = helper::__repository.data();
 
 }
 
-#endif // XAMID_HELPER_VERSION_H
+#endif // XAMIDI_HELPER_VERSION_H

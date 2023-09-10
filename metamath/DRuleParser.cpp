@@ -2,19 +2,19 @@
 
 #include "../helper/FctHelper.h"
 #include "../tree/TreeNode.h"
-#include "../nortmann/DlCore.h"
-#include "../nortmann/DlFormula.h"
+#include "../logic/DlCore.h"
+#include "../logic/DlFormula.h"
 
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::tree;
-using namespace xamid::nortmann;
+using namespace xamidi::helper;
+using namespace xamidi::tree;
+using namespace xamidi::logic;
 
-namespace xamid {
+namespace xamidi {
 namespace metamath {
 
 vector<pair<string, string>> DRuleParser::readFromMmsolitaireFile(const string& file, bool debug) {

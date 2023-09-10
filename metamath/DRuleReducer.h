@@ -1,9 +1,9 @@
-#ifndef XAMID_METAMATH_DRULEREDUCER_H
-#define XAMID_METAMATH_DRULEREDUCER_H
+#ifndef XAMIDI_METAMATH_DRULEREDUCER_H
+#define XAMIDI_METAMATH_DRULEREDUCER_H
 
 #include <string>
 
-namespace xamid {
+namespace xamidi {
 namespace metamath {
 
 struct DRuleReducer {
@@ -14,4 +14,4 @@ struct DRuleReducer {
 }
 }
 
-#endif // XAMID_METAMATH_DRULEREDUCER_H
+#endif // XAMIDI_METAMATH_DRULEREDUCER_H

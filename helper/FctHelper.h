@@ -1,5 +1,5 @@
-#ifndef XAMID_HELPER_FCTHELPER_H
-#define XAMID_HELPER_FCTHELPER_H
+#ifndef XAMIDI_HELPER_FCTHELPER_H
+#define XAMIDI_HELPER_FCTHELPER_H
 
 #include <algorithm>
 #include <array>
@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 struct cmpStringGrow {
@@ -230,4 +230,4 @@ public:
 }
 }
 
-#endif // XAMID_HELPER_FCTHELPER_H
+#endif // XAMIDI_HELPER_FCTHELPER_H

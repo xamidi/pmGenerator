@@ -19,11 +19,11 @@
 #include <iostream>
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::metamath;
+using namespace xamidi::helper;
+using namespace xamidi::metamath;
 
-namespace xamid {
-namespace nortmann {
+namespace xamidi {
+namespace logic {
 
 namespace {
 inline string myTime() {

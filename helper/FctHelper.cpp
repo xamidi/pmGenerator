@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace xamid {
+namespace xamidi {
 namespace helper {
 
 bool cmpStringShrink::operator()(const string& a, const string& b) const {

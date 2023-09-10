@@ -69,53 +69,6 @@ digraph {
 		Resources
 		Version
 	}
-	main -> FctHelper [color=blue]
-	main -> Version [color=blue]
-	main -> DRuleReducer [color=blue]
-	main -> DlProofEnumerator [color=blue]
-	main -> cstring [color=blue]
-	main -> ctime [color=blue]
-	main -> iostream [color=blue]
-	main -> process [color=blue]
-	main -> unistd [color=blue]
-	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
-		main
-	}
-	DRuleParser -> FctHelper [color=blue]
-	DRuleParser -> TreeNode [color=blue]
-	DRuleParser -> DlCore [color=blue]
-	DRuleParser -> DlFormula [color=blue]
-	DRuleParser -> "boost/algorithm/string" [color=blue]
-	DRuleParser -> iostream [color=blue]
-	DRuleParser -> cstddef [color=red]
-	DRuleParser -> map [color=red]
-	DRuleParser -> memory [color=red]
-	DRuleParser -> set [color=red]
-	DRuleParser -> string_view [color=red]
-	DRuleParser -> string [color=red]
-	DRuleParser -> tuple [color=red]
-	DRuleParser -> unordered_map [color=red]
-	DRuleParser -> unordered_set [color=red]
-	DRuleParser -> utility [color=red]
-	DRuleParser -> vector [color=red]
-	DRuleReducer -> FctHelper [color=blue]
-	DRuleReducer -> TreeNode [color=blue]
-	DRuleReducer -> DlCore [color=blue]
-	DRuleReducer -> DlProofEnumerator [color=blue]
-	DRuleReducer -> DRuleParser [color=blue]
-	DRuleReducer -> concurrent_map [color=blue]
-	DRuleReducer -> concurrent_unordered_map [color=blue]
-	DRuleReducer -> concurrent_vector [color=blue]
-	DRuleReducer -> parallel_for [color=blue]
-	DRuleReducer -> "boost/algorithm/string" [color=blue]
-	DRuleReducer -> iostream [color=blue]
-	DRuleReducer -> string [color=red]
-	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\metamath" {
-		DRuleParser
-		DRuleParser
-		DRuleReducer
-		DRuleReducer
-	}
 	DlCore -> FctHelper [color=blue]
 	DlCore -> TreeNode [color=blue]
 	DlCore -> CfgGrammar [color=blue]
@@ -166,7 +119,7 @@ digraph {
 	DlProofEnumerator -> thread [color=red]
 	DlStructure -> CfgGrammar [color=blue]
 	DlStructure -> cstdint [color=red]
-	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\nortmann" {
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\logic" {
 		DlCore
 		DlCore
 		DlFormula
@@ -175,6 +128,53 @@ digraph {
 		DlProofEnumerator
 		DlStructure
 		DlStructure
+	}
+	main -> FctHelper [color=blue]
+	main -> Version [color=blue]
+	main -> DRuleReducer [color=blue]
+	main -> DlProofEnumerator [color=blue]
+	main -> cstring [color=blue]
+	main -> ctime [color=blue]
+	main -> iostream [color=blue]
+	main -> process [color=blue]
+	main -> unistd [color=blue]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
+		main
+	}
+	DRuleParser -> FctHelper [color=blue]
+	DRuleParser -> TreeNode [color=blue]
+	DRuleParser -> DlCore [color=blue]
+	DRuleParser -> DlFormula [color=blue]
+	DRuleParser -> "boost/algorithm/string" [color=blue]
+	DRuleParser -> iostream [color=blue]
+	DRuleParser -> cstddef [color=red]
+	DRuleParser -> map [color=red]
+	DRuleParser -> memory [color=red]
+	DRuleParser -> set [color=red]
+	DRuleParser -> string_view [color=red]
+	DRuleParser -> string [color=red]
+	DRuleParser -> tuple [color=red]
+	DRuleParser -> unordered_map [color=red]
+	DRuleParser -> unordered_set [color=red]
+	DRuleParser -> utility [color=red]
+	DRuleParser -> vector [color=red]
+	DRuleReducer -> FctHelper [color=blue]
+	DRuleReducer -> TreeNode [color=blue]
+	DRuleReducer -> DlCore [color=blue]
+	DRuleReducer -> DlProofEnumerator [color=blue]
+	DRuleReducer -> DRuleParser [color=blue]
+	DRuleReducer -> concurrent_map [color=blue]
+	DRuleReducer -> concurrent_unordered_map [color=blue]
+	DRuleReducer -> concurrent_vector [color=blue]
+	DRuleReducer -> parallel_for [color=blue]
+	DRuleReducer -> "boost/algorithm/string" [color=blue]
+	DRuleReducer -> iostream [color=blue]
+	DRuleReducer -> string [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\metamath" {
+		DRuleParser
+		DRuleParser
+		DRuleReducer
+		DRuleReducer
 	}
 	TreeNode -> ICloneable [color=red]
 	TreeNode -> IPrintable [color=red]

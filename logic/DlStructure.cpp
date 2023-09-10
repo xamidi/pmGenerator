@@ -3,12 +3,12 @@
 #include "../grammar/CfgGrammar.h"
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::grammar;
-using namespace xamid::tree;
+using namespace xamidi::helper;
+using namespace xamidi::grammar;
+using namespace xamidi::tree;
 
-namespace xamid {
-namespace nortmann {
+namespace xamidi {
+namespace logic {
 
 CfgGrammar& DlStructure::dlEvaluationGrammar() {
 	// Unambiguous context-free grammar for DL such that variables are natural numbers.

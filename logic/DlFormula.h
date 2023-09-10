@@ -1,15 +1,15 @@
-#ifndef XAMID_NORTMANN_DLFORMULA_H
-#define XAMID_NORTMANN_DLFORMULA_H
+#ifndef XAMIDI_LOGIC_DLFORMULA_H
+#define XAMIDI_LOGIC_DLFORMULA_H
 
 #include <cstddef>
 #include <memory>
 #include <string>
 
-namespace xamid {
+namespace xamidi {
 namespace helper { struct String; }
 namespace tree { template<typename T> class TreeNode; }
 
-namespace nortmann {
+namespace logic {
 
 typedef tree::TreeNode<helper::String> DlFormula; // NOTE: Even though possible, it should be common practice to never modify a formula that is not freshly generated. Otherwise, editing can have side-effects on different formulas that have nodes in common. Or even worse, cycles can occur when inserting existing formulas.
 
@@ -30,4 +30,4 @@ enum class DlOperator {
 }
 }
 
-#endif // XAMID_NORTMANN_DLFORMULA_H
+#endif // XAMIDI_LOGIC_DLFORMULA_H

@@ -1,7 +1,7 @@
 #include "helper/FctHelper.h"
 #include "helper/Version.h"
 #include "metamath/DRuleReducer.h"
-#include "nortmann/DlProofEnumerator.h"
+#include "logic/DlProofEnumerator.h"
 
 #include <cstring>
 #include <ctime>
@@ -13,9 +13,9 @@
 #endif
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::metamath;
-using namespace xamid::nortmann;
+using namespace xamidi::helper;
+using namespace xamidi::metamath;
+using namespace xamidi::logic;
 
 struct A {
 	string myTime() {
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	auto printUsage = [](const string& error = "") {
 		if (!error.empty())
 			cerr << error << endl;
-		cout << "\n" << xamid::version << " ; repository at " << xamid::repository;
+		cout << "\n" << xamidi::version << " ; repository at " << xamidi::repository;
 		cout << "\nUsage:\n"
 				"    pmGenerator ( -g <limit> [-u] [-c] | -r <pmproofs file> <output file> [-i <prefix>] [-c] [-d] | -a <initials> <replacements file> <pmproofs file> <output file> [-s] [-l] [-w] [-d] | -f ( 0 | 1 ) [-i <prefix>] [-o <prefix>] [-d] | -p [-i <prefix>] [-s] [-t] [-x <limit>] [-y <limit>] [-o <output file>] [-d] )+ | -m <limit> [-s]\n"
 				"    -g: Generate proof files\n"

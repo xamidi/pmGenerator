@@ -15,13 +15,13 @@
 #include <mutex>
 
 using namespace std;
-using namespace xamid::helper;
-using namespace xamid::tree;
-using namespace xamid::grammar;
-using namespace xamid::metamath;
+using namespace xamidi::helper;
+using namespace xamidi::tree;
+using namespace xamidi::grammar;
+using namespace xamidi::metamath;
 
-namespace xamid {
-namespace nortmann {
+namespace xamidi {
+namespace logic {
 
 // ------------------------------------------------------------------------------------------------ //
 // Fields, using lazy initialization via singleton pattern (to prevent initialization order issues) //
