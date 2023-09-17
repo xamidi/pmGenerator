@@ -155,7 +155,7 @@ struct DlCore {
 
 	// (Performance-oriented) inverse of toPolishNotation_noRename(). Assigns DRuleParser's globally definite symbols to operators, and its own globally definite symbols to variables.
 	// Does not fill the output's meaning.
-	static bool fromPolishNotation_noRename(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = true);
+	static bool fromPolishNotation_noRename(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = false);
 
 	// Calculate the formula's symbolic length (i.e. the amount of nodes of its syntax tree), where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(),
 	// and all variable names consist of only numerical characters.

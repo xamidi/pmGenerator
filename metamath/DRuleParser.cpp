@@ -39,7 +39,7 @@ vector<pair<string, string>> DRuleParser::readFromMmsolitaireFile(const string& 
 	bool readingName = true;
 	bool skippingResult = false;
 	bool eof = ss.eof();
-	while (getline(ss, temp, '\n') || !eof) { // read every line, _including_ the last line
+	while (getline(ss, temp) || !eof) { // read every line, _including_ the last line
 		if (readingName) {
 			dProofName += temp;
 			if (temp.find(';') != string::npos) { // usually "; ! <reference name>"

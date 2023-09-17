@@ -7,7 +7,7 @@
 #include <array>
 #include <condition_variable>
 #include <cstddef>
-#include <deque>
+#include <tbb/concurrent_queue.h>
 #include <map>
 #include <thread>
 
@@ -87,7 +87,7 @@ public:
 		if (concurrencyCount < 2) // call 'fString' only from this thread
 			_processCondensedDetachmentPlProofs_generic_seq(prefix, _stack, wordLengthLimit, n, allRepresentativesLookup, fString);
 		else { // call 'fString' from different threads ; NOTE: Iteration itself is super fast, so the worker threads' queues are loaded (and balanced while being processed) by this thread only.
-			std::vector<std::deque<std::string>> queues(concurrencyCount);
+			std::vector<tbb::concurrent_queue<std::string>> queues(concurrencyCount);
 			std::vector<std::mutex> mtxs(concurrencyCount);
 			_loadAndProcessQueuesConcurrently(concurrencyCount, queues, mtxs, [&]() { _loadCondensedDetachmentPlProofs_generic_par(prefix, _stack, wordLengthLimit, n, allRepresentativesLookup, queues, mtxs); }, fString);
 		}
@@ -100,7 +100,7 @@ public:
 		if (concurrencyCount < 2) // call 'fString' only from this thread
 			_processCondensedDetachmentPlProofs_naive_seq(prefix, 1, wordLengthLimit, fString);
 		else { // call 'fString' from different threads ; NOTE: Iteration itself is super fast, so the worker threads' queues are loaded (and balanced while being processed) by this thread only.
-			std::vector<std::deque<std::string>> queues(concurrencyCount);
+			std::vector<tbb::concurrent_queue<std::string>> queues(concurrencyCount);
 			std::vector<std::mutex> mtxs(concurrencyCount);
 			_loadAndProcessQueuesConcurrently(concurrencyCount, queues, mtxs, [&]() { _loadCondensedDetachmentPlProofs_naive_par(prefix, 1, wordLengthLimit, queues, mtxs); }, fString);
 		}
@@ -118,14 +118,14 @@ private:
 	// at least length n + 2. By starting the pushdown automaton with stack [A], only the new candidates are iterated, of which invalid candidates can be skipped
 	// after resulting in a parse error. When providing 'wordLengthLimit' := n + 2, this means to only iterate candidates of length n + 2 in an efficient way.
 	// [NOTE: Sequential non-generic variants (with explicit grammars given as comments) are available at https://github.com/deontic-logic/proof-tool/blob/29dd7dfab9f373d1dd387fb99c16e82c577ec21f/nortmann/DlProofEnumerator.h?ts=4#L167-L174 and below.]
-	static void _loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs, const auto& loader, const auto& process);
+	static void _loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_queue<std::string>>& queues, std::vector<std::mutex>& mtxs, const auto& loader, const auto& process);
 	static void _processCondensedDetachmentPlProofs_generic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const auto& fString);
 	static void _processCondensedDetachmentPlProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const auto& fString);
-	static void _loadCondensedDetachmentPlProofs_generic_par(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
-	static void _loadCondensedDetachmentPlProofs_naive_par(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs);
+	static void _loadCondensedDetachmentPlProofs_generic_par(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, std::vector<tbb::concurrent_queue<std::string>>& queues, std::vector<std::mutex>& mtxs);
+	static void _loadCondensedDetachmentPlProofs_naive_par(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, std::vector<tbb::concurrent_queue<std::string>>& queues, std::vector<std::mutex>& mtxs);
 };
 
-void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<std::deque<std::string>>& queues, std::vector<std::mutex>& mtxs, const auto& loader, const auto& process) {
+void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_queue<std::string>>& queues, std::vector<std::mutex>& mtxs, const auto& loader, const auto& process) {
 	if (queues.size() != concurrencyCount || mtxs.size() != concurrencyCount)
 		throw std::invalid_argument("|queues| = " + std::to_string(queues.size()) + ", |mtxs| = " + std::to_string(mtxs.size()) + ", but concurrencyCount = " + std::to_string(concurrencyCount) + ".");
 
@@ -137,27 +137,25 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	std::condition_variable cond;
 	std::vector<std::thread> threads;
 	std::atomic<bool> incomplete = true; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
-	auto worker = [&process, &queues, &cond, &mtxs, &incomplete](unsigned t) {
-		std::deque<std::string>& queue = queues[t];
-		std::size_t size = 0;
-		// NOTE: It is important that we update 'size' here in case !incomplete, since 'queue' might become
-		//       filled and 'incomplete' false, while this condition is next to be processed in this thread.
-		//       Since 'incomplete' can only become false after all queues are filled and no more balancing
-		//       will take place, evaluating 'incomplete' first ensures that whenever 'queue' is not filled
-		//       completely, the loop remains active, i.e. whenever !incomplete holds (such that 'size' is
-		//       updated here), 'size' becomes 0 only if there is nothing left to process.
-		while (incomplete || (size = queue.size())) {
-			if (!size) {
+	auto worker = [&process, &queues, &cond, &incomplete](unsigned t) {
+		tbb::concurrent_queue<std::string>& queue = queues[t];
+		// NOTE: It is important to check '!queue.empty()' in loop header _after_ 'incomplete', since 'queue' might
+		//       become filled and 'incomplete' false, while this condition is being processed in this thread.
+		//       Since 'incomplete' can only become false after all queues are filled and no more balancing will
+		//       take place, evaluating 'incomplete' first ensures that whenever 'queue' is not filled completely,
+		//       the loop remains active, i.e. whenever !incomplete holds (such that '!queue.empty()' is checked here),
+		//       the loop is discontinued only if there is nothing left to process.
+		while (incomplete || !queue.empty()) {
+			std::string s;
+			if (queue.try_pop(s))
+				process(s);
+			else {
+				// NOTE: The queue balancer is notified only when a queue is already empty, but such requests lead to all
+				//       queues smaller than 'tinyBound' being balanced with those being larger than 'sharingBound'.
+				//       Routinely requesting locks in order to retrieve queue sizes by workers would take too much time.
 				cond.notify_one();
 				std::this_thread::yield();
-			} else {
-				process(queue.front());
-				std::lock_guard<std::mutex> lock(mtxs[t]);
-				queue.pop_front();
 			}
-			size = queue.size();
-			if (size < tinyBound)
-				cond.notify_one();
 		}
 	};
 	for (unsigned t = 0; t < concurrencyCount; t++)
@@ -167,14 +165,20 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	loader();
 
 	// 3. Balance the queues while they are being worked on.
+	//#std::size_t balanceCounter = 0;
 	while (true) {
 		// NOTE: Every worker thread with an empty queue will spam notifications until 'incomplete' is set to false below this loop, i.e. there cannot be a deadlock based on 'cond'.
 		//       This way, no worker thread is ever blocked due to 'cond', which has better performance than utilizing locks to synchronize conditions.
 		cond.wait(condLock);
 		bool allTiny = true;
 		bool someTiny = false;
-		for (unsigned t = 0; t < queues.size(); t++)
-			if (queues[t].size() < tinyBound) {
+		for (unsigned t = 0; t < queues.size(); t++) {
+			std::size_t size;
+			{
+				std::lock_guard<std::mutex> lock(mtxs[t]);
+				size = queues[t].unsafe_size();
+			}
+			if (size < tinyBound) {
 				someTiny = true;
 				if (!allTiny)
 					break;
@@ -183,13 +187,18 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				if (someTiny)
 					break;
 			}
+		}
 		if (allTiny)
 			break;
 		if (someTiny) {
 			std::map<unsigned, unsigned> tinyCandidates;
 			std::map<unsigned, unsigned> sharingCandidates;
 			for (unsigned t = 0; t < queues.size(); t++) {
-				std::size_t size = queues[t].size();
+				std::size_t size;
+				{
+					std::lock_guard<std::mutex> lock(mtxs[t]);
+					size = queues[t].unsafe_size();
+				}
 				if (size < tinyBound)
 					tinyCandidates.emplace(size, t);
 				else if (size > sharingBound)
@@ -201,23 +210,23 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				unsigned t_smallest = itSmallest->second;
 				unsigned t_largest = itLargest->second;
 				std::vector<std::string> tmp;
-				std::deque<std::string>& queue_largest = queues[t_largest];
+				tbb::concurrent_queue<std::string>& queue_largest = queues[t_largest];
 				bool skip = false;
-				if (queue_largest.size() > sharingBound) { // ensure there still are enough elements
-					{
-						std::lock_guard<std::mutex> lock(mtxs[t_largest]);
-						std::size_t halfSize = queue_largest.size() / 2;
-						if (halfSize >= tinyBound) { // ensure there still are enough elements, again
-							tmp = std::vector<std::string>(queue_largest.begin() + halfSize, queue_largest.end());
-							queue_largest.erase(queue_largest.begin() + halfSize, queue_largest.end());
-						} else
-							skip = true;
-					}
-					if (!skip) {
-						std::deque<std::string>& queue_smallest = queues[t_smallest];
-						std::lock_guard<std::mutex> lock(mtxs[t_smallest]);
-						queue_smallest.insert(queue_smallest.end(), tmp.begin(), tmp.end());
-					}
+				std::size_t size_largest;
+				{
+					std::lock_guard<std::mutex> lock(mtxs[t_largest]);
+					size_largest = queue_largest.unsafe_size();
+				}
+				if (size_largest > sharingBound) { // ensure there still are enough elements
+					std::size_t halfSize = size_largest / 2;
+					if (halfSize >= tinyBound) { // ensure there still are enough elements, again
+						tbb::concurrent_queue<std::string>& queue_smallest = queues[t_smallest];
+						std::string s;
+						for (std::size_t i = 0; i < halfSize && queue_largest.try_pop(s); i++)
+							queue_smallest.push(s);
+						//#balanceCounter++;
+					} else
+						skip = true;
 				} else
 					skip = true;
 				if (!skip)
@@ -225,9 +234,10 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				sharingCandidates.erase(itLargest);
 			}
 		}
-		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; std::size_t size = queues[t].size(); ss << t << ": " << size; } return ss.str(); };
+		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; std::size_t size = queues[t].unsafe_size(); ss << t << ": " << size; } return ss.str(); };
 		//#std::cout << queueSizesStr() << std::endl; // print sizes of queues when a balancing attempt just took place
 	}
+	//#std::cout << "Balanced " << balanceCounter << " times." << std::endl;
 
 	// 4. Wait for all threads to complete.
 	incomplete = false;
@@ -248,7 +258,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 		else {
 			auto processN = [&](const std::vector<std::string>& representatives) {
 				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //          but the last option, in order to restore the parameters.
+				std::string prefix_copy; //               but the last option, in order to restore the parameters.
 				std::vector<std::string>::const_iterator last = std::prev(representatives.end());
 				for (std::vector<std::string>::const_iterator it = representatives.begin(); it != last; ++it) {
 					stack_copy = stack;
@@ -264,7 +274,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 				stack.pop_back(); // pop already for all cases
 				// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
 				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //          but the last option, in order to restore the parameters.
+				std::string prefix_copy; //               but the last option, in order to restore the parameters.
 				auto processRepresentatives = [&](const std::vector<std::string>& representatives) {
 					for (const std::string& sequence : representatives) {
 						stack_copy = stack;
@@ -292,7 +302,7 @@ void DlProofEnumerator::_processCondensedDetachmentPlProofs_generic_seq(std::str
 				prefix += "D"; // same terminal for all cases, so all prefix already
 				stack.pop_back(); // pop already for all cases
 				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //          but the last option, in order to restore the parameters.
+				std::string prefix_copy; //               but the last option, in order to restore the parameters.
 				for (unsigned i = 0; i < combinations.size() - 1; i++) {
 					const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[i];
 					if (remainingSpace < p.second)
