@@ -10,13 +10,13 @@
 #include <boost/filesystem/operations.hpp>
 
 #include <tbb/concurrent_map.h>
-#include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 
@@ -392,7 +392,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	}
 
 	// 2. Initialize and prepare progress data.
-	bool showProgress = allRepresentatives.size() > 15;
+	bool showProgress = allRepresentatives.size() >= 17;
 	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount) : ProgressData();
 
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
@@ -414,21 +414,21 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	startTime = chrono::steady_clock::now();
 	counter = _iterateRepresentatives();
 	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to iterate " << counter << " condensed detachment proof strings of length " << wordLengthLimit << "." << endl;
-	// e.g. 17              :     11.54 ms                        taken to iterate     31388
-	//      19              :     42.47 ms                        taken to iterate     94907
-	//      21              :     98.47 ms                        taken to iterate    290392
-	//      23              :    280.59 ms                        taken to iterate    886041
-	//      25              :    897.72 ms                        taken to iterate   2709186
-	//      27              :   3248.31 ms (       3 s 248.31 ms) taken to iterate   8320672
-	//      29              :   9294.50 ms (       9 s 294.50 ms) taken to iterate  25589216
-	//      29-unfiltered27+:  10765.89 ms (      10 s 765.88 ms) taken to iterate  27452198
-	//      29-unfiltered25+:  12193.00 ms (      12 s 193.00 ms) taken to iterate  30038660
-	//      29-unfiltered23+:  12953.30 ms (      12 s 953.30 ms) taken to iterate  32772266
-	//      29-unfiltered21+:  14458.88 ms (      14 s 458.88 ms) taken to iterate  36185400
-	//      29-unfiltered19+:  15760.71 ms (      15 s 760.71 ms) taken to iterate  40243692
-	//      29-unfiltered17+:  19397.85 ms (      19 s 397.85 ms) taken to iterate  44934432
-	//      31              :  35628.12 ms (      35 s 628.12 ms) taken to iterate  78896376 ;  78896376 / 44934432 ≈ 1.75581 ;  35628.12 / 19397.85 ≈ 1.83670
-	//      33-unfiltered31+: 106942.91 ms (1 min 46 s 942.90 ms) taken to iterate 260604052 ; 260604052 / 78896376 ≈ 3.30312 ; 106942.91 / 35628.12 ≈ 3.00164
+	// e.g. 17              :     10.54 ms                        taken to iterate     31388
+	//      19              :     28.52 ms                        taken to iterate     94907
+	//      21              :     71.40 ms                        taken to iterate    290392
+	//      23              :    247.36 ms                        taken to iterate    886041
+	//      25              :    691.78 ms                        taken to iterate   2709186
+	//      27              :   2269.16 ms (       2 s 269.16 ms) taken to iterate   8320672
+	//      29              :   8597.53 ms (       8 s 597.53 ms) taken to iterate  25589216
+	//      29-unfiltered27+:   8905.61 ms (       8 s 905.61 ms) taken to iterate  27452198
+	//      29-unfiltered25+:   9723.98 ms (       9 s 723.98 ms) taken to iterate  30038660
+	//      29-unfiltered23+:  11022.82 ms (      11 s  22.82 ms) taken to iterate  32772266
+	//      29-unfiltered21+:  12502.36 ms (      12 s 502.36 ms) taken to iterate  36185400
+	//      29-unfiltered19+:  13258.28 ms (      13 s 258.28 ms) taken to iterate  40243692
+	//      29-unfiltered17+:  15364.35 ms (      15 s 364.35 ms) taken to iterate  44934432 ;  44934432 / 25589216 ≈ 1.75599 ; 15364.35 /  8597.53 ≈ 1.78707 (times duration of 29)
+	//      31              :  25234.09 ms (      25 s 234.09 ms) taken to iterate  78896376 ;  78896376 / 25589216 ≈ 3.08319 ; 25234.09 /  8597.53 ≈ 2.93504 (times duration of 29)
+	//      33              :  85834.30 ms (1 min 25 s 834.30 ms) taken to iterate 243907474 ; 243907474 / 78896376 ≈ 3.09149 ; 85834.30 / 25234.09 ≈ 3.40152 (times duration of 31)
 	cout << "[Copy] Next iteration count (" << (redundantSchemaRemoval || unfilteredStart == wordLengthLimit ? "filtered" : "unfiltered" + to_string(unfilteredStart) + "+") << "): { " << wordLengthLimit << ", " << counter << " }" << endl;
 	cout << myTime() << ": Next iteration amount counter complete. " << myInfo() << endl;
 }
@@ -543,7 +543,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	}
 
 	// 2. Initialize and prepare progress data.
-	bool showProgress = allRepresentatives.size() > 15;
+	bool showProgress = allRepresentatives.size() >= 17;
 	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount) : ProgressData();
 	ProgressData findProgress;
 	ProgressData removalProgress;
@@ -793,7 +793,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		MPI_Gather(&allRepresentativesCount, 1, MPI_UNSIGNED_LONG_LONG, nullptr, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
 
 	// 2. Initialize and prepare progress data.
-	bool showProgress = isMainProc && allRepresentatives.size() > 15;
+	bool showProgress = isMainProc && allRepresentatives.size() >= 17;
 	ProgressData connectProgress = showProgress ? ProgressData(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount) : ProgressData();
 	ProgressData removalProgress;
 	if (isMainProc) {
@@ -1608,7 +1608,7 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_findRedundantCon
 }
 
 namespace {
-void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, const uint32_t wordLengthLimit, const uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs, const vector<pair<array<uint32_t, 2>, unsigned>>& combinations) {
+void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, const uint32_t wordLengthLimit, const uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<tbb::concurrent_queue<string>>& queues, vector<mutex>& mtxs, const vector<pair<array<uint32_t, 2>, unsigned>>& combinations) {
 	constexpr uint32_t S = 0;
 	const uint32_t A = knownLimit + 2;
 	// NOTE: N1, N3, ..., N<knownLimit> are now simply 1, 3, ..., knownLimit.
@@ -1616,29 +1616,16 @@ void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<
 		return;
 	if (stack.empty()) {
 		bool processed = false;
-		unsigned bestIndex = 0;
-		size_t bestSize = SIZE_MAX;
 		for (unsigned t = 0; t < queues.size(); t++) {
-			deque<string>& queue = queues[t];
-			size_t size = queue.size();
-			if (size) {
-				if (size < bestSize) {
-					bestIndex = t;
-					bestSize = size;
-				}
-			} else {
-				{
-					lock_guard<mutex> lock(mtxs[t]);
-					queue.push_back(prefix);
-				}
+			tbb::concurrent_queue<string>& queue = queues[t];
+			if (queue.empty()) {
+				queue.push(prefix);
 				processed = true;
 				break;
 			}
 		}
-		if (!processed) {
-			lock_guard<mutex> lock(mtxs[bestIndex]);
-			queues[bestIndex].push_back(prefix);
-		}
+		if (!processed)
+			queues[rand() % queues.size()].push(prefix);
 	} else {
 		auto processN = [&](const vector<string>& representatives) {
 			vector<uint32_t> stack_copy; // Since there are multiple options, we use copies for all
@@ -1711,39 +1698,26 @@ void recurse_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<
 	}
 };
 }
-void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<deque<string>>& queues, vector<mutex>& mtxs) {
+void DlProofEnumerator::_loadCondensedDetachmentPlProofs_generic_par(string& prefix, vector<uint32_t>& stack, uint32_t wordLengthLimit, uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, vector<tbb::concurrent_queue<string>>& queues, vector<mutex>& mtxs) {
 	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = proofLengthCombinations(knownLimit);
 	recurse_loadCondensedDetachmentPlProofs_generic_par(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, queues, mtxs, combinations);
 }
 
-void DlProofEnumerator::_loadCondensedDetachmentPlProofs_naive_par(string& prefix, unsigned stackSize, uint32_t wordLengthLimit, vector<deque<string>>& queues, vector<mutex>& mtxs) {
+void DlProofEnumerator::_loadCondensedDetachmentPlProofs_naive_par(string& prefix, unsigned stackSize, uint32_t wordLengthLimit, vector<tbb::concurrent_queue<string>>& queues, vector<mutex>& mtxs) {
 	if (prefix.length() + stackSize > wordLengthLimit)
 		return;
 	if (!stackSize) {
 		bool processed = false;
-		unsigned bestIndex = 0;
-		size_t bestSize = SIZE_MAX;
 		for (unsigned t = 0; t < queues.size(); t++) {
-			deque<string>& queue = queues[t];
-			size_t size = queue.size();
-			if (size) {
-				if (size < bestSize) {
-					bestIndex = t;
-					bestSize = size;
-				}
-			} else {
-				{
-					lock_guard<mutex> lock(mtxs[t]);
-					queue.push_back(prefix);
-				}
+			tbb::concurrent_queue<string>& queue = queues[t];
+			if (queue.empty()) {
+				queue.push(prefix);
 				processed = true;
 				break;
 			}
 		}
-		if (!processed) {
-			lock_guard<mutex> lock(mtxs[bestIndex]);
-			queues[bestIndex].push_back(prefix);
-		}
+		if (!processed)
+			queues[rand() % queues.size()].push(prefix);
 	} else {
 		// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
 		string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
