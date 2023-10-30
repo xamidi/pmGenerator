@@ -1,0 +1,23 @@
+[ Note: All lines before the first line
+  containing a semicolon are ignored
+  and can be used for comment headers. ]
+
+Proof system configuration: pmGenerator -c -n -s CpCCqCprCCNrCCNstqCsr
+SHA-512/224 hash: db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff
+Command to reduce: pmGenerator -c -n -s CpCCqCprCCNrCCNstqCsr -r data/w2proofs.txt data/w2proofs-reducer.txt -d -a SD data/w2proofs-reducer.txt data/w2proofs.txt data/w2proofs-result-all.txt -l -d -w
+Command to reassemble: pmGenerator -c -n -s CpCCqCprCCNrCCNstqCsr -a SD data/empty.txt data/w2proofs.txt data/w2proofs-result-all.txt -l -d -w
+
+(P -> P); ! Cpp
+(P -> P); ! Result of proof
+DDD11DDD11D11DDDDD111111DDDDD111111; ! 35 steps
+
+(P -> (Q -> P)); ! CpCqp
+(P -> (Q -> P)); ! Result of proof
+DDD11DDD11DD11DDD11DDD111DDDDD111111DDDDD111111DDDDD111111DDDDD111111
+; ! 69 steps
+
+(P -> ((Q -> (P -> R)) -> ((~ R -> ((~ S -> T) -> Q)) -> (S -> R))))
+; ! Walsh's 2nd Axiom (CpCCqCprCCNrCCNstqCsr)
+(P -> ((Q -> (P -> R)) -> ((~ R -> ((~ S -> T) -> Q)) -> (S -> R))))
+; ! Result of proof
+1; ! 1 step

@@ -1,0 +1,19 @@
+[ Note: All lines before the first line
+  containing a semicolon are ignored
+  and can be used for comment headers. ]
+
+Proof system configuration: pmGenerator -c -n -s CpCCNqCCNrsCptCCtqCrq
+SHA-512/224 hash: 0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314
+Command to reduce: pmGenerator -c -n -s CpCCNqCCNrsCptCCtqCrq -r data/w3proofs.txt data/w3proofs-reducer.txt -d -a SD data/w3proofs-reducer.txt data/w3proofs.txt data/w3proofs-result-all.txt -l -d -w
+Command to reassemble: pmGenerator -c -n -s CpCCNqCCNrsCptCCtqCrq -a SD data/empty.txt data/w3proofs.txt data/w3proofs-result-all.txt -l -d -w
+
+(P -> (Q -> P)); ! CpCqp
+(P -> (Q -> P)); ! Result of proof
+DDDDDDD1DDDD111DDD1D111D11D111D111DDDD1DDDD111DDD1D111D11D111D11111
+; ! 67 steps
+
+(P -> ((~ Q -> ((~ R -> S) -> (P -> T))) -> ((T -> Q) -> (R -> Q))))
+; ! Walsh's 3rd Axiom (CpCCNqCCNrsCptCCtqCrq)
+(P -> ((~ Q -> ((~ R -> S) -> (P -> T))) -> ((T -> Q) -> (R -> Q))))
+; ! Result of proof
+1; ! 1 step

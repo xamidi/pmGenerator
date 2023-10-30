@@ -4,16 +4,12 @@
 #include "../tree/TreeNode.h"
 #include "../logic/DlCore.h"
 #include "../logic/DlProofEnumerator.h"
-#include "DRuleParser.h"
 
 #include <tbb/concurrent_map.h>
-#include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
 #include <boost/algorithm/string.hpp>
-
-#include <iostream>
 
 using namespace std;
 using namespace xamidi::helper;
@@ -22,37 +18,34 @@ using namespace xamidi::logic;
 namespace xamidi {
 namespace metamath {
 
-void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const string& outputFile, const string& inputFilePrefix, bool withConclusions, bool debug) {
+void DRuleReducer::createReplacementsFile(const string& dProofDB, const string& outputFile, const string& dataLocation, const string& inputFilePrefix, bool withConclusions, bool debug) {
 	// 1. Load and parse mmsolitaire's D-proofs.
 	chrono::time_point<chrono::steady_clock> startTime;
-	vector<pair<string, string>> dProofsInFile;
-	map<size_t, set<string>> knownDProofsByLength = DRuleParser::prepareDProofsByLength(pmproofsFile, 1, &dProofsInFile, debug);
-	//#cout << FctHelper::vectorStringF(dProofsInFile, [](const pair<string, string>& p) { return p.first + ": " + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
-	//#cout << FctHelper::mapStringF(knownDProofsByLength, [](const pair<const size_t, set<string>>& p) { return to_string(p.first) + " : " + FctHelper::setString(p.second); }, "{\n\t", "\n}", "\n\t") << endl;
+	vector<string> dProofsInFile = DRuleParser::readFromMmsolitaireFile(dProofDB, nullptr, debug);
 	if (debug)
 		startTime = chrono::steady_clock::now();
-	vector<string> knownDProofs;
-	for (const pair<const size_t, set<string>>& p : knownDProofsByLength)
-		copy(p.second.begin(), p.second.end(), back_inserter(knownDProofs));
+	// Parse all proofs - including subproofs - from 'dProofDB'. Since such collections tend to contain only a few but large proofs
+	// it it is likely fastest to parse them all combined (so redundant parts are never parsed twice), even when single-threaded.
+	vector<DProofInfo> allProofs = DRuleParser::parseDProofs_raw(dProofsInFile, DlProofEnumerator::getCustomAxioms(), 1, nullptr, false, debug, false, true, false, false);
+	//#cout << FctHelper::vectorStringF(allProofs, [](const DProofInfo& p) { return p.first + ":" + DlCore::toPolishNotation_noRename(get<0>(p.second).back()); }, "{\n\t", "\n}", "\n\t") << endl;
 	if (debug) {
-		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to transfer." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for parsing altogether." << endl;
 		startTime = chrono::steady_clock::now();
 	}
+	// Translation from tree structures to Polish notation is still multi-threaded.
 	// NOTE: A tbb::concurrent_set<string, cmpStringGrow> inside would be preferable, but it has no reverse iterators in order to directly address the last element (which is required later on),
 	//       i.e. prev(set.end()) would crash and set.rbegin() does not exist: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_set_cls/iterators.html
 	tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>> formulasToCheck;
 	atomic<uint64_t> conclusionCounter { 0 };
 	atomic<uint64_t> redundantCounter { 0 };
 	mutex mtx_set;
-	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(knownDProofs.begin(), knownDProofs.end()), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](tbb::blocked_range<vector<string>::const_iterator>& range) {
-		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			const string& s = *it;
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(s);
-			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+	tbb::parallel_for(tbb::blocked_range<vector<DProofInfo>::const_iterator>(allProofs.begin(), allProofs.end()), [&formulasToCheck, &conclusionCounter, &redundantCounter, &mtx_set](tbb::blocked_range<vector<DProofInfo>::const_iterator>& range) {
+		for (vector<DProofInfo>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			const shared_ptr<DlFormula>& conclusion = get<0>(it->second).back();
 			pair<tbb::concurrent_unordered_map<string, set<string, cmpStringGrow>>::iterator, bool> emplaceResult = formulasToCheck.emplace(DlCore::toPolishNotation_noRename(conclusion), set<string, cmpStringGrow> { });
 			{
 				lock_guard<mutex> lock(mtx_set);
-				emplaceResult.first->second.insert(s);
+				emplaceResult.first->second.insert(it->first); // store concrete proof string (disabled 'reversedAbstractProofStrings' in DRuleParser::parseDProofs_raw() call)
 			}
 			if (!emplaceResult.second) // a proof for the conclusion is already known
 				redundantCounter++;
@@ -61,29 +54,37 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to parse " << conclusionCounter + redundantCounter << " D-proofs (" << conclusionCounter << " conclusions, " << redundantCounter << " redundant)." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to translate " << conclusionCounter + redundantCounter << " D-proof" << (conclusionCounter + redundantCounter == 1 ? "" : "s") << " (" << conclusionCounter << " conclusion" << (conclusionCounter == 1 ? "" : "s") << ", " << redundantCounter << " redundant)." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
 	// 2. Load and parse generated D-proofs.
+	string fullInputFilePrefix = DlProofEnumerator::concatenateDataPath(dataLocation, inputFilePrefix);
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
 	vector<vector<string>> allConclusions; // TODO: Need ability to parse conclusions on-the-fly in order to save RAM for huge generator files.
 	uint64_t allRepresentativesCount;
 	uint32_t start;
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, inputFilePrefix)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, fullInputFilePrefix)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	filePostfix = "-unfiltered" + to_string(start) + "+.txt";
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, inputFilePrefix, filePostfix, false)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, fullInputFilePrefix, filePostfix, false)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
-	ProgressData parseProgress(allRepresentatives.size() > 27 ? 5 : allRepresentatives.size() > 25 ? 10 : 20, allRepresentativesCount);
-	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? DlProofEnumerator::connectDProofConclusions(allRepresentatives, allConclusions, &parseProgress) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, &parseProgress);
+	size_t showProgress_bound = 17;
+	size_t parseProgressSteps5 = 29;
+	size_t parseProgressSteps10 = 27;
+	if (DlProofEnumerator::getCustomAxioms())
+		DlProofEnumerator::readConfigFile(true, &showProgress_bound, &parseProgressSteps5, &parseProgressSteps10);
+	bool showProgress = allRepresentatives.size() > showProgress_bound;
+	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > parseProgressSteps5 ? 5 : allRepresentatives.size() > parseProgressSteps10 ? 10 : 20, allRepresentativesCount) : ProgressData();
+	atomic<uint64_t> misses_speedupN { 0 };
+	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? DlProofEnumerator::connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, debug ? &misses_speedupN : nullptr);
 	if (debug) {
-		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proof" << (withConclusions ? " conclusion" : "") << "s in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
+		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proof" << (withConclusions ? " conclusion" : "") << "s in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << (misses_speedupN ? " Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / allRepresentativesCount, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results." : "") << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -98,7 +99,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to load " << inputConclusionCounter << " more D-proofs from the input." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to load " << inputConclusionCounter << " more D-proof" << (inputConclusionCounter == 1 ? "" : "s") << " from the input." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
@@ -113,7 +114,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		}
 	});
 	if (debug) {
-		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " classes of formulas by their standard length." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to create " << formulasByStandardLength.size() << " class" << (formulasByStandardLength.size() == 1 ? "" : "es") << " of formulas by their standard length." << endl;
 		cout << "|representativeProofs| = " << representativeProofs.size() << ", |formulasByStandardLength| = " << formulasByStandardLength.size() << endl;
 		//#cout << [](tbb::concurrent_map<size_t, tbb::concurrent_vector<pair<const string*, string*>>>& m) { stringstream ss; for (const pair<const unsigned, tbb::concurrent_vector<pair<const string*, string*>>>& p : m) { ss << p.first << ":" << p.second.size() << ", "; } return ss.str(); }(formulasByStandardLength) << endl;
 		startTime = chrono::steady_clock::now();
@@ -149,7 +150,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 					string dProof = "D" + it->second + searchResult->second; // proof Dαβ for B
 					extraParseCounter++;
 					// NOTE: If parsing took too long, we could clone B and substitute its variables to start from "0". But parsing isn't an issue here at all.
-					vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
+					vector<DProofInfo> rawParseData = DRuleParser::parseDProof_raw(dProof, DlProofEnumerator::getCustomAxioms(), 1);
 					const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 					pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = representativeProofs.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
 
@@ -211,7 +212,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 							if (dProof.length() <= currentWorstLength) {
 								const string& potentialSchema = *p.first;
 								schemaCheckCounter++;
-								if (DlCore::isSchemaOf_polishNotation_noRename_numVars(potentialSchema, formula)) { // found a schema
+								if (DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(potentialSchema, formula)) { // found a schema
 									{
 										lock_guard<mutex> lock(mtx_best);
 										if ((!bad || bestDProof.length() > dProof.length()) && dProof.length() < currentWorstLength) {
@@ -242,11 +243,10 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 								hasMereAlternatives = true;
 							stylingReplacements.emplace(dProof, bestDProof);
 						}
-				} else {
+				} else
 					for (const string& dProof : dProofs)
 						if (dProof != bestAlternative)
 							stylingReplacements.emplace(dProof, bestAlternative);
-				}
 				if (debug) {
 					lock_guard<mutex> lock(mtx_cout);
 					auto setStr = [](const set<string, cmpStringGrow>& m, size_t len, bool longer, bool prntLen, const string& exclude) {
@@ -289,7 +289,7 @@ void DRuleReducer::createReplacementsFile(const string& pmproofsFile, const stri
 		cout << "Condensed detachment proof replacement strings saved to " << outputFile << "." << endl;
 }
 
-void DRuleReducer::applyReplacements(const string& initials, const string& replacementsFile, const string& pmproofsFile, const string& outputFile, bool styleAll, bool listAll, bool wrap, bool debug) {
+void DRuleReducer::applyReplacements(const string& initials, const string& replacementsFile, const string& dProofDB, const string& outputFile, bool styleAll, bool listAll, bool wrap, bool debug) {
 	// 1. Load generated replacements.
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
@@ -328,12 +328,13 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 	}
 
 	// 2. Load mmsolitaire's D-proofs.
-	vector<pair<string, string>> dProofsInFile = DRuleParser::readFromMmsolitaireFile(pmproofsFile, debug);
+	vector<string> dProofNamesInFile;
+	vector<string> dProofsInFile = DRuleParser::readFromMmsolitaireFile(dProofDB, &dProofNamesInFile, debug);
 	if (debug)
 		startTime = chrono::steady_clock::now();
 	vector<string::size_type> prevLengths(dProofsInFile.size());
 	for (size_t i = 0; i < dProofsInFile.size(); i++)
-		prevLengths[i] = dProofsInFile[i].second.length();
+		prevLengths[i] = dProofsInFile[i].length();
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to store " << dProofsInFile.size() << " lengths." << endl;
 		startTime = chrono::steady_clock::now();
@@ -345,23 +346,23 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 	};
 	vector<Modification> modifications(dProofsInFile.size());
 	for (size_t i = 0; i < dProofsInFile.size(); i++) {
-		pair<string, string>& p = dProofsInFile[i];
-		const string originalDProof = p.second;
-		string& dProof = p.second;
+		const string originalDProof = dProofsInFile[i];
+		string& dProofName = dProofNamesInFile[i];
+		string& dProof = dProofsInFile[i];
 		for (pair<string, string>& replacement : shorteningReplacements)
 			boost::replace_all(dProof, replacement.first, replacement.second);
 		if (originalDProof != dProof) { // could actually reduce that proof
 			modifications[i] = Modification::Shorter;
 			const string reducedDProof = debug ? dProof : string { };
 			if (debug)
-				cerr << "[NOTE] Could reduce \"" << p.first << "\" from " << originalDProof.length() << " to " << dProof.length() << " steps. Before applying styling replacements: " << dProof << endl;
+				cerr << "[NOTE] Could reduce \"" << dProofName << "\" from " << originalDProof.length() << " to " << dProof.length() << " steps. Before applying styling replacements: " << dProof << endl;
 			for (pair<string, string>& replacement : stylingReplacements)
 				boost::replace_all(dProof, replacement.first, replacement.second);
 			if (debug) {
 				if (reducedDProof != dProof)
-					cout << "[NOTE] Could further modify \"" << p.first << "\" with styling replacements: " << dProof << endl;
+					cout << "[NOTE] Could further modify \"" << dProofName << "\" with styling replacements: " << dProof << endl;
 				else
-					cout << "[NOTE] Couldn't further modify \"" << p.first << "\" with applying styling replacements." << endl;
+					cout << "[NOTE] Couldn't further modify \"" << dProofName << "\" with applying styling replacements." << endl;
 			}
 		} else if (styleAll) {
 			for (pair<string, string>& replacement : stylingReplacements)
@@ -369,7 +370,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 			if (originalDProof != dProof) {
 				modifications[i] = Modification::Styled;
 				if (debug)
-					cout << "[NOTE] Could modify \"" << p.first << "\" with styling replacements: " << dProof << endl;
+					cout << "[NOTE] Could modify \"" << dProofName << "\" with styling replacements: " << dProof << endl;
 			}
 		}
 	}
@@ -389,15 +390,14 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 			string::size_type semIndex = context.find(';');
 			if (semIndex == string::npos)
 				throw invalid_argument("DRuleReducer::applyReplacements(): Invalid context \"" + context + "\" has no ';'.");
-			shared_ptr<DlFormula> consequent = DRuleParser::parseMmPlConsequent(context.substr(0, semIndex), false);
+			shared_ptr<DlFormula> consequent = DRuleParser::parseMmConsequent(context.substr(0, semIndex), false);
 
 			// Check if we can substitute to desired consequent.
-			vector<pair<string, tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>>> rawParseData = DRuleParser::parseDProof_raw(dProof);
+			vector<DProofInfo> rawParseData = DRuleParser::parseDProof_raw(dProof, DlProofEnumerator::getCustomAxioms(), 1);
 			const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
 			shared_ptr<DlFormula> reference = DlCore::toBasicDlFormula(consequent, nullptr, nullptr, nullptr, false);
-			map<string, shared_ptr<DlFormula>> substitutions;
-			if (!DlCore::isSchemaOf(conclusion, reference, &substitutions))
-				throw invalid_argument("DRuleReducer::applyReplacements(): (" + context + ") " + DlCore::formulaRepresentation_traverse(conclusion) + " is not a subformula of BasicDL(consequent) " + DlCore::formulaRepresentation_traverse(reference) + ".");
+			if (!DlCore::isSchemaOf(conclusion, reference))
+				throw invalid_argument("DRuleReducer::applyReplacements(): (" + context + ") " + DlCore::formulaRepresentation_traverse(conclusion) + " is not a schema of BasicDL(consequent) " + DlCore::formulaRepresentation_traverse(reference) + ".");
 
 			// Obtain result from conclusion.
 			static const map<string, shared_ptr<DlFormula>> resultSubstitutions { { { "0", make_shared<DlFormula>(make_shared<String>("P")) }, { "1", make_shared<DlFormula>(make_shared<String>("Q")) }, { "2", make_shared<DlFormula>(make_shared<String>("R")) }, { "3", make_shared<DlFormula>(make_shared<String>("S")) }, { "4", make_shared<DlFormula>(make_shared<String>("T")) }, { "5", make_shared<DlFormula>(make_shared<String>("U")) }, { "6", make_shared<DlFormula>(make_shared<String>("V")) }, { "7", make_shared<DlFormula>(make_shared<String>("W")) }, { "8", make_shared<DlFormula>(make_shared<String>("X")) }, { "9", make_shared<DlFormula>(make_shared<String>("Y")) }, { "10", make_shared<DlFormula>(make_shared<String>("Z")) }, { "11", make_shared<DlFormula>(make_shared<String>("A")) }, { "12", make_shared<DlFormula>(make_shared<String>("B")) }, { "13", make_shared<DlFormula>(make_shared<String>("C")) }, { "14", make_shared<DlFormula>(make_shared<String>("D")) }, { "15", make_shared<DlFormula>(make_shared<String>("E")) }, { "16", make_shared<DlFormula>(make_shared<String>("F")) }, { "17", make_shared<DlFormula>(make_shared<String>("G")) }, { "18", make_shared<DlFormula>(make_shared<String>("H")) }, { "19", make_shared<DlFormula>(make_shared<String>("I")) }, { "20", make_shared<DlFormula>(make_shared<String>("J")) }, { "21", make_shared<DlFormula>(make_shared<String>("K")) }, { "22", make_shared<DlFormula>(make_shared<String>("L")) }, { "23", make_shared<DlFormula>(make_shared<String>("M")) }, { "24", make_shared<DlFormula>(make_shared<String>("N")) }, { "25", make_shared<DlFormula>(make_shared<String>("O")) } } };
@@ -405,13 +405,13 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 
 			// Convert result.
 			string f = DlCore::standardFormulaRepresentation(result);
-			boost::replace_all(f, "\\not", "~ ");
-			boost::replace_all(f, "\\imply", " -> ");
+			boost::replace_all(f, DlCore::terminalStr_not(), "~ ");
+			boost::replace_all(f, DlCore::terminalStr_nece(), "□ ");
+			boost::replace_all(f, DlCore::terminalStr_imply(), " -> ");
 			return f + "; ! Result of proof\n";
 		};
-		const pair<string, string>& p = dProofsInFile[i];
-		const string& head = p.first;
-		const string& dStr = p.second;
+		const string& head = dProofNamesInFile[i];
+		const string& dStr = dProofsInFile[i];
 		switch (modifications[i]) {
 		case Modification::None:
 			if (listAll) {
@@ -452,7 +452,7 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 		//       - there are no "  " (i.e. two consequent whitespaces)
 		stringstream ss_wrap;
 		string line;
-		while (getline(ss, line)) {
+		while (getline(ss, line))
 			if (line.empty())
 				ss_wrap << "\n";
 			else {
@@ -489,7 +489,6 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 				else
 					ss_wrap << wrapped << "\n" << line.substr(semIndex) << "\n";
 			}
-		}
 		result = ss_wrap.str();
 	} else
 		result = ss.str();

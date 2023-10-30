@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" height="394px" viewBox="0 0 30 37">
+	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="10" y1="5" x2="5" y2="15"/>
+	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="10" y1="5" x2="15" y2="15"/>
+	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="5" y1="15" x2="5" y2="25"/>
+	<defs id="vertexLibrary">
+		<circle id="vertexCircle" style="fill:#ccccff; stroke:#4040ff; stroke-width:0.2" cx="0" cy="0" r="2.5"/>
+		<rect id="vertexSquare" style="fill:#cccccc; stroke:#404040; stroke-width:0.2" x="-2.5" y="-2.5" width="5" height="5"/>
+		<g id="imply">
+			<use xlink:href="#vertexCircle"/>
+			<g transform="scale(0.21) translate(-9,-9)">
+				<svg style="display:block" width="17" height="18" viewBox="0 0 17 18">
+					<g fill="#000000">
+						<use transform="matrix(10,0,0,10,2.4,12.9)" xlink:href="#imply_ref1"/>
+					</g>
+					<defs>
+						<path id="imply_ref1" transform="scale(0.001,-0.001)" d="M817.4,136 c-18.4,0 -35.2,13.7 -35.2,35.1 0,36.7 105.4,113.1 175.7,183.3 l-831.1,0 c-18.3,0 -35.1,16.9 -35.1,35.2 0,19.8 16.8,35.1 35.1,35.1 l831.1,0 C884.6,499.6 782.2,574.4 782.2,609.6 c0,21.4 16.8,35.1 35.2,35.1 10.7,0 19.8,-4.6 27.5,-13.7 80.9,-96.3 181.8,-183.4 307,-206.3 16.9,-3 29.1,-16.8 29.1,-35.1 0,-16.8 -12.2,-30.6 -29.1,-33.6 C1026.7,333.1 925.8,246 844.9,149.7 837.2,140.6 828.1,136 817.4,136 z"/>
+					</defs>
+				</svg>
+			</g>
+		</g>
+		<g id="nece">
+			<use xlink:href="#vertexCircle"/>
+			<g transform="scale(0.21) translate(-8.5,-9)">
+				<svg style="display:block" width="16" height="18" viewBox="0 0 16 18">
+					<g fill="#000000">
+						<use transform="matrix(10,0,0,10,1.6,13)" xlink:href="#nece_ref1"/>
+					</g>
+					<defs>
+						<path id="nece_ref1" transform="scale(0.001,-0.001)" d="M1170.3,-113 l0,1006.8 -1006.8,0 0,-1006.8 z m-1042,-70.2 c-19.8,0 -35.1,15.2 -35.1,35.1 l0,1077 c0,19.9 15.3,35.1 35.1,35.1 l1077.1,0 c21.4,0 35.2,-15.2 35.2,-35.1 l0,-1077 c0,-19.9 -13.8,-35.1 -35.2,-35.1 z"/>
+					</defs>
+				</svg>
+			</g>
+		</g>
+		<g id="var_p">
+			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,0,13)">
+				<path transform="scale(0.001,-0.001)" d="M378.9,21.4 c56.5,0 129.9,50.4 181.8,157.4 27.5,58 77.9,233.7 77.9,323.8 0,90.2 -36.7,143.7 -97.8,143.7 -25.9,0 -70.2,-10.7 -123.7,-58.1 C389.6,565.3 348.3,522.5 337.6,481.3 L262.8,181.8 c-4.6,-18.3 -4.6,-21.4 -4.6,-24.4 0,-9.2 19.9,-136 120.7,-136 z M-28.9,-296.3 c-12.3,0 -19.9,6.1 -19.9,18.3 0,29.1 16.8,29.1 35.1,29.1 67.2,0 70.2,10.7 82.5,62.6 L239.9,498.1 c6.1,25.9 10.7,42.7 10.7,77.9 0,58 -21.4,70.3 -47.4,70.3 -55,0 -85.6,-73.4 -111.5,-181.9 C82.5,430.8 81,429.3 65.7,429.3 c-3.1,0 -18.3,0 -18.3,15.3 0,4.6 19.8,96.2 47.3,148.2 13.8,27.5 42.8,87.1 113.1,87.1 56.5,0 122.2,-32.1 137.5,-114.6 C395.7,624.9 469,679.9 545.4,679.9 661.5,679.9 748.6,579 748.6,435.4 c0,-224.6 -191,-447.5 -368.2,-447.5 -77.9,0 -120.7,53.4 -140.5,97.7 C229.2,47.4 165,-201.6 165,-219.9 c0,-13.8 0,-24.4 76.4,-24.4 21.4,0 36.7,0 36.7,-16.9 0,-30.5 -19.9,-30.5 -27.5,-30.5 l-151.3,0 c-42.8,0 -87.1,-4.6 -128.2,-4.6 z"/>
+			</g>
+		</g>
+	</defs>
+	<use transform="translate(10,5)" xlink:href="#imply"/>
+	<use transform="translate(5,15)" xlink:href="#nece"/>
+	<use transform="translate(15,15)" xlink:href="#vertexSquare"/>
+	<use transform="translate(14.16,15)" xlink:href="#var_p"/>
+	<use transform="translate(5,25)" xlink:href="#vertexSquare"/>
+	<use transform="translate(4.16,25)" xlink:href="#var_p"/>
+</svg>

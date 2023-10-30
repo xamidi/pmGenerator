@@ -1,0 +1,22 @@
+[ Note: All lines before the first line
+  containing a semicolon are ignored
+  and can be used for comment headers. ]
+
+Proof system configuration: pmGenerator -c -n -s CCCpqCCCNrNsrtCCtpCsp
+SHA-512/224 hash: 7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69
+Command to reduce: pmGenerator -c -n -s CCCpqCCCNrNsrtCCtpCsp -r data/w6proofs.txt data/w6proofs-reducer.txt -d -a SD data/w6proofs-reducer.txt data/w6proofs.txt data/w6proofs-result-all.txt -l -d -w
+Command to reassemble: pmGenerator -c -n -s CCCpqCCCNrNsrtCCtpCsp -a SD data/empty.txt data/w6proofs.txt data/w6proofs-result-all.txt -l -d -w
+
+(P -> P); ! Cpp
+(P -> P); ! Result of proof
+DDDD1D11D1111; ! 13 steps
+
+(P -> (Q -> P)); ! CpCqp
+(P -> (Q -> P)); ! Result of proof
+DD1DD11D11D1DD1D111; ! 19 steps
+
+(((P -> Q) -> (((~ R -> ~ S) -> R) -> T)) -> ((T -> P) -> (S -> P)))
+; ! Walsh's 6th Axiom (CCCpqCCCNrNsrtCCtpCsp)
+(((P -> Q) -> (((~ R -> ~ S) -> R) -> T)) -> ((T -> P) -> (S -> P)))
+; ! Result of proof
+1; ! 1 step

@@ -1,0 +1,59 @@
+[ Note: All lines before the first line
+  containing a semicolon are ignored
+  and can be used for comment headers. ]
+
+Proof system configuration: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp    (or "-N 1" for faster – but incomplete – generation via outruling consecutive necessitation steps)
+SHA-512/224 hash: d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f    (or 360ceff28c45b2d8ea630fc79a7dad68b04acdceaf41521e9f6ecd95)
+Command to reduce: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -r data/s5proofs.txt data/s5proofs-reducer.txt -d -a SD data/s5proofs-reducer.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
+               or: pmGenerator -c -n -N 1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -r data/s5proofs.txt data/s5proofs-reducer.txt -d -a SD data/s5proofs-reducer.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
+
+Command to reassemble: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -a SD data/empty.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
+                   or: pmGenerator -c -n -N 1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -a SD data/empty.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
+
+Note that these proofs may also be reducible from S5 without N-rule (configuration without "-N <limit or -1>", hash f3080a7440bc4f7a8149647365da7c36fea7e287fa6b198737e9837d),
+Some proofs may even be reducible from systems with proper subsets of the same axioms. But since proofs with axioms missing from the system cannot be parsed,
+one would have to place the proof files of a subsystem in a system with all here used axioms, and address the latter system.
+
+(P -> (Q -> P)); ! Axiom 1 by Frege (CpCqp)
+(P -> (Q -> P)); ! Result of proof
+1; ! 1 step
+
+((P -> (Q -> R)) -> ((P -> Q) -> (P -> R)))
+; ! Axiom 2 by Frege (CCpCqrCCpqCpr)
+((P -> (Q -> R)) -> ((P -> Q) -> (P -> R))); ! Result of proof
+2; ! 1 step
+
+((~ P -> ~ Q) -> (Q -> P))
+; ! Axiom for Frege by Łukasiewicz (CCNpNqCqp)
+((~ P -> ~ Q) -> (Q -> P)); ! Result of proof
+3; ! 1 step
+
+(□ P -> P); ! Axiom T (CLpp)
+(□ P -> P); ! Result of proof
+4; ! 1 step
+
+(□ (P -> Q) -> (□ P -> □ Q)); ! Axiom K by Kripke (CLCpqCLpLq)
+(□ (P -> Q) -> (□ P -> □ Q)); ! Result of proof
+5; ! 1 step
+
+(◇ P -> □ ◇ P); ! Axiom 5 by Lewis (CMpLMp, i.e. CNLNpLNLNp)
+(~ □ ~ P -> □ ~ □ ~ P); ! Result of proof
+6; ! 1 step
+
+(P -> P); ! Cpp
+(P -> P); ! Result of proof
+DD211; ! 5 steps
+
+(P -> □ ◇ P); ! CpLMp
+(P -> □ ~ □ ~ P); ! Result of proof
+DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2
+D1311D3DD2DD2D13DD2D1311; ! 93 steps
+
+(□ P -> □ □ P); ! CLpLLp
+(□ P -> □ □ P); ! Result of proof
+DD2D1D5NDD2D1DD2D1D5NDD2DD2D13DD2D1311DD2DD2D13DD2D1311DD2DD2D13DD2D1
+D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13116DD2D13DD2D1311DDD2D13DD2D1D2D
+D2D13D1DD2DD2D13DD2D1311DD2D1D2DD2D1D2DD2D15D5NDD2D13DD2D1D2DD2D13D1D
+D2DD2D13DD2D1311DD2D1DD22D2DD2D13DD2D1311DD2D13DD2D1311ND5ND3DD2DD2D1
+3DD2D1311DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114
+DD2D13DD2D1311D3DD2DD2D13DD2D1311; ! 378 steps

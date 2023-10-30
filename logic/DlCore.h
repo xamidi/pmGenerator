@@ -115,6 +115,8 @@ struct DlCore {
 
 	// Formula properties
 	static std::unordered_set<std::string> primitivesOfFormula(const std::shared_ptr<DlFormula>& formula); // a set (unordered, no duplicates)
+	static std::vector<std::string> primitivesOfFormula_ordered(const std::shared_ptr<DlFormula>& formula); // an ordered set (ordered, no duplicates)
+	static std::vector<std::string> primitiveSequenceOfFormula(const std::shared_ptr<DlFormula>& formula); // a sequence (ordered, duplicates)
 
 	// Create a copy of the given formula where all non-basic operators are replaced by their fundamental meaning in { \not, \imply, \nece, \com }.
 	// NOTE: When requested, 'optOut_hasUniqueOriginals' returns false iff the originals are not unique, e.g. for \notX\implyY\imply(Z\imply(X\orY)),
@@ -128,6 +130,8 @@ struct DlCore {
 	static bool isSchemaOf(const std::shared_ptr<DlFormula>& potentialSchema, const std::shared_ptr<DlFormula>& formula, std::map<std::string, std::shared_ptr<DlFormula>>* optOut_substitutions = nullptr);
 	// Variant where inputs are given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
 	static bool isSchemaOf_polishNotation_noRename_numVars(const std::string& potentialSchema, const std::string& formula, std::map<std::size_t, std::string>* optOut_substitutions = nullptr);
+	// Slightly faster than its map-based variant above. Uses a vector for substitution lookups. Ideal when all numerical variables 0, ..., n are given (i.e. there are no gaps).
+	static bool isSchemaOf_polishNotation_noRename_numVars_vec(const std::string& potentialSchema, const std::string& formula);
 
 	// Determines whether there exists a unifier for the given formulas, i.e. a substitution that results in the same substituted formula for both of the given formulas.
 	// Essentially applies Robinson's unification algorithm, but modified such that the substituted formulas are not constructed but implicitly compared.
@@ -144,15 +148,26 @@ struct DlCore {
 
 	static std::size_t standardFormulaLength(const std::shared_ptr<DlFormula>& formula);
 
-	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński).
+	// Calculate the formula's representation in Polish notation (according to 1. Łukasiewicz, 2. Bocheński), with custom translations for missing standard operator letters.
 	// - standard:  { \and -> K, \or -> A, \nand -> D, \nor -> X, \imply -> C, \implied -> B, \equiv -> E, \xor -> J, \not -> N, \nece -> L, \poss -> M, \top -> V, \bot -> O }
 	// - custom:    { \nimply -> F, \nimplied -> G, \com -> S, \app -> U, \obli -> Z, \perm -> P }
 	// - Bocheński: { \nimply -> L, \nimplied -> M } instead of { \nimply -> F, \nimplied -> G }, and (custom) { \nece -> H, \poss -> I } instead of { \nece -> L, \poss -> M }
+	// This is mainly helpful to search for occurrences of a specific formula in papers via search engines. The style supports at most 26 different variables.
+	// Unsupported elements will be surrounded by < and >, but there is also the option to define custom translations that take priority. Note that new variables are always
+	// translated by their order of occurrence w.r.t. 'sequenceOfVarNames' (default: p, q, r, ..., o) regardless of whether those are assigned by a custom translation.
+	// This can be disabled by passing an empty list. It is the user's responsibility to avoid undesired merges.
+	static std::string toPolishNotation(const std::shared_ptr<DlFormula>& f, bool prioritizeBochenski = false, const std::map<std::string, std::string>* customOperatorTranslation = nullptr, const std::map<std::string, std::string>* customVariableTranslation = nullptr, const std::vector<std::string>& sequenceOfVarNames = { "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o" });
 	// Performance-oriented variant that does not rename variables and does not support user-defined translations. Generates invalid expressions when variable names
 	// interfere with operator symbols, i.e. in order to generate parsable expressions, variable names should not contain a character of an operator symbol.
 	// In order to support variable names of lengths greater 1, all consecutive variable names are separated by '.', e.g. x1\implyx2 -> "Cx1.x2".
 	static std::string toPolishNotation_noRename(const std::shared_ptr<DlFormula>& f, bool prioritizeBochenski = false);
+	// Variant that renames all variables into integers (0, 1, 2, ...) according to their order of appearance, such that all consecutive variable names are separated by '.'.
+	// Resulting strings can be converted to formulas or representations in infix notation via fromPolishNotation_noRename().
+	static std::string toPolishNotation_numVars(const std::shared_ptr<DlFormula>& f, bool prioritizeBochenski = false);
 
+	// Parse a string in Polish notation to the formula's (infix) representation.
+	// Reverse function of toPolishNotation() without user-defined translations.
+	static bool fromPolishNotation(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = false);
 	// (Performance-oriented) inverse of toPolishNotation_noRename(). Assigns DRuleParser's globally definite symbols to operators, and its own globally definite symbols to variables.
 	// Does not fill the output's meaning.
 	static bool fromPolishNotation_noRename(std::shared_ptr<DlFormula>& output, const std::string& input, bool prioritizeBochenski = false, bool debug = false);

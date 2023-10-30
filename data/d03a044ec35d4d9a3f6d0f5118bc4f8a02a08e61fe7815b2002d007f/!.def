@@ -1,0 +1,11 @@
+[d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f]
+(1) C0C1.0              -    CpCqp            -    0\imply(1\imply0)
+(2) CC0C1.2CC0.1C0.2    -    CCpCqrCCpqCpr    -    (0\imply(1\imply2))\imply((0\imply1)\imply(0\imply2))
+(3) CCN0N1C1.0          -    CCNpNqCqp        -    (\not0\imply\not1)\imply(1\imply0)
+(4) CL0.0               -    CLpp             -    \nece0\imply0
+(5) CLC0.1CL0L1         -    CLCpqCLpLq       -    \nece(0\imply1)\imply(\nece0\imply\nece1)
+(6) CNLN0LNLN0          -    CNLNpLNLNp       -    \not\nece\not0\imply\nece\not\nece\not0
+Supports necessitation steps.
+#removals;1:0,2:0,3:0,4:1,5:6,6:6,7:19,8:29,9:83,10:102,11:279,12:422,13:1014,14:1596,15:3648,16:6016,17:13307,18:22703,19:48921,20:86809,21:183513,22:334530,23:699371,24:1304710
+#iterations;1:6,2:6,3:42,4:89,5:268,6:596,7:1386,8:2895,9:6517,10:13164,11:28088,12:56806,13:117775,14:235494,15:484132,16:965558,17:1965114,18:3929633,19:7965680,20:15939098,21:32291194,22:64783208,23:131182254,24:264050751,25:535260845
+#iterations-unfiltered25+;26:1083165713,27:2233996317,28:4589712682

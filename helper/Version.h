@@ -8,9 +8,9 @@
 #define TOOL_NAME "pmGenerator"
 #define TOOL_REPOSITORY "https://github.com/xamidi/pmGenerator"
 #define TOOL_VERSION_MAJOR 1
-#define TOOL_VERSION_MINOR 1
-#define TOOL_VERSION_PATCH 2
-#define TOOL_VERSION_SPEC "1.1.2"
+#define TOOL_VERSION_MINOR 2
+#define TOOL_VERSION_PATCH 0
+#define TOOL_VERSION_SPEC "1.2.0"
 #define TOOL_VERSION_BRANCH "c++11"
 
 #define BUILD_YEAR \
