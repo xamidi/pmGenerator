@@ -1,0 +1,44 @@
+       1 dProofs1.txt
+       1 dProofs3.txt
+       2 dProofs5.txt
+       3 dProofs7.txt
+       6 dProofs9.txt
+       7 dProofs11.txt
+      12 dProofs13.txt
+      15 dProofs15.txt
+      23 dProofs17.txt
+      36 dProofs19.txt
+      61 dProofs21.txt
+      99 dProofs23.txt
+     152 dProofs25.txt
+     214 dProofs27.txt
+     299 dProofs29.txt
+     400 dProofs31.txt
+     560 dProofs33.txt
+     797 dProofs35.txt
+    1162 dProofs37.txt
+    1706 dProofs39.txt
+    2502 dProofs41.txt
+    3673 dProofs43.txt
+    5333 dProofs45.txt
+    7756 dProofs47.txt
+   11285 dProofs49.txt
+   16457 dProofs51.txt
+   24156 dProofs53.txt
+   35569 dProofs55.txt
+   52769 dProofs57.txt
+   78319 dProofs59.txt
+  116867 dProofs61.txt
+  174207 dProofs63.txt
+  260535 dProofs65.txt
+  389264 dProofs67.txt
+  582969 dProofs69.txt
+  872258 dProofs71.txt
+ 1307863 dProofs73.txt
+ 1959086 dProofs75.txt
+ 2940441 dProofs77.txt
+ 4409199 dProofs79.txt
+ 6623647 dProofs81.txt
+22730041 dProofs83-unfiltered83+.txt
+38726684 dProofs85-unfiltered83+.txt
+62716073 dProofs87-unfiltered83+.txt

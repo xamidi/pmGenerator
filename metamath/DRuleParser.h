@@ -20,6 +20,9 @@ namespace logic { typedef tree::TreeNode<helper::String> DlFormula; enum class D
 
 namespace metamath {
 
+// (first: D-proof, second: (<0>: formulas as tree structures, <1>: reasons, <2>: reference numbers of reasons))
+typedef std::pair<std::string, std::tuple<std::vector<std::shared_ptr<logic::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>> DProofInfo;
+
 class DRuleParser {
 	friend struct logic::DlCore;
 
@@ -44,13 +47,26 @@ class DRuleParser {
 	static const std::shared_ptr<helper::String>& _top();
 	static const std::shared_ptr<helper::String>& _bot();
 
+public:
+	struct AxiomInfo {
+		const std::shared_ptr<logic::DlFormula> refinedAxiom;
+		const unsigned primitivesCount;
+		const std::string name;
+		AxiomInfo(const std::string& name, const std::shared_ptr<logic::DlFormula>& axiom);
+	private:
+		AxiomInfo(const std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string>& refinedData);
+		static std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string> _refineAxiom(const std::string& name, const std::shared_ptr<logic::DlFormula>& axiom);
+	};
+
+private:
+	static std::shared_ptr<logic::DlFormula> _ax(unsigned axiomIndex, const std::vector<std::shared_ptr<logic::DlFormula>>& primitives, const std::vector<AxiomInfo>& axioms);
 	static std::shared_ptr<logic::DlFormula> _ax1(const std::shared_ptr<logic::DlFormula>& psi, const std::shared_ptr<logic::DlFormula>& phi);
 	static std::shared_ptr<logic::DlFormula> _ax2(const std::shared_ptr<logic::DlFormula>& psi, const std::shared_ptr<logic::DlFormula>& phi, const std::shared_ptr<logic::DlFormula>& chi);
 	static std::shared_ptr<logic::DlFormula> _ax3(const std::shared_ptr<logic::DlFormula>& psi, const std::shared_ptr<logic::DlFormula>& phi);
 
 public:
-	static std::vector<std::pair<std::string, std::string>> readFromMmsolitaireFile(const std::string& file, bool debug = false);
-	static std::map<std::size_t, std::set<std::string>> prepareDProofsByLength(const std::string& file, unsigned minUseAmountToCreateHelperProof = 2, std::vector<std::pair<std::string, std::string>>* optOut_dProofsInFile = nullptr, bool debug = false);
+	static std::vector<std::string> readFromMmsolitaireFile(const std::string& file, std::vector<std::string>* optOut_dProofNamesInFile, bool debug = false);
+	static std::map<std::size_t, std::set<std::string>> prepareDProofsByLength(const std::string& file, const std::vector<AxiomInfo>* customAxioms = nullptr, unsigned minUseAmountToCreateHelperProof = 2, std::vector<std::string>* optOut_dProofsInFile = nullptr, std::vector<std::string>* optOut_dProofNamesInFile = nullptr, bool debug = false);
 
 	// Fast substitution, which only works reliably when it is ensured that 'formula' contains no non-leaf references that also occur in 'substitutions'.
 	// Otherwise, cycles / infinite trees (which are no formulas) may be constructed!
@@ -59,18 +75,21 @@ private:
 	static void _modifyingSubstitute(std::shared_ptr<logic::DlFormula>& formula, const std::map<std::string, std::shared_ptr<logic::DlFormula>>& substitutions, std::unordered_set<std::shared_ptr<logic::DlFormula>>& alreadyModified);
 
 public:
-	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<logic::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>>> parseDProof_raw(const std::string& dProof, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false, bool exceptionOnUnificationFailure = true);
-	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<logic::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>>> parseDProof_raw_permissive(const std::string& dProof, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false);
-	static std::vector<std::pair<std::string, std::tuple<std::vector<std::shared_ptr<logic::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>>> parseDProofs_raw(const std::vector<std::pair<std::string, std::string>>& dProofs, unsigned minUseAmountToCreateHelperProof = 2, std::map<std::string, std::string>* optOut_duplicates = nullptr, std::map<std::size_t, std::set<std::string>>* optOut_knownDProofsByLength = nullptr, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = true, bool exceptionOnUnificationFailure = true, const std::vector<std::string>* altIn_dProofsWithoutContexts = nullptr, bool prepareOnly = false);
+	static std::vector<DProofInfo> parseDProof_raw(const std::string& dProof, const std::vector<AxiomInfo>* customAxioms = nullptr, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false, bool exceptionOnUnificationFailure = true, bool reversedAbstractProofStrings = true);
+	static std::vector<DProofInfo> parseDProof_raw_permissive(const std::string& dProof, const std::vector<AxiomInfo>* customAxioms = nullptr, unsigned minUseAmountToCreateHelperProof = 2, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = false, bool reversedAbstractProofStrings = true);
+	static std::vector<DProofInfo> parseDProofs_raw(const std::vector<std::string>& dProofs, const std::vector<AxiomInfo>* customAxioms = nullptr, unsigned minUseAmountToCreateHelperProof = 2, std::map<std::size_t, std::set<std::string>>* optOut_knownDProofsByLength = nullptr, bool verifyingConstruct = false, bool debug = false, bool calculateMeanings = true, bool exceptionOnUnificationFailure = true, bool prepareOnly = false, bool reversedAbstractProofStrings = true, std::vector<std::size_t>* optOut_indexTranslation = nullptr, std::unordered_map<std::size_t, std::size_t>* optOut_indexOrigins = nullptr, std::map<std::size_t, std::size_t>* optOut_duplicates = nullptr, std::vector<std::string>* optOut_otherProofStrings = nullptr);
 
-	// Parsing of pmproofs' propositional formulas that declare desired consequents or results of proofs. Used by originalCollection().
-	static std::shared_ptr<logic::DlFormula> parseMmPlConsequent(const std::string& strConsequent, bool calculateMeanings = true);
+	static void reverseAbstractProofString(std::string& abstractDProof);
+
+	// Parsing of propositional formulas in pmproofs' style that declare desired consequents or results of proofs.
+	static std::shared_ptr<logic::DlFormula> parseMmConsequent(const std::string& strConsequent, bool calculateMeanings = true);
+	static std::string toDBProof(const std::string& dProof, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::string& name = "", const std::string& theorem = "", bool normalPolishNotation = false);
 private:
 #define PARSEMMPL_STORED // NOTE: For Metamath's pmproofs.txt, using storage slightly slows parsing but speeds up meaning calculation, so that stored mode is faster overall. However, those overall durations are close to two milliseconds, so it barely matters.
 #ifdef PARSEMMPL_STORED
-	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmPlFormula(std::unordered_map<std::string, std::shared_ptr<logic::DlFormula>>& formulaBackups, const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
+	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmFormula(std::unordered_map<std::string, std::shared_ptr<logic::DlFormula>>& formulaBackups, const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
 #else
-	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmPlFormula(const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
+	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmFormula(const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
 #endif
 	static std::string_view::iterator _obtainUnaryOperatorSequence(const std::string_view& unaryOperatorSequence, std::vector<logic::DlOperator>& unaryOperators);
 };

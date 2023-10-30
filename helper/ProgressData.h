@@ -10,7 +10,7 @@
 namespace xamidi {
 namespace helper {
 
-struct ProgressData {
+struct ProgressData { // Note: Displays only integer percentage values, which might be generously rounded up, but less so for larger data sets (i.e. higher 'maximum'). 'percentageStepSize' must be a divisor of 100.
 	unsigned percentageStepSize = 0;
 	std::uint64_t maximum = 0;
 	bool maximumEstimated = false;
@@ -24,7 +24,7 @@ struct ProgressData {
 	ProgressData& operator=(const ProgressData& other);
 	void setStartTime();
 	bool nextStep();
-	bool nextState(std::uint64_t& percentage, std::string& progress, std::string& estimateToComplete);
+	bool nextState(std::string& percentage, std::string& progress, std::string& estimateToComplete);
 };
 
 }

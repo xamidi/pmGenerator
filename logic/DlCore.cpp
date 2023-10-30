@@ -267,6 +267,32 @@ unordered_set<string> DlCore::primitivesOfFormula(const shared_ptr<DlFormula>& f
 	return result;
 }
 
+vector<string> DlCore::primitivesOfFormula_ordered(const shared_ptr<DlFormula>& formula) {
+	vector<string> result;
+	vector<string> resultSequence = primitiveSequenceOfFormula(formula);
+	unordered_set<string> resultSet;
+	for (const string& name : resultSequence)
+		if (resultSet.emplace(name).second)
+			result.push_back(name);
+	return result;
+}
+
+// Extract the sequence of variables of the given DL-formula
+vector<string> DlCore::primitiveSequenceOfFormula(const shared_ptr<DlFormula>& formula) {
+	vector<string> result;
+	auto recurse = [&](const shared_ptr<DlFormula>& formula, const auto& me) -> void {
+		if (formula->getChildren().empty()) {
+			const string& value = formula->getValue()->value;
+			if (value != terminalStr_bot() && value != terminalStr_top())
+				result.push_back(value);
+		} else
+			for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
+				me(subformula, me);
+	};
+	recurse(formula, recurse);
+	return result;
+}
+
 bool DlCore::tryRegisterVariable(const string& variableName, vector<uint32_t>* optOut_variableNameSequence) {
 	if (dlOperators().count(variableName))
 		return false; // variableName cannot be a variable since it is an operator
@@ -618,6 +644,95 @@ bool DlCore::isSchemaOf_polishNotation_noRename_numVars(const string& potentialS
 	return true;
 }
 
+bool DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(const string& potentialSchema, const string& formula) {
+	vector<string> substitutions;
+	string::size_type formulaIndex = 0;
+	size_t varNum = 0;
+	bool prevVar = false;
+	auto readSubstitutedFormula = [&]() -> bool {
+		if (prevVar) { // read previous variable first
+			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex); // NOTE: Also traverses potential '.' that do not occur in 'potentialSchema'.
+			string substitutedFormula = formula.substr(formulaIndex, finalIndex - formulaIndex + 1);
+			formulaIndex += substitutedFormula.length();
+			if (substitutions.size() <= varNum) {
+				substitutions.resize(varNum + 1);
+				substitutions[varNum] = substitutedFormula;
+			} else {
+				string& entry = substitutions[varNum];
+				if (entry != substitutedFormula) {
+					if (entry.empty())
+						entry = substitutedFormula;
+					else
+						return false;
+				}
+			}
+			varNum = 0;
+			prevVar = false;
+		}
+		return true;
+	};
+	for (char c : potentialSchema)
+		switch (c) {
+		default:
+			if (formulaIndex >= formula.length())
+				return false;
+			if (!readSubstitutedFormula())
+				return false;
+			if (formula[formulaIndex++] != c)
+				return false;
+			break;
+		case '.': // NOTE: A schema may contain a '.' without a concrete formula of it containing a corresponding '.'.
+			if (!readSubstitutedFormula())
+				return false;
+			if (formula[formulaIndex] == '.')
+				formulaIndex++;
+			break;
+		case '0':
+			varNum = 10 * varNum;
+			prevVar = true;
+			break;
+		case '1':
+			varNum = 10 * varNum + 1;
+			prevVar = true;
+			break;
+		case '2':
+			varNum = 10 * varNum + 2;
+			prevVar = true;
+			break;
+		case '3':
+			varNum = 10 * varNum + 3;
+			prevVar = true;
+			break;
+		case '4':
+			varNum = 10 * varNum + 4;
+			prevVar = true;
+			break;
+		case '5':
+			varNum = 10 * varNum + 5;
+			prevVar = true;
+			break;
+		case '6':
+			varNum = 10 * varNum + 6;
+			prevVar = true;
+			break;
+		case '7':
+			varNum = 10 * varNum + 7;
+			prevVar = true;
+			break;
+		case '8':
+			varNum = 10 * varNum + 8;
+			prevVar = true;
+			break;
+		case '9':
+			varNum = 10 * varNum + 9;
+			prevVar = true;
+			break;
+		}
+	if (!readSubstitutedFormula())
+		return false;
+	return true;
+}
+
 bool DlCore::tryUnifyTrees(const shared_ptr<DlFormula>& formulaA, const shared_ptr<DlFormula>& formulaB, map<string, shared_ptr<DlFormula>>* optOut_substitutions, bool debug) {
 	map<string, shared_ptr<DlFormula>> substitutions;
 	if (_tryUnifyTrees(formulaA, formulaB, substitutions, debug)) {
@@ -782,6 +897,49 @@ void DlCore::traverseLeftToRightInOrder(const shared_ptr<DlFormula>& formula, co
 	}
 }
 
+string DlCore::toPolishNotation(const shared_ptr<DlFormula>& f, bool prioritizeBochenski, const map<string, string>* customOperatorTranslation, const map<string, string>* customVariableTranslation, const vector<string>& sequenceOfVarNames) {
+	// NOTE: In Bocheński notation \nimply and \nimplied are L and M, but in Łukasiewicz notation those are already taken by \nece and \poss, respectively.
+	static const unordered_map<string, string> operatorNames_luk = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "F" }, { terminalStr_nimplied(), "G" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "L" }, { terminalStr_poss(), "M" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	static const unordered_map<string, string> operatorNames_boc = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "L" }, { terminalStr_nimplied(), "M" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "H" }, { terminalStr_poss(), "I" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	const unordered_map<string, string>& operatorNames = prioritizeBochenski ? operatorNames_boc : operatorNames_luk;
+
+	map<string, string> operatorTranslations;
+	if (customOperatorTranslation)
+		operatorTranslations = *customOperatorTranslation;
+	map<string, string> variableTranslations;
+	if (customVariableTranslation)
+		variableTranslations = *customVariableTranslation;
+	size_t nextVariableIndex = 0;
+	auto recurse = [&](const shared_ptr<DlFormula>& node, const auto& me) -> string {
+		auto valToString = [&](const string& s) -> string {
+			// 1. Operator names
+			map<string, string>::const_iterator itOperator = operatorTranslations.find(s);
+			if (itOperator == operatorTranslations.end()) {
+				unordered_map<string, string>::const_iterator searchResult = operatorNames.find(s);
+				if (searchResult != operatorNames.end())
+					return operatorTranslations[s] = searchResult->second;
+			} else
+				return itOperator->second;
+			if (dlOperators().count(s))
+				return operatorTranslations[s] = "<" + s + ">"; // unsupported operator
+
+			// 2. Variable names
+			map<string, string>::const_iterator itVariable = variableTranslations.find(s);
+			if (itVariable == variableTranslations.end()) {
+				if (nextVariableIndex >= sequenceOfVarNames.size())
+					return variableTranslations[s] = "<" + s + ">"; // unsupported variable
+				return variableTranslations[s] = sequenceOfVarNames[nextVariableIndex++];
+			} else
+				return itVariable->second;
+		};
+		string str = valToString(node->getValue()->value);
+		for (size_t i = 0; i < node->getChildren().size(); i++)
+			str += me(node->getChildren()[i], me);
+		return str;
+	};
+	return recurse(f, recurse);
+}
+
 string DlCore::toPolishNotation_noRename(const shared_ptr<DlFormula>& f, bool prioritizeBochenski) {
 	// NOTE: In Bocheński notation \nimply and \nimplied are L and M, but in Łukasiewicz notation those are already taken by \nece and \poss, respectively.
 	static const unordered_map<string, string> operatorNames_luk = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "F" }, { terminalStr_nimplied(), "G" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "L" }, { terminalStr_poss(), "M" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
@@ -814,6 +972,112 @@ string DlCore::toPolishNotation_noRename(const shared_ptr<DlFormula>& f, bool pr
 	};
 	bool x, y;
 	return recurse(f, x, y, recurse);
+}
+
+string DlCore::toPolishNotation_numVars(const shared_ptr<DlFormula>& f, bool prioritizeBochenski) {
+	// NOTE: In Bocheński notation \nimply and \nimplied are L and M, but in Łukasiewicz notation those are already taken by \nece and \poss, respectively.
+	static const unordered_map<string, string> operatorNames_luk = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "F" }, { terminalStr_nimplied(), "G" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "L" }, { terminalStr_poss(), "M" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	static const unordered_map<string, string> operatorNames_boc = { { terminalStr_and(), "K" }, { terminalStr_or(), "A" }, { terminalStr_nand(), "D" }, { terminalStr_nor(), "X" }, { terminalStr_imply(), "C" }, { terminalStr_implied(), "B" }, { terminalStr_nimply(), "L" }, { terminalStr_nimplied(), "M" }, { terminalStr_equiv(), "E" }, { terminalStr_xor(), "J" }, { terminalStr_com(), "S" }, { terminalStr_app(), "U" }, { terminalStr_not(), "N" }, { terminalStr_nece(), "H" }, { terminalStr_poss(), "I" }, { terminalStr_obli(), "Z" }, { terminalStr_perm(), "P" }, { terminalStr_top(), "V" }, { terminalStr_bot(), "O" } };
+	const unordered_map<string, string>& operatorNames = prioritizeBochenski ? operatorNames_boc : operatorNames_luk;
+
+	vector<string> variables = DlCore::primitivesOfFormula_ordered(f);
+	unordered_map<string, string> variableTranslation;
+	unsigned counter = 0;
+	for (const string& v : variables)
+		variableTranslation.emplace(v, to_string(counter++));
+
+	auto recurse = [&](const shared_ptr<DlFormula>& node, bool& startsWithVar, bool& endsWithVar, const auto& me) -> string {
+		auto valToString = [&](const string& s, bool& isVar) -> string {
+			// 1. Operator names
+			unordered_map<string, string>::const_iterator searchResult = operatorNames.find(s);
+			if (searchResult != operatorNames.end()) {
+				isVar = false;
+				return searchResult->second;
+			}
+
+			// 2. Variable names
+			isVar = true;
+			return variableTranslation.at(s);
+		};
+		string str = valToString(node->getValue()->value, startsWithVar);
+		bool prevEndsWithVar = startsWithVar;
+		for (size_t i = 0; i < node->getChildren().size(); i++) {
+			bool childStartsWithVar, childEndsWithVar;
+			string tmp = me(node->getChildren()[i], childStartsWithVar, childEndsWithVar, me);
+			str += prevEndsWithVar && childStartsWithVar ? "." + tmp : tmp;
+			prevEndsWithVar = childEndsWithVar;
+		}
+		endsWithVar = prevEndsWithVar;
+		return str;
+	};
+	bool x, y;
+	return recurse(f, x, y, recurse);
+}
+
+bool DlCore::fromPolishNotation(shared_ptr<DlFormula>& output, const string& input, bool prioritizeBochenski, bool debug) {
+	static tbb::concurrent_unordered_map<string, shared_ptr<String>> vars;
+	auto obtainDefiniteVarSymbol = [](const string& s) -> const shared_ptr<String>& { // i.e. make_shared<String>(s), but definite for each variable name s
+		tbb::concurrent_unordered_map<string, shared_ptr<String>>::const_iterator searchResult = vars.find(s);
+		return searchResult == vars.end() ? vars.emplace(s, make_shared<String>(s)).first->second : searchResult->second;
+	};
+	static const unordered_map<char, DlOperator> operators_luk = { { 'K', DlOperator::And }, { 'A', DlOperator::Or }, { 'D', DlOperator::Nand }, { 'X', DlOperator::Nor }, { 'C', DlOperator::Imply }, { 'B', DlOperator::Implied }, { 'F', DlOperator::Nimply }, { 'G', DlOperator::Nimplied }, { 'E', DlOperator::Equiv }, { 'J', DlOperator::Xor }, { 'S', DlOperator::Com }, { 'U', DlOperator::App }, { 'N', DlOperator::Not }, { 'L', DlOperator::Nece }, { 'M', DlOperator::Poss }, { 'Z', DlOperator::Obli }, { 'P', DlOperator::Perm }, { 'V', DlOperator::Top }, { 'O', DlOperator::Bot } };
+	static const unordered_map<char, DlOperator> operators_boc = { { 'K', DlOperator::And }, { 'A', DlOperator::Or }, { 'D', DlOperator::Nand }, { 'X', DlOperator::Nor }, { 'C', DlOperator::Imply }, { 'B', DlOperator::Implied }, { 'L', DlOperator::Nimply }, { 'M', DlOperator::Nimplied }, { 'E', DlOperator::Equiv }, { 'J', DlOperator::Xor }, { 'S', DlOperator::Com }, { 'U', DlOperator::App }, { 'N', DlOperator::Not }, { 'H', DlOperator::Nece }, { 'I', DlOperator::Poss }, { 'Z', DlOperator::Obli }, { 'P', DlOperator::Perm }, { 'V', DlOperator::Top }, { 'O', DlOperator::Bot } };
+	const unordered_map<char, DlOperator>& operators = prioritizeBochenski ? operators_boc : operators_luk;
+	deque<shared_ptr<DlFormula>> stack;
+	for (int64_t i = static_cast<int64_t>(input.length()) - 1; i >= 0; i--) {
+		char c = input[i];
+		if (c == '>') { // unsupported variable ending
+			string::size_type start = input.rfind('<', i);
+			if (start == string::npos) {
+				if (debug)
+					cerr << "Parse error: Missing '<'." << endl;
+				return false;
+			} else if (start + 1 == (string::size_type) i) {
+				if (debug)
+					cerr << "Parse error: Empty variable name in \"<>\"." << endl;
+				return false;
+			} else if (debug && start + 2 == (string::size_type) i && 'a' <= input[start + 1] && input[start + 1] <= 'z')
+				cerr << "Warning: Variable '" << string { input[start + 1] } << "' from \"<" << string { input[start + 1] } << ">\" might be merged. To circumvent this, avoid names 'a', 'b', ..., 'z' for variables that occur as 27th or later." << endl;
+			stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(input.substr(start + 1, i - start - 1))));
+			i = start;
+		} else {
+			unordered_map<char, DlOperator>::const_iterator searchResult = operators.find(c);
+			if (searchResult == operators.end())
+				stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(string { c })));
+			else { // NOTE: It is assumed that all operators are addressed by 'operators', everything else will be treated as a variable.
+				DlOperator op = searchResult->second;
+				unsigned arity = dlOperatorArity(op);
+				if (stack.size() < arity) {
+					if (debug)
+						cerr << "Parse error: Missing variable for '" << string { c } << "' (alias " << dlOperatorToString(op) << ") at index " << i << "." << endl;
+					return false;
+				}
+				switch (arity) {
+				case 0:
+					stack.push_back(make_shared<DlFormula>(obtainDefiniteVarSymbol(dlOperatorToString(op))));
+					break;
+				case 1:
+					stack.back() = make_shared<DlFormula>(obtainDefiniteOpSymbol(op), vector<shared_ptr<DlFormula>> { stack.back() });
+					break;
+				case 2: {
+					shared_ptr<DlFormula> term = make_shared<DlFormula>(obtainDefiniteOpSymbol(op), vector<shared_ptr<DlFormula>> { stack.back(), stack[stack.size() - 2] });
+					stack.pop_back();
+					stack.back() = term;
+					break;
+				}
+				default:
+					throw logic_error("DlCore::fromPolishNotation(): Impossible arity (" + to_string(arity) + ") for " + dlOperatorToString(op) + ".");
+				}
+			}
+		}
+	}
+	if (stack.size() != 1) {
+		if (debug)
+			cerr << "Parse error: Missing or extra variables resulted in non-singleton stack " << FctHelper::dequeString(stack) << "." << endl;
+		return false;
+	}
+	output = stack[0];
+	return true;
 }
 
 bool DlCore::fromPolishNotation_noRename(shared_ptr<DlFormula>& output, const string& input, bool prioritizeBochenski, bool debug) {
