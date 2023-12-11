@@ -178,6 +178,13 @@ DRuleParser::AxiomInfo::AxiomInfo(const string& name, const shared_ptr<DlFormula
 		AxiomInfo(_refineAxiom(name, axiom)) {
 }
 
+DRuleParser::AxiomInfo& DRuleParser::AxiomInfo::operator=(const AxiomInfo& other) {
+	refinedAxiom = other.refinedAxiom->cloneSharedPtr();
+	primitivesCount = other.primitivesCount;
+	name = other.name;
+	return *this;
+}
+
 DRuleParser::AxiomInfo::AxiomInfo(const tuple<shared_ptr<DlFormula>, unsigned, string>& refinedData) :
 		refinedAxiom(get<0>(refinedData)), primitivesCount(get<1>(refinedData)), name(get<2>(refinedData)) {
 }
@@ -441,7 +448,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 			size_t pos = 1;
 			for (vector<pair<string, string>>::const_reverse_iterator it = referencingDProofs.rbegin(); it != referencingDProofs.rend(); ++it) {
 				if (it->second.length() > 1)
-					boost::replace_all(abstractDProof, it->second, "(" + to_string(referencingDProofs.size() - pos) + ")");
+					boost::replace_all(abstractDProof, it->second, "[" + to_string(referencingDProofs.size() - pos) + "]");
 				pos++;
 			}
 			referencingDProofs.push_back(make_pair(abstractDProof, concreteDProof));
@@ -455,32 +462,22 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 		auto sufficientLen = [](const string& s) {
 			// Nα: To contain proofs of fundamental length greater than 1, the containing proof requires length >= 3, e.g. NN1.
 			// Dα: To contain proofs of fundamental length greater than 1, the containing proof requires length >= 4, e.g. D4N1.
-			if (s.length() < 3)
+			if (s.length() < 3 || (s[0] == 'D' && s.length() < 4))
 				return false;
-			bool startsWithN = s[0] == 'N';
-			if (!startsWithN && s.length() < 4)
-				return false;
-			bool counting = true;
-			string::size_type i = 0;
+			// Since references may increase string length (but not proof length), it is fastest to look for a second rule occurrence.
+			bool first = true;
 			for (char c : s) {
 				switch (c) {
-				case '(':
-					counting = false;
-					break;
-				case ')':
-					counting = true;
-					if (++i >= 4) {
+				case 'D':
+				case 'N':
+					if (first)
+						first = false;
+					else
 						return true;
-					}
-					break;
-				default:
-					if (counting && ++i >= 4) {
-						return true;
-					}
 					break;
 				}
 			}
-			return startsWithN ? i >= 3 : i >= 4;
+			return false;
 		};
 		for (const pair<string, string>& p : referencingDProofs) {
 			const string& abstractDProof = p.first;
@@ -510,11 +507,11 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 						referenceIndices[0] = -1;
 						break;
 					}
-					case '(':
+					case '[':
 						inReference = true;
 						refIndex = 0;
 						break;
-					case ')':
+					case ']':
 						if (lastDNIndex) {
 							referenceIndices[nonDs] = refIndex;
 							nonDs++;
@@ -612,7 +609,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 								throw logic_error("DRuleParser::parseDProofs(): Impossible pseudo reference index for axiom: " + to_string(referenceIndex));
 							}
 					};
-					if (lastOpN && nonDs == 1) {
+					if (lastOpN && nonDs == 1) { // Every "N<non-D>" that we read is a new subproof. Each "<non-D>" can be either an axiom, or a reference.
 						string subProof(abstractDProof.begin() + lastDNIndex, abstractDProof.begin() + i + 1);
 						pair<map<string, string>::iterator, bool> emplaceResult = recentCandidates.emplace(subProof, string { });
 						if (emplaceResult.second) { // actually inserted => we still need to calculate the concrete subproof
@@ -643,7 +640,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 			// Replacements in existing basic proofs
 			for (vector<pair<string, string>>::iterator itDProof = referencingDProofs.begin(); itDProof != referencingDProofs.end(); ++itDProof)
 				if (sufficientLen(itDProof->first))
-					boost::replace_all(itDProof->first, recentExtraProof, "(" + to_string(proofIndex) + ")");
+					boost::replace_all(itDProof->first, recentExtraProof, "[" + to_string(proofIndex) + "]");
 			// NOTE: Extra proofs are created bottom-up, i.e. they only contain a single rule (D-rule: length 3, N-rule: length 2) thus are too small for being added new references.
 			proofIndex++;
 		}
@@ -651,14 +648,14 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 		helperProofCandidates.insert(helperProofCandidates.end(), recentCandidates.begin(), recentCandidates.end());
 	} while (!recentCandidates.empty());
 	if (debug) {
-		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << helperProofCandidates.size() << " helper proof candidates, i.e. the minimal set of referenced proofs such that each proof contains only a single rule with inputs." << endl;
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << helperProofCandidates.size() << " helper proof candidate" << (helperProofCandidates.size() == 1 ? "" : "s") << ", i.e. the minimal set of referenced proofs such that each proof contains only a single rule with inputs." << endl;
 		startTime = chrono::steady_clock::now();
 	}
 
 	// 4. Keep only those helper proof candidates which are referenced at least 'minUseAmountToCreateHelperProof' times. The concrete variants of the accepted
 	//    candidates are -- grouped by concrete lengths -- inserted into 'knownDProofsByLength', which already contains the given proofs in the same manner.
 	map<size_t, unsigned> referenceAmounts; // index of proof -> amount of references to proof
-	auto findReferences = [&](const string& dProof, unsigned containerIndex) {
+	auto findReferences = [&](const string& dProof) {
 		bool inReference = false;
 		unsigned refIndex = 0;
 		for (char c : dProof)
@@ -694,28 +691,25 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 				case '9':
 					refIndex = 10 * refIndex + 9;
 					break;
-				case ')':
+				case ']':
 					if (refIndex >= referencingDProofs.size())
-						referenceAmounts[refIndex]++; // Only test the extra references, since only them are optional.
+						referenceAmounts[refIndex]++; // Only test the extra references, since only they are optional.
 					refIndex = 0;
 					inReference = false;
 					break;
 				default:
 					throw invalid_argument("DRuleParser::parseDProofs(): Invalid character '" + string { c } + "': Not part of a proof reference.");
 				}
-			else if (c == '(')
+			else if (c == '[')
 				inReference = true;
 	};
-	{
-		unsigned containerIndex = 0;
-		for (const pair<string, string>& p : referencingDProofs) {
-			const string& referencingDProof = p.first;
-			findReferences(referencingDProof, containerIndex++);
-		}
-		for (const pair<string, string>& p : helperProofCandidates) {
-			const string& extraProof = p.first;
-			findReferences(extraProof, containerIndex++);
-		}
+	for (const pair<string, string>& p : referencingDProofs) {
+		const string& referencingDProof = p.first;
+		findReferences(referencingDProof);
+	}
+	for (const pair<string, string>& p : helperProofCandidates) {
+		const string& extraProof = p.first;
+		findReferences(extraProof);
 	}
 	unsigned extraCounter = 0;
 	{
@@ -758,7 +752,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 			size_t pos = 1;
 			for (vector<string>::const_reverse_iterator it = reversedDProofs.rbegin(); it != reversedDProofs.rend(); ++it) {
 				if (it->length() > 1)
-					boost::replace_all(refinedDProof, *it, "(" + to_string(reversedDProofs.size() - pos) + ")");
+					boost::replace_all(refinedDProof, *it, "[" + to_string(reversedDProofs.size() - pos) + "]");
 				pos++;
 			}
 			reversedDProofs.push_back(reversedDProof); // Add after inserting references, to avoid self-referencing.
@@ -855,7 +849,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 				case '9':
 					refIndex = 10 * refIndex + 9;
 					break;
-				case ')': {
+				case ']': {
 					// Store formula and reason
 					formulas.push_back(modProofs[refIndex].first.back());
 					dReasons.push_back("R");
@@ -893,7 +887,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 						case '8':
 						case '9': {
 							unsigned i = c - '1';
-							const vector<DRuleParser::AxiomInfo>& ax = *customAxioms;
+							const vector<AxiomInfo>& ax = *customAxioms;
 							if (i >= ax.size())
 								throw invalid_argument("DRuleParser::parseDProofs(): Invalid character '" + string { c } + "': Not a proof step.");
 							formulas.push_back(_ax(i, registerFreshPrimitives(ax[i].primitivesCount), ax));
@@ -928,7 +922,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 						case 'y':
 						case 'z': {
 							unsigned i = 10 + c - 'a' - 1;
-							const vector<DRuleParser::AxiomInfo>& ax = *customAxioms;
+							const vector<AxiomInfo>& ax = *customAxioms;
 							if (i >= ax.size())
 								throw invalid_argument("DRuleParser::parseDProofs(): Invalid character '" + string { c } + "': Not a proof step.");
 							formulas.push_back(_ax(i, registerFreshPrimitives(ax[i].primitivesCount), ax));
@@ -1045,7 +1039,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 					used.push_back(false);
 					break;
 				}
-				case '(':
+				case '[':
 					atRef = true;
 					break;
 				}
@@ -1108,15 +1102,15 @@ void DRuleParser::reverseAbstractProofString(string& abstractDProof) {
 	string::size_type pos = 0;
 	string::size_type a;
 	string::size_type b;
-	while ((a = abstractDProof.find(')', pos)) != string::npos) {
-		if ((b = abstractDProof.find('(', a + 2)) == string::npos) {
+	while ((a = abstractDProof.find(']', pos)) != string::npos) {
+		if ((b = abstractDProof.find('[', a + 2)) == string::npos) {
 			reverse(abstractDProof.begin() + a, abstractDProof.end());
 			break;
 		} else if (b - a > 2) {
 			reverse(abstractDProof.begin() + a, abstractDProof.begin() + b + 1);
 		} else {
-			abstractDProof[a] = '(';
-			abstractDProof[b] = ')';
+			abstractDProof[a] = '[';
+			abstractDProof[b] = ']';
 		}
 		pos = b + 1;
 	}
@@ -1138,15 +1132,15 @@ shared_ptr<DlFormula> DRuleParser::parseMmConsequent(const string& strConsequent
 	bool ended = false;
 	for (string::size_type i = 0; i < strConsequent.length(); i++)
 		switch (strConsequent[i]) {
-		case '(':
+		case '[':
 			if (ended)
 				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has more than one top-level subformulas.");
 			openings.push_back(i);
 			depth++;
 			break;
-		case ')':
+		case ']':
 			if (depth == 0)
-				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too many ')'.");
+				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too many ']'.");
 			const string::size_type& currentSubformulaIndex = openings.back();
 #ifdef PARSEMMPL_STORED
 			shared_ptr<DlFormula> subformula = _parseEnclosedMmFormula(formulaBackups, strConsequent, currentSubformulaIndex, i, subformulas, consBegin);
@@ -1161,7 +1155,7 @@ shared_ptr<DlFormula> DRuleParser::parseMmConsequent(const string& strConsequent
 			break;
 		}
 	if (depth > 0)
-		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too few ')'.");
+		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too few ']'.");
 
 	if (subformulas.empty())
 		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has no subformulas.");
@@ -1281,6 +1275,704 @@ string DRuleParser::toDBProof(const string& dProof, const vector<AxiomInfo>* cus
 	ss << f << "; ! Result of proof\n";
 	ss << dProof << "; ! " << dProof.length() << " step" << (dProof.length() == 1 ? "" : "s") << "\n";
 	return ss.str();
+}
+
+shared_ptr<DlFormula> DRuleParser::_parseAbstractDProof_parse(const string& rule, const size_t i, const size_t extraIndex, const string& extraId, const vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, const vector<AxiomInfo>* customAxioms, vector<shared_ptr<DlFormula>>& helperRulesConclusions, const vector<string>& helperRules, const vector<size_t>* optOut_indexEvalSequence, vector<size_t>& indexEvalSequence, vector<AxiomInfo>& axBase, vector<AxiomInfo>& axBaseN, vector<AxiomInfo>& refBase) {
+	vector<DProofInfo> rawParseData;
+	string::size_type pos = rule.find('[');
+	if (pos == string::npos) // no references => use original axioms
+		rawParseData = parseDProof_raw(rule, customAxioms);
+	else {
+		string::size_type posEnd = rule.find(']', pos + 1);
+		if (posEnd == string::npos)
+			throw invalid_argument("Missing ']' in \"" + rule + "\".");
+		size_t num;
+		try {
+			num = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+		} catch (...) {
+			throw invalid_argument("Bad index number in \"" + rule + "\".");
+		}
+		if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
+			if (posEnd != rule.size() - 1)
+				throw logic_error("First ']' should be final character in \"" + rule + "\".");
+			shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+			if (!f) // still need to parse rule at 'num'?
+				f = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+			if (optOut_indexEvalSequence)
+				indexEvalSequence.push_back(i);
+			return make_shared<DlFormula>(_nece(), vector<shared_ptr<DlFormula>> { f });
+		} else {
+			bool refLhs = pos == 1;
+			pos = rule.find('[', posEnd + 1);
+			if (pos == string::npos) { // D-rule with one axiom, one reference => use axBase or axBaseN
+				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+				if (!f) // still need to parse rule at 'num'?
+					f = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+				char axSym = refLhs ? rule[posEnd + 1] : rule[1];
+				if ((axSym < '1' || axSym > '9') && (axSym < 'a' || axSym > 'z'))
+					throw invalid_argument("Invalid axiom name in \"" + rule + "\".");
+				size_t ax = axSym >= '1' && axSym <= '9' ? axSym - '0' : 10 + axSym - 'a';
+				string rule_copy = rule;
+				if (ax < 35) {
+					axBase[extraIndex] = AxiomInfo("", f);
+					boost::replace_all(rule_copy, "[" + to_string(num) + "]", extraId);
+					rawParseData = parseDProof_raw(rule_copy, &axBase);
+				} else {
+					axBaseN[33] = AxiomInfo("", f);
+					boost::replace_all(rule_copy, "[" + to_string(num) + "]", "y");
+					rawParseData = parseDProof_raw(rule_copy, &axBaseN);
+				}
+			} else { // D-rule with no axioms, two references => use refBase
+				string::size_type posEnd = rule.find(']', pos + 1);
+				if (posEnd == string::npos)
+					throw invalid_argument("Missing ']' in \"" + rule + "\".");
+				size_t num2;
+				try {
+					num2 = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+				} catch (...) {
+					throw invalid_argument("Bad index number in \"" + rule + "\".");
+				}
+				if (posEnd != rule.size() - 1)
+					throw logic_error("Second ']' should be final character in \"" + rule + "\".");
+				shared_ptr<DlFormula>& f1 = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+				if (!f1) // still need to parse rule at 'num'?
+					f1 = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+				shared_ptr<DlFormula>& f2 = num2 < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num2] : helperRulesConclusions[num2 - inOut_abstractDProof.size()];
+				if (!f2) // still need to parse rule at 'num2'?
+					f2 = _parseAbstractDProof_parse(num2 < inOut_abstractDProof.size() ? inOut_abstractDProof[num2] : helperRules[num2 - inOut_abstractDProof.size()], num2, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+				refBase[0] = AxiomInfo("", f1);
+				refBase[1] = AxiomInfo("", f2);
+				string rule_copy = rule;
+				boost::replace_all(rule_copy, "[" + to_string(num) + "]", "1");
+				if (num != num2)
+					boost::replace_all(rule_copy, "[" + to_string(num2) + "]", "2");
+				rawParseData = parseDProof_raw(rule_copy, &refBase);
+				//#cout << "[#2] " << DlCore::toPolishNotation(get<0>(rawParseData.back().second).back()) << " = D<" << DlCore::toPolishNotation(f1) << "><" << DlCore::toPolishNotation(f2) << ">" << endl;
+			}
+		}
+	}
+	if (optOut_indexEvalSequence)
+		indexEvalSequence.push_back(i);
+	return get<0>(rawParseData.back().second).back();
+}
+void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, const vector<AxiomInfo>* customAxioms, vector<string>* optOut_helperRules, vector<shared_ptr<DlFormula>>* optOut_helperRulesConclusions, vector<size_t>* optOut_indexEvalSequence, bool debug) {
+	if (customAxioms && customAxioms->empty())
+		throw invalid_argument("Axiom list given but empty.");
+
+	// 1. Ensure full referencing (except that only higher indices can reference lower indices)
+	//#cout << "\n[BEFORE]\n" << FctHelper::vectorString(inOut_abstractDProof, { }, { }, "\n") << endl;
+	for (size_t i = 1; i < inOut_abstractDProof.size(); i++)
+		for (size_t j = 0; j < i; j++)
+			boost::replace_all(inOut_abstractDProof[i], inOut_abstractDProof[j], "[" + to_string(j) + "]");
+	//#cout << "\n[AFTER]\n" << FctHelper::vectorString(inOut_abstractDProof, { }, { }, "\n") << endl;
+
+	// 2. Obtain the minimal set of referencing proofs that would be required to accomplish that each given proof can be retracted to a single rule with inputs.
+	//    Note: Similar to (3.) in parseDProofs_raw(), but without concrete proofs.
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	vector<string> helperRules;
+	set<string> recentDRules;
+	do { // register all references, building up on existing references
+		recentDRules.clear();
+		auto sufficientLen = [](const string& s) {
+			// Nα: To contain proofs of fundamental length greater than 1, the containing proof requires length >= 3, e.g. NN1.
+			// Dα: To contain proofs of fundamental length greater than 1, the containing proof requires length >= 4, e.g. D4N1.
+			if (s.length() < 3 || (s[0] == 'D' && s.length() < 4))
+				return false;
+			// Since references may increase string length (but not proof length), it is fastest to look for a second rule occurrence.
+			bool first = true;
+			for (char c : s) {
+				switch (c) {
+				case 'D':
+				case 'N':
+					if (first)
+						first = false;
+					else
+						return true;
+					break;
+				}
+			}
+			return false;
+		};
+		for (const string& abstractDProofEntry : inOut_abstractDProof) {
+			if (sufficientLen(abstractDProofEntry)) {
+				if (abstractDProofEntry[0] != 'D' && abstractDProofEntry[0] != 'N')
+					throw invalid_argument("DRuleParser::parseAbstractDProof(): A D-N-proof of length greater 1 must start with 'D' or 'N'.");
+				string::size_type lastDNIndex = 0;
+				bool lastOpN = false;
+				bool inReference = false;
+				unsigned nonDs = 0;
+				string::size_type i;
+				array<int, 2> referenceIndices = { -1, -1 }; // referenceIndices[i] = -n < 0 means that a reference index for i doesn't exist, i.e. argument[i] is an axiom (An), not a reference
+				unsigned refIndex = 0;
+				for (i = 1; i < abstractDProofEntry.length(); i++) {
+					char c = abstractDProofEntry[i];
+					switch (c) {
+					case 'D':
+						nonDs = 0;
+						lastDNIndex = i;
+						lastOpN = false;
+						referenceIndices = { -1, -1 };
+						break;
+					case 'N': {
+						nonDs = 0;
+						lastDNIndex = i;
+						lastOpN = true;
+						referenceIndices[0] = -1;
+						break;
+					}
+					case '[':
+						inReference = true;
+						refIndex = 0;
+						break;
+					case ']':
+						if (lastDNIndex) {
+							referenceIndices[nonDs] = refIndex;
+							nonDs++;
+						}
+						inReference = false;
+						break;
+					case '0':
+						if (inReference)
+							refIndex = 10 * refIndex;
+						else
+							throw invalid_argument("DRuleParser::parseAbstractDProof(): Invalid character '0': Not a proof step.");
+						break;
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
+						if (inReference)
+							refIndex = 10 * refIndex + (c - '0');
+						else if ((!customAxioms && c > '3') || (customAxioms && static_cast<unsigned>(c) - '0' > customAxioms->size()))
+							throw invalid_argument("DRuleParser::parseAbstractDProof(): Invalid character '" + string { c } + "': Not a proof step.");
+						else if (lastDNIndex) {
+							referenceIndices[nonDs] = '0' - c;
+							nonDs++;
+						}
+						break;
+					case 'a':
+					case 'b':
+					case 'c':
+					case 'd':
+					case 'e':
+					case 'f':
+					case 'g':
+					case 'h':
+					case 'i':
+					case 'j':
+					case 'k':
+					case 'l':
+					case 'm':
+					case 'n':
+					case 'o':
+					case 'p':
+					case 'q':
+					case 'r':
+					case 's':
+					case 't':
+					case 'u':
+					case 'v':
+					case 'w':
+					case 'x':
+					case 'y':
+					case 'z':
+						if (!customAxioms || 10u + c - 'a' > customAxioms->size())
+							throw invalid_argument("DRuleParser::parseAbstractDProof(): Invalid character '" + string { c } + "': Not a proof step.");
+						else if (lastDNIndex) {
+							referenceIndices[nonDs] = 'a' - c - 10;
+							nonDs++;
+						}
+						break;
+					default:
+						throw invalid_argument("DRuleParser::parseAbstractDProof(): Invalid character '" + string { c } + "': Not a proof step.");
+					}
+					if (lastOpN && nonDs == 1) { // Every "N<non-D>" that we read is a new subproof. Each "<non-D>" can be either an axiom, or a reference.
+						string subProof(abstractDProofEntry.begin() + lastDNIndex, abstractDProofEntry.begin() + i + 1);
+						recentDRules.emplace(subProof);
+						nonDs = 0;
+						lastDNIndex = 0;
+					} else if (nonDs == 2) { // Every "D<non-D><non-D>" that we read is a new subproof. Each "<non-D>" can be either an axiom, or a reference.
+						string subProof(abstractDProofEntry.begin() + lastDNIndex, abstractDProofEntry.begin() + i + 1);
+						recentDRules.emplace(subProof);
+						nonDs = 0;
+						lastDNIndex = 0;
+					}
+				}
+			}
+		}
+		size_t proofIndex = helperRules.size() + inOut_abstractDProof.size(); // starting index of the new stuff
+		for (const string& recentExtraProof : recentDRules) {
+			// Replacements in existing basic proofs
+			for (vector<string>::iterator itDProof = inOut_abstractDProof.begin(); itDProof != inOut_abstractDProof.end(); ++itDProof)
+				if (sufficientLen(*itDProof))
+					boost::replace_all(*itDProof, recentExtraProof, "[" + to_string(proofIndex) + "]");
+			// NOTE: Extra proofs are created bottom-up, i.e. they only contain a single rule (D-rule: length 3, N-rule: length 2) thus are too small for being added new references.
+			proofIndex++;
+		}
+		// Registration of new extra proofs
+		helperRules.insert(helperRules.end(), recentDRules.begin(), recentDRules.end());
+	} while (!recentDRules.empty());
+	if (debug) {
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << helperRules.size() << " helper proof candidate" << (helperRules.size() == 1 ? "" : "s") << ", i.e. the minimal set of referenced proofs such that each proof contains only a single rule with inputs." << endl;
+		startTime = chrono::steady_clock::now();
+	}
+
+	// 3. Use lazy evaluation in order to determine conclusions.
+	//    NOTE: At this point, all (sub)proofs in 'inOut_abstractDProof' and 'helperRules' are only single D- or N-rules with inputs. Indices in 'helperRules' are offset by |inOut_abstractDProof|.
+	//          However, there now might be cross-references back and forth between proofs of both sets.
+	size_t extraIndex;
+	string extraId;
+	vector<AxiomInfo> axBase; // for use as (1, ..., n, extra) in case there are below 35 axioms, and as (1, ..., n-1, extra) in case there are 35 axioms.
+	vector<AxiomInfo> axBaseN; // for use as (1, ..., n-2, extra, n) with n, in case there are 35 axioms.
+	if (customAxioms) {
+		size_t n = customAxioms->size();
+		axBase = *customAxioms;
+		if (n == 35) {
+			extraIndex = 34;
+			extraId = "z";
+			axBaseN = *customAxioms; // to be used by extra conclusions that combine with axiom 'z'
+		} else {
+			extraIndex = n;
+			extraId = n < 9 ? string { char(n + '1') } : string { char(n - 9 + 'a') };
+			axBase.resize(n + 1, axBase[0]); // create single slot to be used by extra conclusions
+		}
+	} else {
+		static const vector<AxiomInfo> defaultAxioms = []() { shared_ptr<DlFormula> v0 = make_shared<DlFormula>(make_shared<String>("0")); shared_ptr<DlFormula> v1 = make_shared<DlFormula>(make_shared<String>("1")); shared_ptr<DlFormula> v2 = make_shared<DlFormula>(make_shared<String>("2")); return vector<AxiomInfo> { AxiomInfo("1", _ax1(v0, v1)), AxiomInfo("2", _ax2(v0, v1, v2)), AxiomInfo("3", _ax3(v0, v1)) }; }();
+		axBase = defaultAxioms;
+		extraIndex = 3;
+		extraId = "4";
+		axBase.resize(4, axBase[0]); // create single slot to be used by extra conclusions
+	}
+	vector<AxiomInfo> refBase(2, axBase[0]); // two slots to be used by extra conclusions
+	out_abstractDProofConclusions = vector<shared_ptr<DlFormula>>(inOut_abstractDProof.size());
+	vector<shared_ptr<DlFormula>> helperRulesConclusions(helperRules.size());
+	vector<size_t> indexEvalSequence;
+	for (size_t i = 0; i < inOut_abstractDProof.size(); i++)
+		out_abstractDProofConclusions[i] = _parseAbstractDProof_parse(inOut_abstractDProof[i], i, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+	if (debug) {
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to morph and parse " << inOut_abstractDProof.size() + helperRules.size() << " abstract proof" << (inOut_abstractDProof.size() + helperRules.size() == 1 ? "" : "s") << "." << endl;
+		startTime = chrono::steady_clock::now();
+	}
+	//#cout << "\n[AFTER]\n" << FctHelper::vectorString(inOut_abstractDProof, { }, { }, "\n") << endl;
+	//#cout << "\n[HELPER]\n" << FctHelper::vectorString(helperRules, { }, { }, "\n") << endl;
+	//#cout << "\n[AFTER-FORMULAS]\n" << FctHelper::vectorStringF(out_abstractDProofConclusions, [](const shared_ptr<DlFormula>& f) { return f ? DlCore::toPolishNotation(f) : "null"; }, { }, { }, "\n") << endl;
+	//#cout << "\n[HELPER-FORMULAS]\n" << FctHelper::vectorStringF(helperRulesConclusions, [](const shared_ptr<DlFormula>& f) { return f ? DlCore::toPolishNotation(f) : "null"; }, { }, { }, "\n") << endl;
+	//#cout << "indexEvalSequence = " << FctHelper::vectorString(indexEvalSequence) << endl;
+
+	if (optOut_helperRules)
+		*optOut_helperRules = helperRules;
+	if (optOut_helperRulesConclusions)
+		*optOut_helperRulesConclusions = helperRulesConclusions;
+	if (optOut_indexEvalSequence)
+		*optOut_indexEvalSequence = indexEvalSequence;
+}
+
+vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, vector<string>& out_helperRules, vector<shared_ptr<DlFormula>>& out_helperRulesConclusions, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, vector<size_t>* optOut_indexEvalSequence, bool debug) {
+	chrono::time_point<chrono::steady_clock> startTime;
+	map<size_t, set<size_t>> targetIndices_orderedByTheorems;
+	parseAbstractDProof(inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, &out_helperRules, &out_helperRulesConclusions, optOut_indexEvalSequence, debug);
+	if (requiredIntermediateResults) {
+		if (debug)
+			startTime = chrono::steady_clock::now();
+		if (inOut_abstractDProof.size() != requiredIntermediateResults->size())
+			throw invalid_argument("|inOut_abstractDProof| = " + to_string(inOut_abstractDProof.size()) + " != " + to_string(requiredIntermediateResults->size()) + " = |requiredIntermediateResults|");
+		for (size_t i = 0; i < inOut_abstractDProof.size(); i++)
+			if (*out_abstractDProofConclusions[i] != *(*requiredIntermediateResults)[i].refinedAxiom)
+				throw invalid_argument("Validation failed for index " + to_string(i) + ": Resulted in " + DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) + ", but requested " + (*requiredIntermediateResults)[i].name + ".");
+		if (debug)
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to validate " << inOut_abstractDProof.size() << " conclusion" << (inOut_abstractDProof.size() == 1 ? "" : "s") << "." << endl;
+	}
+	if (filterForTheorems) {
+		if (debug)
+			startTime = chrono::steady_clock::now();
+		if (filterForTheorems->empty())
+			throw invalid_argument("|filterForTheorems| = 0");
+		size_t i = 0;
+		size_t occurrences = 0; // including duplicates
+		for (const shared_ptr<DlFormula>& f : out_abstractDProofConclusions) {
+			for (size_t j = 0; j < filterForTheorems->size(); j++)
+				if (*f == *(*filterForTheorems)[j].refinedAxiom) {
+					targetIndices_orderedByTheorems[j].emplace(i);
+					occurrences++;
+				}
+			i++;
+		}
+		for (const shared_ptr<DlFormula>& f : out_helperRulesConclusions) {
+			for (size_t j = 0; j < filterForTheorems->size(); j++)
+				if (*f == *(*filterForTheorems)[j].refinedAxiom) {
+					targetIndices_orderedByTheorems[j].emplace(i);
+					occurrences++;
+				}
+			i++;
+		}
+		if (debug)
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to find " << occurrences << " occurrence" << (occurrences == 1 ? "" : "s") << " of " << filterForTheorems->size() << " theorem" << (filterForTheorems->size() == 1 ? "" : "s") << "." << endl;
+		if (targetIndices_orderedByTheorems.size() < filterForTheorems->size())
+			for (size_t j = 0; j < filterForTheorems->size(); j++)
+				if (!targetIndices_orderedByTheorems.count(j))
+					throw invalid_argument("Cannot find theorem " + (*filterForTheorems)[j].name + " in given proof.");
+	}
+	vector<size_t> targetIndices;
+	for (const pair<const size_t, set<size_t>>& p : targetIndices_orderedByTheorems)
+		for (size_t i : p.second)
+			targetIndices.push_back(i);
+	if (targetIndices.empty())
+		targetIndices.push_back(inOut_abstractDProof.size() - 1);
+	return targetIndices;
+}
+
+namespace {
+template<typename FuncA, typename FuncB>
+void switchRefs(char& c, bool& inReference, unsigned& refIndex, const FuncA& inRefAction, const FuncB& outRefAction) {
+	if (inReference)
+		switch (c) {
+		case '0':
+			refIndex = 10 * refIndex;
+			break;
+		case '1':
+			refIndex = 10 * refIndex + 1;
+			break;
+		case '2':
+			refIndex = 10 * refIndex + 2;
+			break;
+		case '3':
+			refIndex = 10 * refIndex + 3;
+			break;
+		case '4':
+			refIndex = 10 * refIndex + 4;
+			break;
+		case '5':
+			refIndex = 10 * refIndex + 5;
+			break;
+		case '6':
+			refIndex = 10 * refIndex + 6;
+			break;
+		case '7':
+			refIndex = 10 * refIndex + 7;
+			break;
+		case '8':
+			refIndex = 10 * refIndex + 8;
+			break;
+		case '9':
+			refIndex = 10 * refIndex + 9;
+			break;
+		case ']':
+			inRefAction();
+			refIndex = 0;
+			inReference = false;
+			break;
+		default:
+			throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+		}
+	else if (c == '[')
+		inReference = true;
+	else
+		outRefAction();
+}
+size_t measureFundamentalLengthsInAbstractDProof_fundamentalLength(size_t i, vector<size_t>& storedFundamentalLengths, const vector<string>& abstractDProof, const vector<string>& helperRules, bool debug) {
+	auto bounded_add = [&debug](size_t a, size_t b, size_t i) { // fundamental lengths above SIZE_MAX are realistic, so avoid overflows and treat SIZE_MAX as 'SIZE_MAX and above'
+		if (b > SIZE_MAX - a) {
+			if (debug)
+				cerr << "[WARNING] SIZE_MAX (" << SIZE_MAX << ") surpassed for index " << i << " (via " << a << " + " << b << "). Counter cannot increase further." << endl;
+			return SIZE_MAX;
+		}
+		return a + b;
+	};
+	if (storedFundamentalLengths[i] != SIZE_MAX)
+		return storedFundamentalLengths[i];
+	const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
+	bool inReference = false;
+	size_t counter = 0;
+	unsigned refIndex = 0;
+	for (char c : dProof)
+		switchRefs(c, inReference, refIndex, [&]() {
+			counter = bounded_add(counter, measureFundamentalLengthsInAbstractDProof_fundamentalLength(refIndex, storedFundamentalLengths, abstractDProof, helperRules, debug), i);
+		}, [&]() { counter = bounded_add(counter, 1, i); });
+	if (inReference)
+		throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Missing character ']' after '['.");
+	//#if (storedFundamentalLengths[i] != SIZE_MAX)
+	//#	throw logic_error("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Redundant computation of fundamental length for index " + to_string(i) + ".");
+	storedFundamentalLengths[i] = counter;
+	return counter;
+}
+}
+vector<size_t> DRuleParser::measureFundamentalLengthsInAbstractDProof(const vector<size_t>& targetIndices, const vector<string>& abstractDProof, const vector<shared_ptr<DlFormula>>& abstractDProofConclusions, const vector<string>& helperRules, const vector<shared_ptr<DlFormula>>& helperRulesConclusions, bool debug, size_t limit) {
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	vector<size_t> storedFundamentalLengths(abstractDProof.size() + helperRules.size(), SIZE_MAX);
+	size_t sumFundamentalLength = 0;
+	vector<pair<size_t, size_t>> fundamentalLengths;
+	for (size_t i : targetIndices) {
+		size_t l = measureFundamentalLengthsInAbstractDProof_fundamentalLength(i, storedFundamentalLengths, abstractDProof, helperRules, debug);
+		sumFundamentalLength += l;
+		fundamentalLengths.emplace_back(i, l);
+	}
+	if (debug) {
+		long double dur = static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0;
+		for (const pair<size_t, size_t>& p : fundamentalLengths) {
+			size_t i = p.first;
+			size_t l = p.second;
+			const shared_ptr<DlFormula>& f = i < abstractDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - abstractDProof.size()];
+			cout << "There " << (l == 1 ? "is " : "are ") << p.second << " step" << (l == 1 ? "" : "s") << " towards " << DlCore::toPolishNotation(f) << " / " << DlCore::toPolishNotation_noRename(f) << " (index " << i << ")." << endl;
+		}
+		cout << FctHelper::round(dur, 2) << " ms taken to count " << sumFundamentalLength << " relevant proof step" << (sumFundamentalLength == 1 ? "" : "s") << " in total." << endl;
+	}
+	if (sumFundamentalLength > limit)
+		throw domain_error("Limit (" + to_string(limit) + ") exceed with " + to_string(sumFundamentalLength) + " proof step" + (sumFundamentalLength == 1 ? "" : "s") + ".");
+	return storedFundamentalLengths;
+}
+
+namespace {
+string unfoldRulesInAbstractDProof_unfoldedProof(size_t i, const map<size_t, size_t>& indexTranslation, vector<string>& targetUnfoldedProofs, vector<string>& storedUnfoldedProofs, const vector<string>& abstractDProof, const vector<string>& helperRules, vector<size_t>* storedFundamentalLengths, const size_t storeIntermediateUnfoldingLimit) {
+	map<size_t, size_t>::const_iterator it_targetIndex = indexTranslation.find(i);
+	if (it_targetIndex != indexTranslation.end()) {
+		if (!targetUnfoldedProofs[it_targetIndex->second].empty())
+			return targetUnfoldedProofs[it_targetIndex->second];
+	} else if (!storedUnfoldedProofs[i].empty())
+		return storedUnfoldedProofs[i];
+	const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
+	bool inReference = false;
+	string result;
+	unsigned refIndex = 0;
+	for (char c : dProof)
+		switchRefs(c, inReference, refIndex, [&]() {
+			result += unfoldRulesInAbstractDProof_unfoldedProof(refIndex, indexTranslation, targetUnfoldedProofs, storedUnfoldedProofs, abstractDProof, helperRules, storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+		}, [&]() { result += string { c }; });
+	if (inReference)
+		throw invalid_argument("DRuleParser::unfoldRulesInAbstractDProof(): Missing character ']' after '['.");
+	//#if (it_targetIndex != indexTranslation.end()) {
+	//#	if (!targetUnfoldedProofs[it_targetIndex->second].empty())
+	//#		throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
+	//#} else if (!storedUnfoldedProofs[i].empty())
+	//#	throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
+	if (it_targetIndex != indexTranslation.end())
+		targetUnfoldedProofs[it_targetIndex->second] = result;
+	else if (!storedFundamentalLengths || (*storedFundamentalLengths)[i] <= storeIntermediateUnfoldingLimit)
+		storedUnfoldedProofs[i] = result;
+	return result;
+}
+}
+vector<string> DRuleParser::unfoldRulesInAbstractDProof(const vector<size_t>& targetIndices, const vector<string>& abstractDProof, const vector<string>& helperRules, bool debug, vector<size_t>* storedFundamentalLengths, size_t storeIntermediateUnfoldingLimit) {
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	set<size_t> targetIndices_lookup(targetIndices.begin(), targetIndices.end());
+	// NOTE: In order to save memory, concrete D-proofs are only stored for target indices, or in case they are no longer than 'storeIntermediateUnfoldingLimit' steps.
+	vector<string> targetUnfoldedProofs(targetIndices.size());
+	vector<string> storedUnfoldedProofs(abstractDProof.size() + helperRules.size());
+	map<size_t, size_t> indexTranslation;
+	for (size_t i = 0; i < targetIndices.size(); i++) {
+		size_t targetIndex = targetIndices[i];
+		indexTranslation.emplace(targetIndex, i);
+	}
+	for (size_t i : targetIndices)
+		unfoldRulesInAbstractDProof_unfoldedProof(i, indexTranslation, targetUnfoldedProofs, storedUnfoldedProofs, abstractDProof, helperRules, storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+	if (debug)
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to unfold " << targetUnfoldedProofs.size() << " proof" << (targetUnfoldedProofs.size() == 1 ? "" : "s") << " of fundamental length" << (targetUnfoldedProofs.size() == 1 ? " " : "s ") << FctHelper::vectorStringF(targetUnfoldedProofs, [](const string& s) { return to_string(s.length()); }, { }, { }, ",") << "." << endl;
+	return targetUnfoldedProofs;
+}
+
+vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractDProof, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t storeIntermediateUnfoldingLimit, size_t limit) {
+
+	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
+	vector<string> retractedDProof = abstractDProof;
+	vector<shared_ptr<DlFormula>> abstractDProofConclusions;
+	vector<string> helperRules;
+	vector<shared_ptr<DlFormula>> helperRulesConclusions;
+	vector<size_t> targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, filterForTheorems, requiredIntermediateResults, nullptr, debug);
+
+	// 2. Measure fundamental lengths of proofs of target theorems.
+	vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(targetIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug, limit);
+
+	// 3. Unfold proofs of target theorems.
+	return unfoldRulesInAbstractDProof(targetIndices, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+}
+
+namespace {
+void recombineAbstractDProof_collectRefIndices(size_t i, const vector<string>& retractedDProof, const vector<string>& helperRules, set<size_t>& referencedIndices) {
+	if (referencedIndices.count(i))
+		return;
+	const string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+	bool inReference = false;
+	unsigned refIndex = 0;
+	for (char c : dProof)
+		switchRefs(c, inReference, refIndex, [&]() {
+			recombineAbstractDProof_collectRefIndices(refIndex, retractedDProof, helperRules, referencedIndices);
+		}, [&]() { });
+	if (inReference)
+		throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
+	//#if (referencedIndices.count(i))
+	//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant collection of index " + to_string(i) + ".");
+	referencedIndices.emplace(i);
+}
+const string& recombineAbstractDProof_extendAndTranslateProof(size_t i, vector<string>& retractedDProof, vector<string>& helperRules, const set<size_t>& dedicatedIndices, map<size_t, size_t>& indexTranslation, set<size_t>& extendedIndices, size_t& sumCharLength, const size_t limit) {
+	string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+	if (extendedIndices.count(i))
+		return dProof;
+	bool inReference = false;
+	string result;
+	unsigned refIndex = 0;
+	for (char c : dProof)
+		switchRefs(c, inReference, refIndex, [&]() {
+			if (dedicatedIndices.count(refIndex))
+				result += "[" + to_string(indexTranslation[refIndex]) + "]";
+			else
+				result += recombineAbstractDProof_extendAndTranslateProof(refIndex, retractedDProof, helperRules, dedicatedIndices, indexTranslation, extendedIndices, sumCharLength, limit);
+		}, [&]() { result += string { c }; });
+	if (inReference)
+		throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
+	//#if (extendedIndices.count(i))
+	//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant computation of extended proof for index " + to_string(i) + ".");
+	if (dedicatedIndices.count(i))
+		sumCharLength += result.length();
+	if (sumCharLength > limit)
+		throw domain_error("Limit (" + to_string(limit) + ") exceed with at least " + to_string(sumCharLength) + " byte" + (sumCharLength == 1 ? "" : "s") + " in abstract proofs.");
+	extendedIndices.emplace(i);
+	dProof = result;
+	return dProof;
+}
+}
+vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit) {
+	chrono::time_point<chrono::steady_clock> startTime;
+
+	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
+	vector<string> retractedDProof = abstractDProof;
+	vector<shared_ptr<DlFormula>> abstractDProofConclusions;
+	vector<string> helperRules;
+	vector<shared_ptr<DlFormula>> helperRulesConclusions;
+	vector<size_t> indexEvalSequence;
+	vector<size_t> targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, filterForTheorems, requiredIntermediateResults, &indexEvalSequence, debug);
+	{
+		// Duplicates in and order of 'filterForTheorems' are irrelevant for recombination => Order indices and remove duplicates.
+		set<size_t> targetIndices_noDuplicates(targetIndices.begin(), targetIndices.end());
+		targetIndices = vector<size_t>(targetIndices_noDuplicates.begin(), targetIndices_noDuplicates.end());
+	}
+
+	// 2. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.
+	set<size_t> dedicatedIndices;
+	{
+		// 2.1 Remove proofs with fundamental lengths above 'maxLengthToKeepProof' (if requested).
+		if (maxLengthToKeepProof < SIZE_MAX) {
+			vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(targetIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug);
+			set<size_t> toRemove;
+			for (size_t i = 0; i < targetIndices.size(); i++) {
+				size_t targetIndex = targetIndices[i];
+				if (storedFundamentalLengths[targetIndex] > maxLengthToKeepProof)
+					toRemove.emplace(i);
+			}
+			for (set<size_t>::reverse_iterator it = toRemove.rbegin(); it != toRemove.rend(); ++it)
+				targetIndices.erase(targetIndices.begin() + *it);
+			if (!toRemove.empty()) {
+				if (debug)
+					cout << "Removed " << toRemove.size() << " target theorem" << (toRemove.size() == 1 ? "" : "s") << " due to having " << (toRemove.size() == 1 ? "a proof" : "proofs") << " longer than " << maxLengthToKeepProof << " step" << (maxLengthToKeepProof == 1 ? "" : "s") << ". Still relevant: " << FctHelper::vectorString(targetIndices) << endl;
+				if (targetIndices.empty())
+					throw domain_error("None of the specified theorems are proven in at most " + to_string(maxLengthToKeepProof) + " step" + (maxLengthToKeepProof == 1 ? "" : "s") + ".");
+			}
+		}
+
+		// 2.2 Collect indices that are referenced by relevant indices.
+		if (debug)
+			startTime = chrono::steady_clock::now();
+		set<size_t> referencedIndices;
+		for (size_t i : targetIndices)
+			recombineAbstractDProof_collectRefIndices(i, retractedDProof, helperRules, referencedIndices);
+		if (debug) {
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << referencedIndices.size() << " referenced " << (referencedIndices.size() == 1 ? "index" : "indices") << "." << endl;
+			startTime = chrono::steady_clock::now();
+		}
+
+		// 2.3 Determine which referenced indices should obtain their own lines according to targetIndices', 'minUseAmountToCreateHelperProof' and 'conclusionsWithHelperProofs'.
+		if (minUseAmountToCreateHelperProof > 1) {
+
+			// 2.3.1 Add 'targetIndices' (i.e. according to 'filterForTheorems' if requested, final conclusion otherwise) and indices according to 'conclusionsWithHelperProofs' (if requested).
+			dedicatedIndices = set<size_t>(targetIndices.begin(), targetIndices.end());
+			if (conclusionsWithHelperProofs) {
+				for (size_t i : referencedIndices) {
+					const shared_ptr<DlFormula>& f = i < retractedDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()];
+					for (const AxiomInfo& info : *conclusionsWithHelperProofs)
+						if (*f == *info.refinedAxiom) {
+							dedicatedIndices.emplace(i);
+							break;
+						}
+				}
+			}
+
+			// 2.3.2 Add indices which are referenced at least 'minUseAmountToCreateHelperProof' times.
+			if (minUseAmountToCreateHelperProof != UINT_MAX) {
+				map<size_t, unsigned> referenceAmounts; // index of proof -> amount of references to proof
+				auto findReferences = [&](const string& dProof) {
+					bool inReference = false;
+					unsigned refIndex = 0;
+					for (char c : dProof)
+						switchRefs(c, inReference, refIndex, [&]() {
+							referenceAmounts[refIndex]++;
+						}, []() { });
+				};
+				for (size_t i : referencedIndices)
+					findReferences(i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()]);
+				for (const pair<const size_t, unsigned>& p : referenceAmounts)
+					if (p.second >= minUseAmountToCreateHelperProof)
+						dedicatedIndices.emplace(p.first);
+			}
+		} else
+			dedicatedIndices = referencedIndices;
+		if (debug) {
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << dedicatedIndices.size() << " dedicated " << (dedicatedIndices.size() == 1 ? "index" : "indices") << "." << endl;
+			startTime = chrono::steady_clock::now();
+		}
+	}
+
+	// 3. Build new abstract proof
+	vector<size_t> indicesForNewProof;
+	map<size_t, size_t> indexTranslation;
+	for (size_t i : indexEvalSequence)
+		if (dedicatedIndices.count(i)) {
+			indexTranslation.emplace(i, indicesForNewProof.size());
+			indicesForNewProof.push_back(i);
+		}
+	vector<string> newAbstractDProof;
+	if (!out_conclusions.empty())
+		out_conclusions.clear();
+	if (abstractProofStrings && indicesForNewProof.size() > 1) {
+
+		// 3.1 Extend rules for referenced indices that are not dedicated, and translate referenced indices that are dedicated.
+		set<size_t> extendedIndices;
+		size_t sumCharLength = 0;
+		for (size_t i : dedicatedIndices)
+			recombineAbstractDProof_extendAndTranslateProof(i, retractedDProof, helperRules, dedicatedIndices, indexTranslation, extendedIndices, sumCharLength, limit);
+
+		// 3.2 Add transformed rules to new proof.
+		for (size_t i : indicesForNewProof) {
+			string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+			newAbstractDProof.push_back(dProof);
+			dProof.clear();
+			const shared_ptr<DlFormula>& f = i < retractedDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()];
+			out_conclusions.push_back(f);
+		}
+	} else {
+
+		// 3.3 Obtain unfolded proof.
+		vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(indicesForNewProof, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug, limit);
+		newAbstractDProof = unfoldRulesInAbstractDProof(indicesForNewProof, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+		for (size_t i : indicesForNewProof) {
+			const shared_ptr<DlFormula>& f = i < retractedDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()];
+			out_conclusions.push_back(f);
+		}
+	}
+	if (debug)
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to build transformed proof." << endl;
+
+	//#for (size_t i = 0; i < newAbstractDProof.size(); i++)
+	//#	cout << "[" << i << "] " << DlCore::toPolishNotation(out_conclusions[i]) << " = " << newAbstractDProof[i] << endl;
+	return newAbstractDProof;
 }
 
 #ifdef PARSEMMPL_STORED

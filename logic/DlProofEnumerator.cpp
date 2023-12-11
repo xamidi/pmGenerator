@@ -859,7 +859,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 		}
 		for (DProofInfo& p : rawParseData) {
 			const tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>& t = p.second;
-			ss << "[" << c++ << "] " << (summaryMode ? toString(get<0>(t).back()) + " = " : "") << (abstractProofStrings ? [](string& s) { DRuleParser::reverseAbstractProofString(s); boost::replace_all(s, "(", "["); boost::replace_all(s, ")", "]"); return s; }(p.first) : p.first) << (summaryMode ? "" : ":") << "\n";
+			ss << "[" << c++ << "] " << (summaryMode ? toString(get<0>(t).back()) + " = " : "") << (abstractProofStrings ? [](string& s) { DRuleParser::reverseAbstractProofString(s); return s; }(p.first) : p.first) << (summaryMode ? "" : ":") << "\n";
 			if (!summaryMode) {
 				size_t len = get<0>(t).size();
 				for (size_t i = 0; i < len; i++)
@@ -880,6 +880,230 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 	}
 	if (!conclusionsOnly && (_dProofs.size() != rawParseData.size() || !duplicates.empty()))
 		cout << "Index correspondences (out,in) are " << FctHelper::mapString(map<size_t, size_t>(indexOrigins.begin(), indexOrigins.end())) << "." << endl;
+}
+
+void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input, vector<DRuleParser::AxiomInfo>& out_customAxioms, vector<string>& out_abstractDProof, vector<DRuleParser::AxiomInfo>* optOut_requiredIntermediateResults, bool useInputFile, bool normalPolishNotation, bool debug) {
+	vector<string> summaryLines;
+	{
+		string inputFromFile;
+		if (useInputFile && !FctHelper::readFile(input, inputFromFile))
+			throw runtime_error("Failed to read file \"" + input + "\".");
+		summaryLines = FctHelper::stringSplit(useInputFile ? inputFromFile : input, "\n");
+	}
+	vector<string> inputConclusions;
+	size_t axiomIndex = 0;
+	size_t stepIndex = 0;
+	for (const string& line : summaryLines)
+		if (!line.empty()) {
+			if (!line.rfind('[', 0)) {
+				string::size_type pos = line.find(']', 2);
+				if (pos == string::npos)
+					throw invalid_argument("Missing index number in \"" + line + "\".");
+				size_t num;
+				try {
+					num = stoll(line.substr(1, pos));
+				} catch (...) {
+					throw invalid_argument("Bad index number in \"" + line + "\".");
+				}
+				if (num != stepIndex++)
+					throw invalid_argument("Invalid index number in \"" + line + "\". Should be " + to_string(stepIndex - 1) + ".");
+				pos = line.find_first_not_of(' ', pos + 1);
+				string::size_type posEnd = line.find_first_of(" =:", pos + 1);
+				if (pos == string::npos || posEnd == string::npos)
+					throw invalid_argument("Missing conclusion completion in \"" + line + "\".");
+				if (optOut_requiredIntermediateResults)
+					inputConclusions.push_back(line.substr(pos, posEnd - pos));
+				pos = line.find_first_not_of(" =:", posEnd + 1);
+				if (pos == string::npos)
+					throw invalid_argument("Missing D-proof in \"" + line + "\".");
+				out_abstractDProof.push_back(line.substr(pos));
+			} else { // axiom
+				if (axiomIndex == 35)
+					throw invalid_argument("Too many axioms. (Axiom numbers must be in {1, ..., 9, a, ..., z}, i.e. there are 35 at most.)");
+				string::size_type pos = line.find_first_not_of(' ');
+				string::size_type posEnd = line.find_first_of(" =:", pos + 1);
+				if (pos == string::npos || posEnd == string::npos)
+					throw invalid_argument("Missing axiom completion in \"" + line + "\".");
+				string axiom = line.substr(pos, posEnd - pos);
+				pos = line.find_first_not_of(" =:", posEnd + 1);
+				if (pos == string::npos)
+					throw invalid_argument("Missing axiom name in \"" + line + "\".");
+				string axName = line.substr(pos);
+				if (axName.length() != 1 || ((axName[0] < '1' || axName[0] > '9') && (axName[0] < 'a' || axName[0] > 'z')))
+					throw invalid_argument("Invalid axiom name in \"" + line + "\".");
+				size_t num = axName[0] >= '1' && axName[0] <= '9' ? axName[0] - '1' : 10 + axName[0] - 'a' - 1;
+				if (num != axiomIndex++)
+					throw invalid_argument("[axiomIndex = " + to_string(axiomIndex - 1) + ", char = " + to_string(axiomIndex - 10 + 'a') + "] Invalid axiom number in \"" + line + "\". Should be " + (axiomIndex <= 9 ? string { char(axiomIndex + '0') } : string { char(axiomIndex - 10 + 'a') }) + ".");
+				shared_ptr<DlFormula> ax;
+				if (normalPolishNotation) {
+					if (!DlCore::fromPolishNotation(ax, axiom, false, debug))
+						throw domain_error("Could not parse \"" + axiom + "\" as a formula in normal Polish notation.");
+				} else if (!DlCore::fromPolishNotation_noRename(ax, axiom, false, debug))
+					throw domain_error("Could not parse \"" + axiom + "\" as a formula in dotted Polish notation.");
+				out_customAxioms.push_back(DRuleParser::AxiomInfo(axName, ax));
+			}
+		}
+	if (optOut_requiredIntermediateResults) {
+		vector<DRuleParser::AxiomInfo>& requiredIntermediateResults = *optOut_requiredIntermediateResults;
+		for (const string& conclusion : inputConclusions) {
+			shared_ptr<DlFormula> f;
+			if (normalPolishNotation) {
+				if (!DlCore::fromPolishNotation(f, conclusion, false, debug))
+					throw domain_error("Could not parse \"" + conclusion + "\" as a formula in normal Polish notation.");
+			} else if (!DlCore::fromPolishNotation_noRename(f, conclusion, false, debug))
+				throw domain_error("Could not parse \"" + conclusion + "\" as a formula in dotted Polish notation.");
+			requiredIntermediateResults.push_back(DRuleParser::AxiomInfo(conclusion, f));
+		}
+		//#cout << "inputConclusions = " << FctHelper::vectorString(inputConclusions) << endl;
+	}
+	//#cout << "customAxioms = " << FctHelper::vectorStringF(out_customAxioms, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom); }) << "\nabstractDProof = " << FctHelper::vectorString(out_abstractDProof) << endl;
+	//#if (optOut_requiredIntermediateResults) cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(*optOut_requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom) + "[" + ax.name + "]"; }) << endl;
+}
+
+void DlProofEnumerator::recombineProofSummary(const string& input, bool useInputFile, const string* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, size_t maxLengthToKeepProof, bool normalPolishNotation, const string* filterForTheorems, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, const string* outputFile, bool debug) {
+	vector<DRuleParser::AxiomInfo> customAxioms;
+	vector<string> abstractDProof_input;
+	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+	convertProofSummaryToAbstractDProof(input, customAxioms, abstractDProof_input, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
+
+	auto toAxiomInfoVector = [&](const string& list, vector<DRuleParser::AxiomInfo>& target) {
+		const vector<string> v = FctHelper::stringSplit(list, ",");
+		for (const string& s : v) {
+			shared_ptr<DlFormula> f;
+			if (normalPolishNotation) {
+				if (!DlCore::fromPolishNotation(f, s, false, debug))
+					throw domain_error("Could not parse \"" + s + "\" as a formula in normal Polish notation.");
+			} else if (!DlCore::fromPolishNotation_noRename(f, s, false, debug))
+				throw domain_error("Could not parse \"" + s + "\" as a formula in dotted Polish notation.");
+			target.push_back(DRuleParser::AxiomInfo(s, f));
+		}
+	};
+	vector<DRuleParser::AxiomInfo> filterForTheorems_axInfo;
+	if (filterForTheorems && *filterForTheorems != ".")
+		toAxiomInfoVector(*filterForTheorems, filterForTheorems_axInfo);
+	vector<DRuleParser::AxiomInfo> conclusionsWithHelperProofs_axInfo;
+	if (conclusionsWithHelperProofs)
+		toAxiomInfoVector(*conclusionsWithHelperProofs, conclusionsWithHelperProofs_axInfo);
+	vector<shared_ptr<DlFormula>> conclusions;
+	const vector<string> abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof_input, conclusions, &customAxioms, filterForTheorems ? *filterForTheorems != "." ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, conclusionsWithHelperProofs ? &conclusionsWithHelperProofs_axInfo : nullptr, minUseAmountToCreateHelperProof, &requiredIntermediateResults, debug, maxLengthToKeepProof, abstractProofStrings, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof);
+
+	auto print = [&](ostream& mout) -> string::size_type {
+		string::size_type bytes = 0;
+		for (const DRuleParser::AxiomInfo& ax : customAxioms) {
+			string f = normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
+			mout << "    " << f << " = " << ax.name << "\n";
+			bytes += 9 + f.length();
+		}
+		for (size_t i = 0; i < abstractDProof.size(); i++) {
+			string f = normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
+			const string& p = abstractDProof[i];
+			mout << "[" << i << "] " << f << " = " << p << "\n";
+			bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
+		}
+		return bytes;
+	};
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	if (outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		const string& file = *outputFile;
+		while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+			cerr << "Failed to create file at \"" << file << "\", trying again." << endl;
+		string::size_type bytes;
+		{
+			ofstream fout(file, fstream::out | fstream::binary);
+			bytes = print(fout);
+		}
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file << "." << endl;
+	} else {
+		string::size_type bytes = print(cout);
+		cout << flush;
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+	}
+}
+
+void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFile, bool normalPolishNotation, const string* filterForTheorems, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, bool wrap, const string* outputFile, bool debug) {
+	vector<DRuleParser::AxiomInfo> customAxioms;
+	vector<string> abstractDProof;
+	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+	convertProofSummaryToAbstractDProof(input, customAxioms, abstractDProof, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
+
+	auto toAxiomInfoVector = [&](const string& list, vector<DRuleParser::AxiomInfo>& target) {
+		const vector<string> v = FctHelper::stringSplit(list, ",");
+		for (const string& s : v) {
+			shared_ptr<DlFormula> f;
+			if (normalPolishNotation) {
+				if (!DlCore::fromPolishNotation(f, s, false, debug))
+					throw domain_error("Could not parse \"" + s + "\" as a formula in normal Polish notation.");
+			} else if (!DlCore::fromPolishNotation_noRename(f, s, false, debug))
+				throw domain_error("Could not parse \"" + s + "\" as a formula in dotted Polish notation.");
+			target.push_back(DRuleParser::AxiomInfo(s, f));
+		}
+	};
+	vector<DRuleParser::AxiomInfo> filterForTheorems_axInfo;
+	if (filterForTheorems && *filterForTheorems != ".")
+		toAxiomInfoVector(*filterForTheorems, filterForTheorems_axInfo);
+	const vector<string> dProofs = DRuleParser::unfoldAbstractDProof(abstractDProof, &customAxioms, filterForTheorems ? *filterForTheorems != "." ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, &requiredIntermediateResults, debug, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof);
+
+	auto print = [&](ostream& mout) -> string::size_type {
+		string::size_type bytes = 0;
+		if (wrap)
+			for (size_t i = 0; i < dProofs.size(); i++) {
+				if (i) {
+					mout << ",\n";
+					bytes += 2;
+				}
+				const string& dProof = dProofs[i];
+				string::size_type rem = dProof.length();
+				for (size_t offset = 0; rem != 0; offset += 69) {
+					if (offset) {
+						mout << "\n";
+						bytes++;
+					}
+					string s = dProof.substr(offset, 69);
+					mout << s;
+					string::size_type len = s.length();
+					rem -= len;
+					bytes += len;
+				}
+			}
+		else {
+			for (size_t i = 0; i < dProofs.size(); i++) {
+				if (i) {
+					mout << ",\n";
+					bytes += 2;
+				}
+				const string& dProof = dProofs[i];
+				mout << dProof;
+				bytes += dProof.length();
+			}
+		}
+		mout << "\n";
+		bytes++;
+		return bytes;
+	};
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	if (outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		const string& file = *outputFile;
+		while (!boost::filesystem::exists(file) && !FctHelper::ensureDirExists(file))
+			cerr << "Failed to create file at \"" << file << "\", trying again." << endl;
+		string::size_type bytes;
+		{
+			ofstream fout(file, fstream::out | fstream::binary);
+			bytes = print(fout);
+		}
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file << "." << endl;
+	} else {
+		string::size_type bytes = print(cout);
+		cout << flush;
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+	}
 }
 
 bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRepresentatives, vector<vector<string>>* optOut_allConclusionsLookup, uint64_t* optOut_allRepresentativesCount, uint32_t* optOut_firstMissingIndex, bool debug, const string& filePrefix, const string& filePostfix, bool initFresh, uint32_t limit, const uint32_t* proofLenStepSize) {
@@ -1218,13 +1442,13 @@ map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
 	return _;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/1d05f2a646563061162be9ad0db68946499ac867
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions, size_t* candidateQueueCapacities) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/1d05f2a646563061162be9ad0db68946499ac867
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
 	auto myInfo = [&]() -> string {
 		stringstream ss;
-		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << "]";
+		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (candidateQueueCapacities ? ", candidate queue capacities: " + to_string(*candidateQueueCapacities) : "") << "]";
 		return ss.str();
 	};
 	cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. " << myInfo() << endl;
@@ -1449,7 +1673,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 		const unsigned knownLimit = wordLengthLimit - c;
 		startTime = chrono::steady_clock::now();
-		_collectProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives);
+		_collectProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives, candidateQueueCapacities);
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to collect " << representativeCounter << " D-proof" << (representativeCounter == 1 ? "" : "s") << " of length " << wordLengthLimit << ". [iterated " << counter << " condensed detachment proof strings]" << (misses_speedupN ? " (Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / counter, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results.)" : "") << endl;
 		// e.g. 17:    1631.72 ms (        1 s 631.72 ms) taken to collect    6649 [...]
 		//      19:    5586.94 ms (        5 s 586.94 ms) taken to collect   19416 [...] ;    5586.94 /   1631.72 ≈ 3.42396
@@ -3017,7 +3241,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 	}
 }
 
-void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup) {
+void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, size_t* candidateQueueCapacities) {
 	atomic<uint64_t> counter { 0 };
 	atomic<uint64_t> conclusionCounter { 0 };
 	atomic<uint64_t> redundantCounter { 0 };
@@ -3053,12 +3277,12 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 			throw invalid_argument("Parameters missing for DlProofEnumeratorMode::Dynamic.");
 		if (progressData)
 			progressData->setStartTime();
-		processCondensedDetachmentProofs_dynamic(*genIn_stack, wordLengthLimit, *genIn_n, *genIn_allRepresentativesLookup, process, _necessitationLimit);
+		processCondensedDetachmentProofs_dynamic(*genIn_stack, wordLengthLimit, *genIn_n, *genIn_allRepresentativesLookup, process, _necessitationLimit, candidateQueueCapacities);
 		break;
 	case DlProofEnumeratorMode::Naive:
 		if (progressData)
 			progressData->setStartTime();
-		processCondensedDetachmentProofs_naive(wordLengthLimit, process);
+		processCondensedDetachmentProofs_naive(wordLengthLimit, process, candidateQueueCapacities);
 		break;
 	}
 	if (optOut_counter)
@@ -3519,7 +3743,7 @@ void recurse_loadCondensedDetachmentProofs_dynamic_par(string& prefix, vector<ui
 			}
 		}
 		if (!processed)
-			queues[rand() % queues.size()].push(prefix);
+			while (!queues[rand() % queues.size()].try_push(prefix));
 	} else {
 		auto countLeadingNs = [](const string& p) { uint32_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
 		auto countTrailingNs = [](const string& p) { uint32_t counter = 0; for (string::const_reverse_iterator it = p.rbegin(); it != p.rend() && *it == 'N'; ++it) counter++; return counter; };
@@ -3651,7 +3875,7 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_naive_par(string& prefix,
 			}
 		}
 		if (!processed)
-			queues[rand() % queues.size()].push(prefix);
+			while (!queues[rand() % queues.size()].try_push(prefix));
 	} else {
 		// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
 		string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.

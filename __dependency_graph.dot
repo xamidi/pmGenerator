@@ -143,6 +143,7 @@ digraph {
 	main -> Version [color=blue]
 	main -> DRuleReducer [color=blue]
 	main -> DlProofEnumerator [color=blue]
+	main -> "boost/algorithm/string" [color=blue]
 	main -> "(cstring)" [color=blue]
 	main -> "(ctime)" [color=blue]
 	main -> "(regex)" [color=blue]
