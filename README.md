@@ -44,9 +44,10 @@ Some more – and very special – proof systems are illustrated [further down b
            -d: default system ; ignore all other arguments except '-e'
 
     Composable:
-      -g <limit or -1> [-u] [-s]
+      -g <limit or -1> [-u] [-q <limit>] [-s]
          Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/
            -u: unfiltered (significantly faster, but generates redundant proofs)
+           -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
            -s: proof files without conclusions, requires additional parsing
       -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]
          Replacements file creation based on proof files
@@ -69,6 +70,29 @@ Some more – and very special – proof systems are illustrated [further down b
            -s: only print summary with conclusions and abstract condensed detachment proofs ; used only when '-b' unspecified
            -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references ; used only when '-b' unspecified
            -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace
+           -o: redirect the result's output to the specified file
+           -d: print debug information
+      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-f] [-o <output file>] [-d]
+         Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
+           -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
+           -j: join common subproofs together when they are used at least a given amount of times ; default: 2
+           -p: only keep subproofs with primitive lengths not exceeding the given limit ; default: -1
+           -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+           -t: only transform proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to keep all conclusions ; default: final theorem only
+           -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references
+           -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
+           -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
+           -f: proof summary is given by input file path
+           -o: redirect the result's output to the specified file
+           -d: print debug information
+      --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-f] [-o <output file>] [-d]
+         Break down proof summary (as by '--parse [...] -s') into primitive steps ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
+           -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+           -t: obtain proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to obtain a proof for each conclusion ; default: final theorem only
+           -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
+           -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
+           -w: wrap results
+           -f: proof summary is given by input file path
            -o: redirect the result's output to the specified file
            -d: print debug information
       --search <string> [-n] [-s] [-w] [-p] [-f] [-d]
@@ -116,14 +140,16 @@ Some more – and very special – proof systems are illustrated [further down b
            -s: disable smooth progress mode (lowers memory requirements, but makes terrible progress predictions)
 
 #### Examples
-    pmGenerator -g -1
+    pmGenerator -g -1 -q 50
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator --variate 0 -l data/ -o "dProofs-withoutConclusions (all)/dProofs" -d
     pmGenerator --variate 1 -s --search CNpCCNpqNp -n --search CNpCCNpqNp -n -s
     pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w
     pmGenerator --plot -s -d --plot -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
     pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2D1311D3DD2DD2D13DD2D1311 -j 2 -n
-    pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 -r data/merproofs.txt data/merproofs-reducer.txt -d -a SD data/merproofs-reducer.txt data/merproofs.txt data/merproofs-result-all.txt -l -d
+    pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d
+    pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
+    pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 -r data/mproofs.txt data/mproofs-reducer.txt -d -a SD data/mproofs-reducer.txt data/mproofs.txt data/mproofs-result-all.txt -l -d
     pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt
     pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n
     pmGenerator --variate 1 -s --extract -t 1000 -s -d

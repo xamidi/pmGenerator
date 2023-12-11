@@ -49,10 +49,11 @@ class DRuleParser {
 
 public:
 	struct AxiomInfo {
-		const std::shared_ptr<logic::DlFormula> refinedAxiom;
-		const unsigned primitivesCount;
-		const std::string name;
+		std::shared_ptr<logic::DlFormula> refinedAxiom;
+		unsigned primitivesCount;
+		std::string name;
 		AxiomInfo(const std::string& name, const std::shared_ptr<logic::DlFormula>& axiom);
+		AxiomInfo& operator=(const AxiomInfo& other);
 	private:
 		AxiomInfo(const std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string>& refinedData);
 		static std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string> _refineAxiom(const std::string& name, const std::shared_ptr<logic::DlFormula>& axiom);
@@ -83,7 +84,14 @@ public:
 
 	// Parsing of propositional formulas in pmproofs' style that declare desired consequents or results of proofs.
 	static std::shared_ptr<logic::DlFormula> parseMmConsequent(const std::string& strConsequent, bool calculateMeanings = true);
+
 	static std::string toDBProof(const std::string& dProof, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::string& name = "", const std::string& theorem = "", bool normalPolishNotation = false);
+	static void parseAbstractDProof(std::vector<std::string>& inOut_abstractDProof, std::vector<std::shared_ptr<logic::DlFormula>>& out_abstractDProofConclusions, const std::vector<AxiomInfo>* customAxioms = nullptr, std::vector<std::string>* optOut_helperRules = nullptr, std::vector<std::shared_ptr<logic::DlFormula>>* optOut_helperRulesConclusions = nullptr, std::vector<std::size_t>* optOut_indexEvalSequence = nullptr, bool debug = false);
+	static std::vector<std::size_t> parseValidateAndFilterAbstractDProof(std::vector<std::string>& inOut_abstractDProof, std::vector<std::shared_ptr<logic::DlFormula>>& out_abstractDProofConclusions, std::vector<std::string>& out_helperRules, std::vector<std::shared_ptr<logic::DlFormula>>& out_helperRulesConclusions, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::vector<AxiomInfo>* filterForTheorems = nullptr, std::vector<AxiomInfo>* requiredIntermediateResults = nullptr, std::vector<std::size_t>* optOut_indexEvalSequence = nullptr, bool debug = false);
+	static std::vector<std::size_t> measureFundamentalLengthsInAbstractDProof(const std::vector<std::size_t>& targetIndices, const std::vector<std::string>& abstractDProof, const std::vector<std::shared_ptr<logic::DlFormula>>& abstractDProofConclusions, const std::vector<std::string>& helperRules = { }, const std::vector<std::shared_ptr<logic::DlFormula>>& helperRulesConclusions = { }, bool debug = false, std::size_t limit = SIZE_MAX);
+	static std::vector<std::string> unfoldRulesInAbstractDProof(const std::vector<std::size_t>& targetIndices, const std::vector<std::string>& abstractDProof, const std::vector<std::string>& helperRules = { }, bool debug = false, std::vector<std::size_t>* storedFundamentalLengths = nullptr, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX);
+	static std::vector<std::string> unfoldAbstractDProof(const std::vector<std::string>& abstractDProof, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::vector<AxiomInfo>* filterForTheorems = nullptr, std::vector<AxiomInfo>* requiredIntermediateResults = nullptr, bool debug = false, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX, std::size_t limit = SIZE_MAX);
+	static std::vector<std::string> recombineAbstractDProof(const std::vector<std::string>& abstractDProof, std::vector<std::shared_ptr<logic::DlFormula>>& out_conclusions, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::vector<AxiomInfo>* filterForTheorems = nullptr, const std::vector<AxiomInfo>* conclusionsWithHelperProofs = nullptr, unsigned minUseAmountToCreateHelperProof = 2, std::vector<AxiomInfo>* requiredIntermediateResults = nullptr, bool debug = false, std::size_t maxLengthToKeepProof = SIZE_MAX, bool abstractProofStrings = true, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX, std::size_t limit = SIZE_MAX);
 private:
 #define PARSEMMPL_STORED // NOTE: For Metamath's pmproofs.txt, using storage slightly slows parsing but speeds up meaning calculation, so that stored mode is faster overall. However, those overall durations are close to two milliseconds, so it barely matters.
 #ifdef PARSEMMPL_STORED
