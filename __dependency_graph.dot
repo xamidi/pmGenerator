@@ -10,7 +10,7 @@ digraph {
 		sha2
 	}
 	CfgGrammar -> FctHelper [color=blue]
-	CfgGrammar -> "(regex)" [color=blue]
+	CfgGrammar -> "boost/algorithm/string" [color=blue]
 	CfgGrammar -> IPrintable [color=red]
 	CfgGrammar -> "(cstdint)" [color=red]
 	CfgGrammar -> "(unordered_map)" [color=red]

@@ -35,7 +35,7 @@ Some more – and very special – proof systems are illustrated [further down b
     Configuring:
       -c [-i <file>] [-s <string>] [-n] [-N <limit or -1>] [-l] [-e <id>] [-d]
          Proof system customization ; Generates a SHA-512/224 hash to identify the system, sets the effective data location to "<data location>/<hash>", and (if nonexisting) creates the !.def file.
-           -i: specify axioms by input file path (where a LF-separated string of axioms is stored)
+           -i: specify axioms by input file path (where a LF-separated string of axioms is stored), ignoring lines that are empty or starting with '%'
            -s: specify axioms by comma-separated string ; used only when '-i' unspecified ; default: "C0C1.0,CC0C1.2CC0.1C0.2,CCN0N1C1.0"
            -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
            -N: enable necessitation rule "N" for the given system with unlimited (-N 0) or limited (-N <positive amount>) consecutive necessitation steps allowed
@@ -69,7 +69,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -b: only print conclusions of the given proofs ; sets default of '-j' to 1
            -s: only print summary with conclusions and abstract condensed detachment proofs ; used only when '-b' unspecified
            -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references ; used only when '-b' unspecified
-           -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace
+           -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
       --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-f] [-o <output file>] [-d]
@@ -82,7 +82,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
            -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
-           -f: proof summary is given by input file path
+           -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
       --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-f] [-o <output file>] [-d]
@@ -92,7 +92,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
            -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
            -w: wrap results
-           -f: proof summary is given by input file path
+           -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
       --search <string> [-n] [-s] [-w] [-p] [-f] [-d]
@@ -101,7 +101,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -s: search for schemas of the given formulas
            -w: search whole collections of schemas (i.e. enable multiple results per term) ; entails '-s'
            -p: search proofs (rather than conclusions) ; used only when '-n' and '-s' unspecified
-           -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace
+           -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
       --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-f] [-d]
          Various options to extract information from proof files ; [Hint: Generate missing files with '--variate 1 -s'.]
@@ -110,7 +110,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false
            -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'
            -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs
-           -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace
+           -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
       --iterate [-u] [-s]
          Iterate proof candidates currently next up for generation and print (and store for custom proof systems) their amount for prediction purposes
