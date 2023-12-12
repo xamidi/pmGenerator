@@ -56,7 +56,7 @@ static const map<Task, string>& cmdInfo() {
 		_[Task::Customize] =
 				"    -c [-i <file>] [-s <string>] [-n] [-N <limit or -1>] [-l] [-e <id>] [-d]\n"
 				"       Proof system customization ; Generates a SHA-512/224 hash to identify the system, sets the effective data location to \"<data location>/<hash>\", and (if nonexisting) creates the !.def file.\n"
-				"         -i: specify axioms by input file path (where a LF-separated string of axioms is stored)\n"
+				"         -i: specify axioms by input file path (where a LF-separated string of axioms is stored), ignoring lines that are empty or starting with '%'\n"
 				"         -s: specify axioms by comma-separated string ; used only when '-i' unspecified ; default: \"C0C1.0,CC0C1.2CC0.1C0.2,CCN0N1C1.0\"\n"
 				"         -n: specify formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
 				"         -N: enable necessitation rule \"N\" for the given system with unlimited (-N 0) or limited (-N <positive amount>) consecutive necessitation steps allowed\n"
@@ -92,7 +92,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -b: only print conclusions of the given proofs ; sets default of '-j' to 1\n"
 				"         -s: only print summary with conclusions and abstract condensed detachment proofs ; used only when '-b' unspecified\n"
 				"         -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references ; used only when '-b' unspecified\n"
-				"         -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace\n"
+				"         -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::TransformProofSummary] =
@@ -106,7 +106,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references\n"
 				"         -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1\n"
 				"         -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)\n"
-				"         -f: proof summary is given by input file path\n"
+				"         -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::UnfoldProofSummary] =
@@ -117,7 +117,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1\n"
 				"         -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)\n"
 				"         -w: wrap results\n"
-				"         -f: proof summary is given by input file path\n"
+				"         -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::SearchProofFiles] =
@@ -127,7 +127,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -s: search for schemas of the given formulas\n"
 				"         -w: search whole collections of schemas (i.e. enable multiple results per term) ; entails '-s'\n"
 				"         -p: search proofs (rather than conclusions) ; used only when '-n' and '-s' unspecified\n"
-				"         -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace\n"
+				"         -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
 		_[Task::ExtractFromProofFiles] =
 				"    --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-f] [-d]\n"
@@ -137,7 +137,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false\n"
 				"         -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'\n"
 				"         -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs\n"
-				"         -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, and whitespace\n"
+				"         -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
 		_[Task::IterateProofCandidates] =
 				"    --iterate [-u] [-s]\n"
@@ -308,16 +308,16 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	for (size_t w = 1; w <= 15; w += 2) {
 		cout << "dProofs" + to_string(w) + ".txt" << endl;
 		string s1 = "CCCC0.0C0.0CCC0.0C0.0CNCC1.1C1.1CCC1.1C1.1CC1.1C1.1CCC0.0C0.0CNCC1.1C1.1CCC1.1C1.1CC1.1C1.1"; //"CCCC0.0C0.0CCC0.0C0.0CNC1.1CC1.1C1.1CCC0.0C0.0CNC1.1CC1.1C1.1"; //"CCCC0.0C0.0CCC0.0C0.0CN1C1.1CCC0.0C0.0CN1C1.1"; //"CCC0.0CC0.0CN1C1.1CC0.0CN1C1.1"; //"CCC0.0C1CN2C2.2C1CN2C2.2";
-		s1 = regex_replace(s1, regex("0"), "z");
-		s1 = regex_replace(s1, regex("1"), "y");
-		s1 = regex_replace(s1, regex("2"), "x");
-		s1 = regex_replace(s1, regex("3"), "w");
-		s1 = regex_replace(s1, regex("4"), "v");
-		s1 = regex_replace(s1, regex("5"), "u");
-		s1 = regex_replace(s1, regex("6"), "t");
-		s1 = regex_replace(s1, regex("7"), "s");
-		s1 = regex_replace(s1, regex("8"), "r");
-		s1 = regex_replace(s1, regex("9"), "q");
+		boost::replace_all(s1, "0", "z");
+		boost::replace_all(s1, "1", "y");
+		boost::replace_all(s1, "2", "x");
+		boost::replace_all(s1, "3", "w");
+		boost::replace_all(s1, "4", "v");
+		boost::replace_all(s1, "5", "u");
+		boost::replace_all(s1, "6", "t");
+		boost::replace_all(s1, "7", "s");
+		boost::replace_all(s1, "8", "r");
+		boost::replace_all(s1, "9", "q");
 		shared_ptr<DlFormula> f1;
 		DlCore::fromPolishNotation_noRename(f1, s1);
 		string content;
@@ -1029,7 +1029,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					string axiomString;
 					if (!FctHelper::readFile(t.str["axiomFilePath"], axiomString))
 						throw runtime_error("Failed to read file \"" + t.str["axiomFilePath"] + "\".");
-					axioms = FctHelper::stringSplit(axiomString, "\n");
+					axioms = FctHelper::stringSplitAndSkip(axiomString, "\n", "%", true);
 				} else
 					axioms = FctHelper::stringSplit(t.str["axiomString"], ",");
 				if (mpiArg.empty()) {

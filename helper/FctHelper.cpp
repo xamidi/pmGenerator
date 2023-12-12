@@ -465,6 +465,23 @@ vector<string> FctHelper::stringSplit(const string& str, const string& sep) {
 	return parts;
 }
 
+vector<string> FctHelper::stringSplitAndSkip(const string& str, const string& sep, const string& skipPrefix, bool skipEmpty) {
+	vector<string> parts;
+	string::size_type start = 0;
+	string::size_type end = str.find(sep);
+	while (end != string::npos) {
+		string s = str.substr(start, end - start);
+		if (!(skipEmpty && s.empty()) && s.rfind(skipPrefix, 0))
+			parts.push_back(s);
+		start = end + sep.length();
+		end = str.find(sep, start);
+	}
+	string s = str.substr(start, end);
+	if (!(skipEmpty && s.empty()) && s.rfind(skipPrefix, 0))
+		parts.push_back(s);
+	return parts;
+}
+
 string FctHelper::stringJoin(const vector<string>& elements) {
 	if (!elements.empty()) {
 		stringstream ss;

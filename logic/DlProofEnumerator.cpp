@@ -793,10 +793,33 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 		if (!FctHelper::readFile(*inputFile, fileString))
 			throw runtime_error("Failed to read file \"" + *inputFile + "\".");
 		string::size_type len = fileString.length();
-		boost::replace_all(fileString, "\r", "");
-		boost::replace_all(fileString, "\n", "");
-		boost::replace_all(fileString, "\t", "");
-		boost::replace_all(fileString, " ", "");
+
+		// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+		bool startOfLine = true;
+		bool erasingLine = false;
+		fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+			switch (c) {
+			case '\r':
+			case '\n':
+				startOfLine = true;
+				erasingLine = false;
+				return true;
+			case '\t':
+			case ' ':
+				startOfLine = false;
+				return true;
+			case '%':
+				if (startOfLine) {
+					startOfLine = false;
+					erasingLine = true;
+				}
+				return erasingLine;
+			default:
+				startOfLine = false;
+				return erasingLine;
+			}
+		}), fileString.end());
+
 		dProofsFromFile = FctHelper::stringSplit(fileString, ",");
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << *inputFile << "\"." << endl;
@@ -888,60 +911,58 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 		string inputFromFile;
 		if (useInputFile && !FctHelper::readFile(input, inputFromFile))
 			throw runtime_error("Failed to read file \"" + input + "\".");
-		summaryLines = FctHelper::stringSplit(useInputFile ? inputFromFile : input, "\n");
+		summaryLines = FctHelper::stringSplitAndSkip(useInputFile ? inputFromFile : input, "\n", "%", true);
 	}
 	vector<string> inputConclusions;
 	size_t axiomIndex = 0;
 	size_t stepIndex = 0;
 	for (const string& line : summaryLines)
-		if (!line.empty()) {
-			if (!line.rfind('[', 0)) {
-				string::size_type pos = line.find(']', 2);
-				if (pos == string::npos)
-					throw invalid_argument("Missing index number in \"" + line + "\".");
-				size_t num;
-				try {
-					num = stoll(line.substr(1, pos));
-				} catch (...) {
-					throw invalid_argument("Bad index number in \"" + line + "\".");
-				}
-				if (num != stepIndex++)
-					throw invalid_argument("Invalid index number in \"" + line + "\". Should be " + to_string(stepIndex - 1) + ".");
-				pos = line.find_first_not_of(' ', pos + 1);
-				string::size_type posEnd = line.find_first_of(" =:", pos + 1);
-				if (pos == string::npos || posEnd == string::npos)
-					throw invalid_argument("Missing conclusion completion in \"" + line + "\".");
-				if (optOut_requiredIntermediateResults)
-					inputConclusions.push_back(line.substr(pos, posEnd - pos));
-				pos = line.find_first_not_of(" =:", posEnd + 1);
-				if (pos == string::npos)
-					throw invalid_argument("Missing D-proof in \"" + line + "\".");
-				out_abstractDProof.push_back(line.substr(pos));
-			} else { // axiom
-				if (axiomIndex == 35)
-					throw invalid_argument("Too many axioms. (Axiom numbers must be in {1, ..., 9, a, ..., z}, i.e. there are 35 at most.)");
-				string::size_type pos = line.find_first_not_of(' ');
-				string::size_type posEnd = line.find_first_of(" =:", pos + 1);
-				if (pos == string::npos || posEnd == string::npos)
-					throw invalid_argument("Missing axiom completion in \"" + line + "\".");
-				string axiom = line.substr(pos, posEnd - pos);
-				pos = line.find_first_not_of(" =:", posEnd + 1);
-				if (pos == string::npos)
-					throw invalid_argument("Missing axiom name in \"" + line + "\".");
-				string axName = line.substr(pos);
-				if (axName.length() != 1 || ((axName[0] < '1' || axName[0] > '9') && (axName[0] < 'a' || axName[0] > 'z')))
-					throw invalid_argument("Invalid axiom name in \"" + line + "\".");
-				size_t num = axName[0] >= '1' && axName[0] <= '9' ? axName[0] - '1' : 10 + axName[0] - 'a' - 1;
-				if (num != axiomIndex++)
-					throw invalid_argument("[axiomIndex = " + to_string(axiomIndex - 1) + ", char = " + to_string(axiomIndex - 10 + 'a') + "] Invalid axiom number in \"" + line + "\". Should be " + (axiomIndex <= 9 ? string { char(axiomIndex + '0') } : string { char(axiomIndex - 10 + 'a') }) + ".");
-				shared_ptr<DlFormula> ax;
-				if (normalPolishNotation) {
-					if (!DlCore::fromPolishNotation(ax, axiom, false, debug))
-						throw domain_error("Could not parse \"" + axiom + "\" as a formula in normal Polish notation.");
-				} else if (!DlCore::fromPolishNotation_noRename(ax, axiom, false, debug))
-					throw domain_error("Could not parse \"" + axiom + "\" as a formula in dotted Polish notation.");
-				out_customAxioms.push_back(DRuleParser::AxiomInfo(axName, ax));
+		if (!line.rfind('[', 0)) {
+			string::size_type pos = line.find(']', 2);
+			if (pos == string::npos)
+				throw invalid_argument("Missing index number in \"" + line + "\".");
+			size_t num;
+			try {
+				num = stoll(line.substr(1, pos));
+			} catch (...) {
+				throw invalid_argument("Bad index number in \"" + line + "\".");
 			}
+			if (num != stepIndex++)
+				throw invalid_argument("Invalid index number in \"" + line + "\". Should be " + to_string(stepIndex - 1) + ".");
+			pos = line.find_first_not_of(' ', pos + 1);
+			string::size_type posEnd = line.find_first_of(" =:", pos + 1);
+			if (pos == string::npos || posEnd == string::npos)
+				throw invalid_argument("Missing conclusion completion in \"" + line + "\".");
+			if (optOut_requiredIntermediateResults)
+				inputConclusions.push_back(line.substr(pos, posEnd - pos));
+			pos = line.find_first_not_of(" =:", posEnd + 1);
+			if (pos == string::npos)
+				throw invalid_argument("Missing D-proof in \"" + line + "\".");
+			out_abstractDProof.push_back(line.substr(pos));
+		} else { // axiom
+			if (axiomIndex == 35)
+				throw invalid_argument("Too many axioms. (Axiom numbers must be in {1, ..., 9, a, ..., z}, i.e. there are 35 at most.)");
+			string::size_type pos = line.find_first_not_of(' ');
+			string::size_type posEnd = line.find_first_of(" =:", pos + 1);
+			if (pos == string::npos || posEnd == string::npos)
+				throw invalid_argument("Missing axiom completion in \"" + line + "\".");
+			string axiom = line.substr(pos, posEnd - pos);
+			pos = line.find_first_not_of(" =:", posEnd + 1);
+			if (pos == string::npos)
+				throw invalid_argument("Missing axiom name in \"" + line + "\".");
+			string axName = line.substr(pos);
+			if (axName.length() != 1 || ((axName[0] < '1' || axName[0] > '9') && (axName[0] < 'a' || axName[0] > 'z')))
+				throw invalid_argument("Invalid axiom name in \"" + line + "\".");
+			size_t num = axName[0] >= '1' && axName[0] <= '9' ? axName[0] - '1' : 10 + axName[0] - 'a' - 1;
+			if (num != axiomIndex++)
+				throw invalid_argument("[axiomIndex = " + to_string(axiomIndex - 1) + ", char = " + to_string(axiomIndex - 10 + 'a') + "] Invalid axiom number in \"" + line + "\". Should be " + (axiomIndex <= 9 ? string { char(axiomIndex + '0') } : string { char(axiomIndex - 10 + 'a') }) + ".");
+			shared_ptr<DlFormula> ax;
+			if (normalPolishNotation) {
+				if (!DlCore::fromPolishNotation(ax, axiom, false, debug))
+					throw domain_error("Could not parse \"" + axiom + "\" as a formula in normal Polish notation.");
+			} else if (!DlCore::fromPolishNotation_noRename(ax, axiom, false, debug))
+				throw domain_error("Could not parse \"" + axiom + "\" as a formula in dotted Polish notation.");
+			out_customAxioms.push_back(DRuleParser::AxiomInfo(axName, ax));
 		}
 	if (optOut_requiredIntermediateResults) {
 		vector<DRuleParser::AxiomInfo>& requiredIntermediateResults = *optOut_requiredIntermediateResults;
@@ -2162,10 +2183,33 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 		if (!FctHelper::readFile(*inputFile, fileString))
 			throw runtime_error("Failed to read file \"" + *inputFile + "\".");
 		string::size_type len = fileString.length();
-		boost::replace_all(fileString, "\r", "");
-		boost::replace_all(fileString, "\n", "");
-		boost::replace_all(fileString, "\t", "");
-		boost::replace_all(fileString, " ", "");
+
+		// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+		bool startOfLine = true;
+		bool erasingLine = false;
+		fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+			switch (c) {
+			case '\r':
+			case '\n':
+				startOfLine = true;
+				erasingLine = false;
+				return true;
+			case '\t':
+			case ' ':
+				startOfLine = false;
+				return true;
+			case '%':
+				if (startOfLine) {
+					startOfLine = false;
+					erasingLine = true;
+				}
+				return erasingLine;
+			default:
+				startOfLine = false;
+				return erasingLine;
+			}
+		}), fileString.end());
+
 		searchTermsFromFile = FctHelper::stringSplit(fileString, ",");
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << *inputFile << "\"." << endl;
@@ -2605,10 +2649,33 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		if (!FctHelper::readFile(*config, fileString))
 			throw runtime_error("Failed to read file \"" + *config + "\".");
 		string::size_type len = fileString.length();
-		boost::replace_all(fileString, "\r", "");
-		boost::replace_all(fileString, "\n", "");
-		boost::replace_all(fileString, "\t", "");
-		boost::replace_all(fileString, " ", "");
+
+		// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+		bool startOfLine = true;
+		bool erasingLine = false;
+		fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+			switch (c) {
+			case '\r':
+			case '\n':
+				startOfLine = true;
+				erasingLine = false;
+				return true;
+			case '\t':
+			case ' ':
+				startOfLine = false;
+				return true;
+			case '%':
+				if (startOfLine) {
+					startOfLine = false;
+					erasingLine = true;
+				}
+				return erasingLine;
+			default:
+				startOfLine = false;
+				return erasingLine;
+			}
+		}), fileString.end());
+
 		dProofs = FctHelper::stringSplit(fileString, ",");
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << *config << "\"." << endl;

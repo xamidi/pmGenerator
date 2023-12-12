@@ -141,6 +141,7 @@ struct FctHelper {
 	static std::wstring utf8toWide(const std::string& in);
 	static std::wstring utf8toWide(const char* in);
 	static std::vector<std::string> stringSplit(const std::string& str, const std::string& sep);
+	static std::vector<std::string> stringSplitAndSkip(const std::string& str, const std::string& sep, const std::string& skipPrefix, bool skipEmpty = false);
 	static std::string stringJoin(const std::vector<std::string>& elements);
 	static std::string stringJoin(const std::string& separator, const std::vector<std::string>& elements);
 
