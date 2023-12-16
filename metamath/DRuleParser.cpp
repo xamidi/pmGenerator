@@ -1132,15 +1132,15 @@ shared_ptr<DlFormula> DRuleParser::parseMmConsequent(const string& strConsequent
 	bool ended = false;
 	for (string::size_type i = 0; i < strConsequent.length(); i++)
 		switch (strConsequent[i]) {
-		case '[':
+		case '(':
 			if (ended)
 				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has more than one top-level subformulas.");
 			openings.push_back(i);
 			depth++;
 			break;
-		case ']':
+		case ')':
 			if (depth == 0)
-				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too many ']'.");
+				throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too many ')'.");
 			const string::size_type& currentSubformulaIndex = openings.back();
 #ifdef PARSEMMPL_STORED
 			shared_ptr<DlFormula> subformula = _parseEnclosedMmFormula(formulaBackups, strConsequent, currentSubformulaIndex, i, subformulas, consBegin);
@@ -1155,7 +1155,7 @@ shared_ptr<DlFormula> DRuleParser::parseMmConsequent(const string& strConsequent
 			break;
 		}
 	if (depth > 0)
-		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too few ']'.");
+		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has too few ')'.");
 
 	if (subformulas.empty())
 		throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has no subformulas.");
