@@ -53,3 +53,66 @@ $ sacct -j 40395470 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,M
 > 40395470.ba+                    64  COMPLETED      0:0   05:52:57 194334004K 
 > 40395470.ex+                    64  COMPLETED      0:0   05:52:57          0 
 194334004 / 1024^2 = 185.331348419189453125 ≈ 185.33
+
+149-141:
+$ sacct -j 40493664 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40493664     optane_low         64  COMPLETED      0:0   08:49:38            
+> 40493664.ba+                    64  COMPLETED      0:0   08:49:38 277004364K 
+> 40493664.ex+                    64  COMPLETED      0:0   08:49:38        12K 
+277004364 / 1024^2 = 264.171947479248046875 ≈ 264.17
+
+151-141:
+$ sacct -j 40502307 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40502307     optane_low         64  COMPLETED      0:0   12:53:52            
+> 40502307.ba+                    64  COMPLETED      0:0   12:53:52 389256652K 
+> 40502307.ex+                    64  COMPLETED      0:0   12:53:52          0 
+389256652 / 1024^2 = 371.224071502685546875 ≈ 371.22
+
+153-141:
+$ sacct -j 40515252 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40515252     optane_low         64  COMPLETED      0:0   18:16:28            
+> 40515252.ba+                    64  COMPLETED      0:0   18:16:28 545941964K 
+> 40515252.ex+                    64  COMPLETED      0:0   18:16:28          0 
+545941964 / 1024^2 = 520.650829315185546875 ≈ 520.65
+
+155-141:
+$ sacct -j 40532095 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40532095     optane_low         64  COMPLETED      0:0 1-01:10:50            
+> 40532095.ba+                    64  COMPLETED      0:0 1-01:10:50 742775964K 
+> 40532095.ex+                    64  COMPLETED      0:0 1-01:10:50          0 
+742775964 / 1024^2 = 708.366359710693359375 ≈ 708.37
+
+157-141:
+$ sacct -j 40644348 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40644348     optane_low         64  COMPLETED      0:0 1-10:03:16             
+> 40644348.ba+                    64  COMPLETED      0:0 1-10:03:16 1012306728K 
+> 40644348.ex+                    64  COMPLETED      0:0 1-10:03:16           0 
+1012306728 / 1024^2 = 965.41092681884765625 ≈ 965.41
+
+159-141:
+$ sacct -j 40717587 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40717587     optane_low         64  COMPLETED      0:0 2-00:27:09             
+> 40717587.ba+                    64  COMPLETED      0:0 2-00:27:09 1370655796K 
+> 40717587.ex+                    64  COMPLETED      0:0 2-00:27:09           0 
+1370655796 / 1024^2 = 1307.159229278564453125 ≈ 1307.16
+
+161-141:
+$ sacct -j 40754259 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40754259     optane_low         64  COMPLETED      0:0 2-21:04:41             
+> 40754259.ba+                    64  COMPLETED      0:0 2-21:04:41 1876908704K 
+> 40754259.ex+                    64  COMPLETED      0:0 2-21:04:41           0 
+1876908704 / 1024^2 = 1789.959625244140625 ≈ 1789.96

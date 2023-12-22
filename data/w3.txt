@@ -1,0 +1,99 @@
+% Walsh's 3rd Axiom (CpCCNqCCNrsCptCCtqCrq), i.e. 0→((¬1→((¬2→3)→(0→4)))→((4→1)→(2→1)))
+% Completeness follows w.r.t. CpCqp,CCpCqrCCpqCpr,CCNpNqCqp and CCpqCCqrCpr,CCNppp,CpCNpq.
+%
+% Proof system configuration: pmGenerator -c -n -s CpCCNqCCNrsCptCCtqCrq
+% SHA-512/224 hash: 0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314
+%
+% Full summary: pmGenerator --transform data/w3.txt -f -n -t . -j 1
+% Step counting: pmGenerator --transform data/w3.txt -f -n -t . -p -2 -d
+%                pmGenerator --transform data/w3.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
+
+    CpCCNqCCNrsCptCCtqCrq = 1
+[0] CCNpCCNqrCCsCCNtCCNuvCswCCwtCutxCCxpCqp = D11
+[1] CCNpCCNqrCCCNsCCNtuCCvCCNwCCNxyCvzCCzwCxwaCCasCtsbCCbpCqp = D1[0]
+[2] CCCpCCNqCCNrsCtuCCuqCrqvCCCNqCCNrsCtuCCuqCrqv = D[0]1
+[3] CCCpCCqrCsrtCCCqrCsrt = D[1]1
+[4] CCNpCCNqrCCCCsCCtuCvuwCCCtuCvuwxCCxpCqp = D1[3]
+[5] CCCpCCCqrCsrtuCCCCqrCsrtu = D[4]1
+[6] CCCNpqCCrCCNsCCNtuCrvCCvsCtsqCCqwCpw = D[3][0]
+[7] CCCNpqCCCNrCCNstCCuCCNvCCNwxCuyCCyvCwvzCCzrCsrqCCqaCpa = D[3][1]
+[8] CCCNpCCNqCCNrsCNptCCtqCrqCCCrqpCqpCCCCCrqpCqpuCvu = D[2][6]
+[9] CCCCCpCCNqCCNrsCtuCCuqCrqvCCCNqCCNrsCtuCCuqCrqvwCxw = D[8][0]
+[10] CCCpCqrsCCqrs = DD1[9]1
+[11] CCCCCpCCqrCsrtCCCqrCsrtuCCuvCwv = D[5]D[3][4]
+[12] CCCCCpqrCqrsCts = DD[10][0]1
+[13] CCCCCCpqCrqsCtsuCqu = DD[10]DD[3]111
+[14] CCpqCrCpq = D[10][9]
+[15] CCCpqrCqr = DDD[12]D[3][2]1[0]
+[16] CCCNpqrCpr = D[0]DD[8][1][10]
+[17] CCNpCCNqrCCCCCCstuCtuvCCvwCxwyCCypCqp = D1D[5]D[3]DD[12]11
+[18] CCNppCqp = D[0]D[16][0]
+
+% Axiom 1 by Frege (CpCqp), i.e. 0→(1→0) ; 67 steps
+[19] CpCqp = DDD[12][12]11
+
+[20] CCNpCCNqrCCsCtsuCCupCqp = D1[19]
+[21] CCCCNpqCrqpCsp = D[0]D[13]DD[3][7][3]
+[22] CCpqCrCsCpq = D[10][14]
+[23] CpCCpqCrq = D[15][11]
+[24] CpCqCNpr = D[16][14]
+[25] CpCqCrp = D[15][19]
+[26] CCNpCCNqrCCCCNstCCuCvuwCCwxCsxyCCypCqp = D1D[15][20]
+
+% Axiom 3 by Łukasiewicz (CpCNpq), i.e. 0→(¬0→1) ; 127 steps
+[27] CpCNpq = D[16]D[6][18]
+
+[28] CpCqq = D[16]D[1][23]
+[29] CCCpCqrsCrs = DD1[18]DD[11]1D[1]DDD[3]D[3]D1[7][3][10]
+[30] CCCCCpqrCsrtCqt = DD1DD[3][14][18]D[14]1
+[31] CCCNpqCCCCNrsCCtCutvCCvwCrwxCCxyCpy = D[15][26]
+
+% Identity principle (Cpp), i.e. 0→0 ; 283 steps
+[32] Cpp = D[28][28]
+
+[33] CCNpCCNqrCCsstCCtpCqp = D1[32]
+[34] CpCNNCqrCsCqr = D[21]DD[29][26]D[21]D[1]DD[1]D[14][24]D[16][22]
+[35] CCNCCppNqrCqr = D[31]D[33]D[34][34]
+[36] CCCppNqCqr = D[16][35]
+[37] CCNNpqCpq = D[31]D[17]D[15]DD[31]D[17]D[35][25][25]
+[38] CpCqCrNNp = D[37][25]
+[39] CpCqCrNNCNps = D[16][38]
+[40] CCpqCNNpq = D[31]D[17][38]
+[41] CCpqCNCNNprq = D[31]D[17][39]
+[42] CpCNNCNqqq = D[18]D[41][18]
+[43] CCNpqCNCrpq = D[31]D[17]D[40]D[15][38]
+[44] CCNpqCNCNprq = D[31]D[17]D[40][39]
+[45] CCNpqCNCrCspq = D[31]D[17]D[40]D[29][38]
+[46] CCNpCqpCrCqp = D[17]D[43][25]
+[47] CpCCNCqrrCqr = D[46][23]
+[48] CCpqCCCrrpq = D[33][47]
+[49] CCCpqCNprCsCNpr = D[17]D[44]D[30]D[23][36]
+
+% Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 9109 steps
+[50] CCNppp = D[37]D[42][42]
+
+[51] CpCNCqrCNqs = D[49][49]
+[52] CCpNCNppCqNCNpp = D[17]D[40]D[30]D[23]D[48][50]
+[53] CNCpqCrCsp = DDD[48][37]DD[17]D[44][25]D[40][46]D[45]DD[49][24]D[51][51]
+[54] CCpCpqCrCpq = D[17][53]
+[55] CpCCqCqrCqr = D[54][54]
+[56] CCpCpqCpq = D[55][55]
+[57] CCpqCNCprq = D[31]D[17]DD[56][49]D[37]D[15][22]
+[58] CCCpqrCNpr = D[31]D[17]D[57][38]
+[59] CCpqCCNppq = DD[10]D1[1]D[17]DD[31]DD[31]D[17]D[40]DD[31][52][25]D[58][52][25]
+[60] CCNCpqrCCrqCpq = DD[59][29]D[45]1
+[61] CCpCqCprCqCpr = D[56]D[17]D[43][53]
+[62] CpCCpqq = DD[61]D[13]D[3]D[3]D1[6]DD[20][47][56]
+[63] CCpqCCNqpq = D[17]DDD[15][17]D[59]D[30][56][59]
+
+% Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 1682551 steps
+[64] CCNpNqCqp = D[37]D[61]DD[63]D[15][36]D[43]D[56]D[41][45]
+
+% Axiom 1 by Łukasiewicz (CCpqCCqrCpr), i.e. (0→1)→((1→2)→(0→2)) ; 1686507 steps
+[65] CCpqCCqrCpr = DDD1[57]D[19]D[59][62][60]
+
+[66] CCCCpqCrqsCCrps = D[65][65]
+[67] CCpCqrCqCpr = D[66]D[65][62]
+
+% Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 25914517 steps
+[68] CCpCqrCCpqCpr = D[67]D[66]D[60]DD[67]D[58][63]D[67]D[66][58]

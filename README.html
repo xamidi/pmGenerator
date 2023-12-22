@@ -8,15 +8,15 @@
      Update instructions:
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
-     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (156 occurences)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (258 occurences)
      4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<article class\=\"container-lg\"><img src\=\"icon\/icon-readme\.png\" alt\=\"icon\" style=\"float: left; padding-right: 20px; margin-top: -24px;\">[/REPLACE] (1 occurence)
      5. RegEx replace-all: [FIND]<\/div><\/div><\/body>[/FIND], [REPLACE]<\/article><\/div><\/div><\/body>[/REPLACE] (1 occurence)
      6. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidipmgenerator\"[/REPLACE] (1 occurence)
-     7. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (304 occurences)
+     7. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (508 occurences)
      8. RegEx replace-all: [FIND] \⇒ [/FIND], [REPLACE] ⇒ [/REPLACE] (2 occurences)
      9. RegEx replace-all: [FIND]&nbsp; Size of Files   <br>\[B\]         &nbsp;[/FIND], [REPLACE]&nbsp; Size of Files   <br>\[B\]         &nbsp;[/REPLACE] (9 occurence)
      10.RegEx replace-all: [FIND]\]   \&nbsp;[/FIND], [REPLACE]\]   &nbsp;[/REPLACE] (18 occurences)
-     11.RegEx replace-all: [FIND]id\=\"frege-s-calculus-simplified[^"]+"[/FIND], [REPLACE]id\=\"freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-sample-customization-info"[/REPLACE] (1 occurence)
+     11.RegEx replace-all: [FIND]id\=\"frege-s-calculus-simplified[^"]+"[/FIND], [REPLACE]id\=\"freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info"[/REPLACE] (1 occurence)
      12.RegEx replace-all: [FIND]id\=\"meredith-s-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"merediths-axiom-1-basis-cccccpqcnrnsrtcctpcsp-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      13.RegEx replace-all: [FIND]id\=\"walsh-s-1st-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-1st-axiom-1-basis-ccpccnpqrcsccntcrtcpt-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      14.RegEx replace-all: [FIND]id\=\"walsh-s-2nd-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-2nd-axiom-1-basis-cpccqcprccnrccnstqcsr-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
@@ -24,9 +24,9 @@
      16.RegEx replace-all: [FIND]id\=\"walsh-s-4th-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-4th-axiom-1-basis-cpccnqccnrsctqccrtcrq-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      17.RegEx replace-all: [FIND]id\=\"walsh-s-5th-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      18.RegEx replace-all: [FIND]id\=\"walsh-s-6th-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
-     19.RegEx replace-all: [FIND]id\=\"s5[^"]+"[/FIND], [REPLACE]id\=\"s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-sample-customization-info"[/REPLACE] (1 occurence)
-     20.RegEx replace-all: [FIND](<sup>)<sub>[/FIND], [REPLACE]<small>[/REPLACE] (61 occurences)
-     21.RegEx replace-all: [FIND](</sub>)</sup>[/FIND], [REPLACE]</small>[/REPLACE] (61 occurences)
+     19.RegEx replace-all: [FIND]id\=\"s5[^"]+"[/FIND], [REPLACE]id\=\"s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-db-sample-customization-info"[/REPLACE] (1 occurence)
+     20.RegEx replace-all: [FIND](<sup>)<sub>[/FIND], [REPLACE]<small>[/REPLACE] (88 occurences)
+     21.RegEx replace-all: [FIND](</sub>)</sup>[/FIND], [REPLACE]</small>[/REPLACE] (88 occurences)
      (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4 onward.)
      -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -266,7 +266,7 @@ b, strong {
 <body><div class="markdown-container ltr"><div id="readme"><article class="container-lg"><img src="icon/icon-readme.png" alt="icon" style="float: left; padding-right: 20px; margin-top: -24px;">
 <h1 id="xamidipmgenerator">@xamidi/pmGenerator</h1>
 <p>This tool can collect exhaustive sets of <a href="https://en.wikipedia.org/wiki/Condensed_detachment">condensed detachment</a> proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”</a> collection.<br>The D-rule combines unification with <a href="https://en.wikipedia.org/wiki/Modus_ponens">modus ponens</a> (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus <em>pmGenerator</em> covers all syntactic consequences based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.<br>Eligible for high-performance computing. If you have access to a powerful computer, you may use <em>pmGenerator</em> to further contribute to our knowledge regarding the <a href="https://en.wikipedia.org/wiki/Proof_complexity">complexity of proof systems</a>. The following table exemplary shows progress that has already been made.</p>
-<h6 id="freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-sample-customization-info">Frege's calculus simplified by Łukasiewicz (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>) &nbsp;<small>[<a href="data/top1000SmallestConclusions_1to39Steps.txt">top1000</a>] [<a href="data/cardinalities.txt">cardinalities</a>] [<a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">sample</a>] [<a href="data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def">customization info</a>]</small></h6>
+<h6 id="freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info">Frege's calculus simplified by Łukasiewicz (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>) &nbsp;<small>[<a href="data/top1000SmallestConclusions_1to39Steps.txt">top1000</a>] [<a href="data/cardinalities.txt">cardinalities</a>] [<a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">db</a>] [<a href="data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def">customization info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -513,13 +513,13 @@ Standalone:
 <pre><code>pmGenerator -g -1 -q 50
 pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
 pmGenerator --variate 0 -l data/ -o "dProofs-withoutConclusions (all)/dProofs" -d
-pmGenerator --variate 1 -s --search CNpCCNpqNp -n --search CNpCCNpqNp -n -s
-pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w
+pmGenerator --variate 1 -s --search CNpCCNpqNp -n -d --search CNpCCNpqNp -n -s
+pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w -d
 pmGenerator --plot -s -d --plot -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
 pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2D1311D3DD2DD2D13DD2D1311 -j 2 -n
 pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d
 pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
-pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 -r data/mproofs.txt data/mproofs-reducer.txt -d -a SD data/mproofs-reducer.txt data/mproofs.txt data/mproofs-result-all.txt -l -d
+pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
 pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt
 pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n
 pmGenerator --variate 1 -s --extract -t 1000 -s -d
@@ -554,7 +554,7 @@ srun -n 6 ./pmGenerator -m 31
 <p>There are illustrated seven proof systems in the following which according to <a href="http://fitelson.org/walsh.pdf">M. Walsh and B. Fitelson</a> are minimal 1-bases (i.e. generators consisting of shortest single axioms) for propositional logic.
 Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>pmGenerator -c -n -s CCCpqCCrNsCtNtCCtpCrp -g -1</code> produces only 9 more representatives (1.<code>D11:CCpCNpqCrCNpq</code>, 2.<code>D1D11:CCNppCqp</code>, 3.<code>D1D1D11:CCpNCpNpCqNCpNp</code>, 4.<code>DD11D11:CpCNCqCNqrCNqr</code>, 5.<code>DD11D1D11:CpCNCNqqq</code>, 6.<code>DDD11D111:CNCpCNpqCNpq</code>, 7.<code>DD11D1D1D11:CpCNCqNCqNqNCqNq</code>, 8.<code>DDD11D1D111:CNCNppp</code>, 9.<code>DDD11D1D1D111:CNCpNCpNpNCpNp</code>).<br>Therefore, these systems are implied to be the only minimal 1-bases for C-N propositional calculus.</p>
 <p>Target files are distinguished using a hexadecimal SHA-512/224 digest as a folder name for each proof system.<br>For user identification of hash folders, I recommend to use custom icons, such as illustrated below.<br>&nbsp;&nbsp;<sub><img src="png/customIconPreview.png" alt="Icon-Preview" title="Hash folders with icons under Windows 7"></sub><br>For this purpose, a favicon database (<code>ico.dll</code>) is included in the release files, as well as an archive (<code>ico.7z</code>) with all the <code>.ico</code> files for usability with non-Windows operating systems.</p>
-<h6 id="merediths-axiom-1-basis-cccccpqcnrnsrtcctpcsp-top1000-cardinalities-sample-info">Meredith's Axiom; 1-basis (<a href="svg/meredith.svg">CCCCCpqCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to77Steps.txt">top1000</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt">cardinalities</a>] [<a href="data/mproofs.txt">sample</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def">info</a>]</small></h6>
+<h6 id="merediths-axiom-1-basis-cccccpqcnrnsrtcctpcsp-top1000-cardinalities-sample-info">Meredith's Axiom; 1-basis (<a href="svg/meredith.svg">CCCCCpqCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt">top1000</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt">cardinalities</a>] [<a href="data/m.txt">sample</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -615,9 +615,33 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/jobsRSS.txt#L48-L55">304.37</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=29440512597%2F15912038278" title="size(dProofs77-unfiltered71+.txt) / size(dProofs75-unfiltered71+.txt)">1.8502...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/vNC7xWrPSneFbn7" title="56'177'510'817 bytes compressed into 2'123'231'985 bytes (ratio approx. 26.4585)">dProofs79‑unfiltered71+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">118 604 053 297</td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/dProofs79-unfiltered71+_64cpu.log">1578.13</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/utilization/79-71.log">339.19</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/jobsRSS.txt#L57-L64">550.39</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=56177510817%2F29440512597" title="size(dProofs79-unfiltered71+.txt) / size(dProofs77-unfiltered71+.txt)">1.9081...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/xiKTUrcNNECfWJ2" title="108'323'290'318 bytes compressed into 4'002'658'331 bytes (ratio approx. 27.0628)">dProofs81‑unfiltered71+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">226 927 343 615</td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/dProofs81-unfiltered71+_64cpu.log">2896.16</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/utilization/81-71.log">635.64</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/jobsRSS.txt#L66-L73">1003.84</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=108323290318%2F56177510817" title="size(dProofs81-unfiltered71+.txt) / size(dProofs79-unfiltered71+.txt)">1.9282...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/Sy4u4kFrpBvXxYP" title="207'577'506'070 bytes compressed into 7'501'303'661 bytes (ratio approx. 27.6722)">dProofs83‑unfiltered71+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">434 504 849 685</td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/dProofs83-unfiltered71+_64cpu.log">5380.80</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/utilization/83-71.log">1196.78</a></td>
+<td style="text-align:right"><a href="log/custom/meredith-CCCCCpqCNrNsrtCCtpCsp/jobsRSS.txt#L75-L82">1846.46</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=207577506070%2F108323290318" title="size(dProofs83-unfiltered71+.txt) / size(dProofs81-unfiltered71+.txt)">1.9162...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-1st-axiom-1-basis-ccpccnpqrcsccntcrtcpt-top1000-cardinalities-sample-info">Walsh's 1st Axiom; 1-basis (<a href="svg/walsh1st.svg">CCpCCNpqrCsCCNtCrtCpt</a>) &nbsp;<small>[<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to147Steps.txt">top1000</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt">cardinalities</a>] [<a href="data/w1proofs.txt">sample</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def">info</a>]</small></h6>
+<h6 id="walshs-1st-axiom-1-basis-ccpccnpqrcsccntcrtcpt-top1000-cardinalities-sample-info">Walsh's 1st Axiom; 1-basis (<a href="svg/walsh1st.svg">CCpCCNpqrCsCCNtCrtCpt</a>) &nbsp;<small>[<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt">top1000</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt">cardinalities</a>] [<a href="data/w1.txt">sample</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -678,9 +702,65 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L48-L55">185.33</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=16130023412%2F12166973212" title="size(dProofs147-unfiltered141+.txt) / size(dProofs145-unfiltered141+.txt)">1.3257...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://mega.nz/file/yxdCXKwL#SfnM2LGuViJ3lIQQyrXskTu6ObGZuYfOltmYTV4zqNw" title="21'575'998'815 bytes compressed into 582'486'170 bytes (ratio approx. 37.0412)">dProofs149‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">70 481 548 096</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs149-unfiltered141+_64cpu.log">564.46</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/149-141.log">173.34</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L57-L64">264.17</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=21575998815%2F16130023412" title="size(dProofs149-unfiltered141+.txt) / size(dProofs147-unfiltered141+.txt)">1.3376...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/kyJbalQmwpsBxIZ" title="29'138'591'117 bytes compressed into 779'973'708 bytes (ratio approx. 37.3584)">dProofs151‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">99 620 139 213</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs151-unfiltered141+_64cpu.log">825.12</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/151-141.log">243.11</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L66-L73">371.22</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=29138591117%2F21575998815" title="size(dProofs151-unfiltered141+.txt) / size(dProofs149-unfiltered141+.txt)">1.3505...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/n9ccdaAHt2YgyBO" title="39'867'127'446 bytes compressed into 1'058'080'615 bytes (ratio approx. 37.6787)">dProofs153‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">139 487 266 659</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs153-unfiltered141+_64cpu.log">1169.19</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/153-141.log">340.40</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L75-L82">520.65</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=39867127446%2F29138591117" title="size(dProofs153-unfiltered141+.txt) / size(dProofs151-unfiltered141+.txt)">1.3681...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/iw4tK8bBsjWldVW" title="53'770'763'259 bytes compressed into 1'413'419'788 bytes (ratio approx. 38.0430)">dProofs155‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">193 258 029 918</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs155-unfiltered141+_64cpu.log">1610.97</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/155-141.log">471.06</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L84-L91">708.37</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=53770763259%2F39867127446" title="size(dProofs155-unfiltered141+.txt) / size(dProofs153-unfiltered141+.txt)">1.3487...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/YWjWeIZ6ms6dPZf" title="73'644'408'291 bytes compressed into 1'913'276'599 bytes (ratio approx. 38.4913)">dProofs157‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">266 902 438 209</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs157-unfiltered141+_64cpu.log">2178.79</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/157-141.log">647.45</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L93-L100">965.41</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=73644408291%2F53770763259" title="size(dProofs157-unfiltered141+.txt) / size(dProofs155-unfiltered141+.txt)">1.3695...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/5gJDQbZdgszCFE7" title="98'773'762'822 bytes compressed into 2'541'220'153 bytes (ratio approx. 38.8686)">dProofs159‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">365 676 201 031</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs159-unfiltered141+_64cpu.log">3099.95</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/159-141.log">881.28</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L102-L109">1307.16</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=98773762822%2F73644408291" title="size(dProofs159-unfiltered141+.txt) / size(dProofs157-unfiltered141+.txt)">1.3412...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/JH7S80qFOdcIfT6" title="133'862'174'308 bytes compressed into 3'408'096'122 bytes (ratio approx. 39.2777)">dProofs161‑unfiltered141+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">499 538 375 339</td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/dProofs161-unfiltered141+_64cpu.log">4419.27</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/utilization/161-141.log">1198.88</a></td>
+<td style="text-align:right"><a href="log/custom/walsh1-CCpCCNpqrCsCCNtCrtCpt/jobsRSS.txt#L111-L118">1789.96</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=133862174308%2F98773762822" title="size(dProofs161-unfiltered141+.txt) / size(dProofs159-unfiltered141+.txt)">1.3552...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-2nd-axiom-1-basis-cpccqcprccnrccnstqcsr-top1000-cardinalities-sample-info">Walsh's 2nd Axiom; 1-basis (<a href="svg/walsh2nd.svg">CpCCqCprCCNrCCNstqCsr</a>) &nbsp;<small>[<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to41Steps.txt">top1000</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt">cardinalities</a>] [<a href="data/w2proofs.txt">sample</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def">info</a>]</small></h6>
+<h6 id="walshs-2nd-axiom-1-basis-cpccqcprccnrccnstqcsr-top1000-cardinalities-sample-info">Walsh's 2nd Axiom; 1-basis (<a href="svg/walsh2nd.svg">CpCCqCprCCNrCCNstqCsr</a>) &nbsp;<small>[<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt">top1000</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt">cardinalities</a>] [<a href="data/w2.txt">sample</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -725,9 +805,17 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/walsh2-CpCCqCprCCNrCCNstqCsr/jobsRSS.txt#L30-L37">291.86</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=84489763512%2F27702180806" title="size(dProofs41-unfiltered39+.txt) / size(dProofs39-unfiltered39+.txt)">3.0499...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/f1P2wTUMf3nId0g" title="257'774'107'632 bytes compressed into 2'041'458'453 bytes (ratio approx. 126.2696)">dProofs43‑unfiltered39+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">383 440 778 208</td>
+<td style="text-align:right"><a href="log/custom/walsh2-CpCCqCprCCNrCCNstqCsr/dProofs43-unfiltered39+_64cpu.log">1881.40</a></td>
+<td style="text-align:right"><a href="log/custom/walsh2-CpCCqCprCCNrCCNstqCsr/utilization/43-39.log">748.02</a></td>
+<td style="text-align:right"><a href="log/custom/walsh2-CpCCqCprCCNrCCNstqCsr/jobsRSS.txt#L39-L46">888.57</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=257774107632%2F84489763512" title="size(dProofs43-unfiltered39+.txt) / size(dProofs41-unfiltered39+.txt)">3.0509...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-3rd-axiom-1-basis-cpccnqccnrscptcctqcrq-top1000-cardinalities-sample-info">Walsh's 3rd Axiom; 1-basis (<a href="svg/walsh3rd.svg">CpCCNqCCNrsCptCCtqCrq</a>) &nbsp;<small>[<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to69Steps.txt">top1000</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt">cardinalities</a>] [<a href="data/w3proofs.txt">sample</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def">info</a>]</small></h6>
+<h6 id="walshs-3rd-axiom-1-basis-cpccnqccnrscptcctqcrq-top1000-cardinalities-sample-info">Walsh's 3rd Axiom; 1-basis (<a href="svg/walsh3rd.svg">CpCCNqCCNrsCptCCtqCrq</a>) &nbsp;<small>[<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt">top1000</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt">cardinalities</a>] [<a href="data/w3.txt">sample</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -773,16 +861,32 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=22771527998%2F9415171948" title="size(dProofs67-unfiltered65+.txt) / size(dProofs65-unfiltered65+.txt)">2.4185...</a></td>
 </tr>
 <tr>
-<td><small><a href="https://mega.nz/file/mlEwBbhZ#KBH21b6120HB2zqo0Cs8OWZYfjCUoWK6AeS75BtNdgY" title="49'180'529'600 bytes compressed into 801720838 bytes (ratio approx. 61.3437)">dProofs69‑unfiltered65+.txt</a></small><sup>✻</sup></td>
+<td><small><a href="https://mega.nz/file/mlEwBbhZ#KBH21b6120HB2zqo0Cs8OWZYfjCUoWK6AeS75BtNdgY" title="49'180'529'600 bytes compressed into 801'720'838 bytes (ratio approx. 61.3437)">dProofs69‑unfiltered65+.txt</a></small><sup>✻</sup></td>
 <td style="text-align:right">88 716 050 898</td>
 <td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/dProofs69-unfiltered65+_64cpu.log">1222.77</a></td>
 <td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/utilization/69-65.log">189.80</a></td>
 <td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/jobsRSS.txt#L39-L46">251.38</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=49180529600%2F22771527998" title="size(dProofs69-unfiltered65+.txt) / size(dProofs67-unfiltered65+.txt)">2.1597...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/iDMtDYEdBpHTLRz" title="103'402'476'250 bytes compressed into 1'635'136'468 bytes (ratio approx. 63.2378)">dProofs71‑unfiltered65+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">192 118 527 148</td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/dProofs71-unfiltered65+_64cpu.log">2507.20</a></td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/utilization/71-65.log">405.23</a></td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/jobsRSS.txt#L48-L55">524.03</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=103402476250%2F49180529600" title="size(dProofs71-unfiltered65+.txt) / size(dProofs69-unfiltered65+.txt)">2.1025...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/rrZNVCfUpai5ZQC" title="220'718'480'631 bytes compressed into 3'365'806'262 bytes (ratio approx. 65.5767)">dProofs73‑unfiltered65+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">412 837 007 779</td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/dProofs73-unfiltered65+_64cpu.log">5133.48</a></td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/utilization/73-65.log">867.31</a></td>
+<td style="text-align:right"><a href="log/custom/walsh3-CpCCNqCCNrsCptCCtqCrq/jobsRSS.txt#L57-L64">1098.91</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=220718480631%2F103402476250" title="size(dProofs73-unfiltered65+.txt) / size(dProofs71-unfiltered65+.txt)">2.1345...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-4th-axiom-1-basis-cpccnqccnrsctqccrtcrq-top1000-cardinalities-sample-info">Walsh's 4th Axiom; 1-basis (<a href="svg/walsh4th.svg">CpCCNqCCNrsCtqCCrtCrq</a>) &nbsp;<small>[<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to157Steps.txt">top1000</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt">cardinalities</a>] [<a href="data/w4proofs.txt">sample</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def">info</a>]</small></h6>
+<h6 id="walshs-4th-axiom-1-basis-cpccnqccnrsctqccrtcrq-top1000-cardinalities-sample-info">Walsh's 4th Axiom; 1-basis (<a href="svg/walsh4th.svg">CpCCNqCCNrsCtqCCrtCrq</a>) &nbsp;<small>[<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt">top1000</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt">cardinalities</a>] [<a href="data/w4.txt">sample</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -835,9 +939,57 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L39-L46">199.75</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=26019597453%2F18088589265" title="size(dProofs157-unfiltered153+.txt) / size(dProofs155-unfiltered153+.txt)">1.4384...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/sxQG1x4rWREeGt6" title="34'641'539'688 bytes compressed into 651'219'941 bytes (ratio approx. 53.1948)">dProofs159‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">103 533 160 689</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs159-unfiltered153+_64cpu.log">453.35</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/159-153.log">226.16</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L48-L55">293.63</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=34641539688%2F26019597453" title="size(dProofs159-unfiltered153+.txt) / size(dProofs157-unfiltered153+.txt)">1.3313...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/BFnkL1fAj8Vi9Z9" title="55'681'200'733 bytes compressed into 1'040'015'069 bytes (ratio approx. 53.5388)">dProofs161‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">159 214 361 422</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs161-unfiltered153+_64cpu.log">644.41</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/161-153.log">345.00</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L57-L64">427.35</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=55681200733%2F34641539688" title="size(dProofs161-unfiltered153+.txt) / size(dProofs159-unfiltered153+.txt)">1.6073...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/L8jieKQK7qdtGtr" title="75'698'437'452 bytes compressed into 1'393'369'930 bytes (ratio approx. 54.3276)">dProofs163‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">234 912 798 874</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs163-unfiltered153+_64cpu.log">923.80</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/163-153.log">506.04</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L66-L73">613.85</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=75698437452%2F55681200733" title="size(dProofs163-unfiltered153+.txt) / size(dProofs161-unfiltered153+.txt)">1.3594...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/mzESbz3fOeuZf4u" title="127'132'189'367 bytes compressed into 2'232'538'824 bytes (ratio approx. 56.9451)">dProofs165‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">362 044 988 241</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs165-unfiltered153+_64cpu.log">1372.75</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/165-153.log">770.18</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L75-L82">899.59</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=127132189367%2F75698437452" title="size(dProofs165-unfiltered153+.txt) / size(dProofs163-unfiltered153+.txt)">1.6794...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/KWqprDlpJ8rIDgI" title="180'054'503'529 bytes compressed into 3'127'767'660 bytes (ratio approx. 57.5665)">dProofs167‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">542 099 491 770</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs167-unfiltered153+_64cpu.log">2013.71</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/167-153.log">1144.49</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L84-L91">1316.14</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=180054503529%2F127132189367" title="size(dProofs167-unfiltered153+.txt) / size(dProofs165-unfiltered153+.txt)">1.4162...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/EHjzWTh1uEPbb6v" title="273'688'640'204 bytes compressed into 4'667'700'887 bytes (ratio approx. 58.6346)">dProofs169‑unfiltered153+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">815 788 131 974</td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs169-unfiltered153+_64cpu.log">3061.78</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/169-153.log">1716.57</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L93-L100">1933.14</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=273688640204%2F180054503529" title="size(dProofs169-unfiltered153+.txt) / size(dProofs167-unfiltered153+.txt)">1.5200...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info">Walsh's 5th Axiom; 1-basis (<a href="svg/walsh5th.svg">CCpqCCCrCstCqCNsNpCps</a>) &nbsp;<small>[<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to53Steps.txt">top1000</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt">cardinalities</a>] [<a href="data/w5proofs.txt">sample</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def">info</a>]</small></h6>
+<h6 id="walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info">Walsh's 5th Axiom; 1-basis (<a href="svg/walsh5th.svg">CCpqCCCrCstCqCNsNpCps</a>) &nbsp;<small>[<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt">top1000</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt">cardinalities</a>] [<a href="data/w5.txt">sample</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -874,9 +1026,17 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/walsh5-CCpqCCCrCstCqCNsNpCps/jobsRSS.txt#L21-L28">412.98</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=98556622203%2F41567415644" title="size(dProofs53-unfiltered53+.txt) / size(dProofs51.txt)">2.3710...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/k5gB5xLWduhCQDN" title="233'577'192'864 bytes compressed into 993'411'897 bytes (ratio approx. 235.1262)">dProofs55‑unfiltered53+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">404 054 704 152</td>
+<td style="text-align:right"><a href="log/custom/walsh5-CCpqCCCrCstCqCNsNpCps/dProofs55-unfiltered53+_64cpu.log">2173.65</a></td>
+<td style="text-align:right"><a href="log/custom/walsh5-CCpqCCCrCstCqCNsNpCps/utilization/55-53.log">759.14</a></td>
+<td style="text-align:right"><a href="log/custom/walsh5-CCpqCCCrCstCqCNsNpCps/jobsRSS.txt#L30-L37">916.66</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=233577192864%2F98556622203" title="size(dProofs55-unfiltered53+.txt) / size(dProofs53-unfiltered53+.txt)">2.3699...</a></td>
+</tr>
 </tbody>
 </table>
-<h6 id="walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info">Walsh's 6th Axiom; 1-basis (<a href="svg/walsh6th.svg">CCCpqCCCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to87Steps.txt">top1000</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt">cardinalities</a>] [<a href="data/w6proofs.txt">sample</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def">info</a>]</small></h6>
+<h6 id="walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info">Walsh's 6th Axiom; 1-basis (<a href="svg/walsh6th.svg">CCCpqCCCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt">top1000</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt">cardinalities</a>] [<a href="data/w6.txt">sample</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -929,11 +1089,43 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/jobsRSS.txt#L39-L46">196.18</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=25607335143%2F14942566211" title="size(dProofs87-unfiltered83+.txt) / size(dProofs85-unfiltered83+.txt)">1.7137...</a></td>
 </tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/RqMWPM5NF9dVvjW" title="42'757'203'285 bytes compressed into 1'017'266'453 bytes (ratio approx. 42.0315)">dProofs89‑unfiltered83+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">96 917 532 392</td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/dProofs89-unfiltered83+_64cpu.log">1166.01</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/utilization/89-83.log">229.28</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/jobsRSS.txt#L48-L55">356.90</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=42757203285%2F25607335143" title="size(dProofs89-unfiltered83+.txt) / size(dProofs87-unfiltered83+.txt)">1.6697...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/S0dI5sz7g6OE5Wi" title="68'394'045'164 bytes compressed into 1'583'904'093 bytes (ratio approx. 43.1807)">dProofs91‑unfiltered83+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">165 311 577 556</td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/dProofs91-unfiltered83+_64cpu.log">1997.90</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/utilization/91-83.log">389.83</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/jobsRSS.txt#L57-L64">598.55</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=68394045164%2F42757203285" title="size(dProofs91-unfiltered83+.txt) / size(dProofs89-unfiltered83+.txt)">1.5995...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/mwVplLXdwBeuHF7" title="112'090'394'619 bytes compressed into 2'542'434'207 bytes (ratio approx. 44.0878)">dProofs93‑unfiltered83+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">277 401 972 175</td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/dProofs93-unfiltered83+_64cpu.log">3700.55</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/utilization/93-83.log">650.43</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/jobsRSS.txt#L66-L73">993.50</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=112090394619%2F68394045164" title="size(dProofs93-unfiltered83+.txt) / size(dProofs91-unfiltered83+.txt)">1.6388...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/D5fKvVtEOC4d82K" title="193'064'036'043 bytes compressed into 4'209'134'915 bytes (ratio approx. 45.8679)">dProofs95‑unfiltered83+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">470 466 008 218</td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/dProofs95-unfiltered83+_64cpu.log">6619.36</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/utilization/95-83.log">1089.83</a></td>
+<td style="text-align:right"><a href="log/custom/walsh6-CCCpqCCCNrNsrtCCtpCsp/jobsRSS.txt#L75-L82">1638.71</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=193064036043%2F112090394619" title="size(dProofs95-unfiltered83+.txt) / size(dProofs93-unfiltered83+.txt)">1.7223...</a></td>
+</tr>
 </tbody>
 </table>
 <p>The above systems show remarkable differences in complexity, despite similarities. For example, the syntax trees of Walsh's 3rd and 4th axiom differ only in four leaf nodes.</p>
 <p>Only systems with an odd-ary rule such as necessitation can have condensed detachment proofs of even lengths.<br>The system of modal logic illustrated below extends <a href="#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-sample-customization-info">Frege's calculus simplified by Łukasiewicz</a>. It can be covered by enabling the N-rule without limiting the number of its consecutive applications via <code>-c -N -1</code>.</p>
-<h6 id="s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-sample-customization-info">S5 (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>,<a href="svg/truth-4.svg">CLpp</a>,<a href="svg/kripke-5.svg">CLCpqCLpLq</a>,<a href="svg/lewis-6.svg">CNLNpLNLNp</a>) &nbsp;<small>[<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to27Steps.txt">top1000</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt">cardinalities</a>] [<a href="data/s5proofs.txt">sample</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def">info</a>]</small></h6>
+<h6 id="s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-db-sample-customization-info">S5 (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>,<a href="svg/truth-4.svg">CLpp</a>,<a href="svg/kripke-5.svg">CLCpqCLpLq</a>,<a href="svg/lewis-6.svg">CNLNpLNLNp</a>) &nbsp;<small>[<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt">top1000</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt">cardinalities</a>] [<a href="data/s5proofs.txt">db</a>] [<a href="data/s5.txt">sample</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def">info</a>]</small></h6>
 <table>
 <thead>
 <tr>
@@ -985,6 +1177,30 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/utilization/27-25.log">89.08</a></td>
 <td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L39-L46">305.84</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=11414777022%2F5023015642" title="size(dProofs27-unfiltered25+.txt) / size(dProofs26-unfiltered25+.txt)">2.2724...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/nCADlGnlYCgOjvk" title="24'722'013'566 bytes compressed into 1'073'629'811 bytes (ratio approx. 23.0266)">dProofs28‑unfiltered25+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">45 428 091 663</td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/dProofs28-unfiltered25+_64cpu.log">1052.76</a></td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/utilization/28-25.log">190.06</a></td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L48-L55">632.76</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=24722013566%2F11414777022" title="size(dProofs28-unfiltered25+.txt) / size(dProofs27-unfiltered25+.txt)">2.1657...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/qElEXv7QpbJ5KNs" title="54'687'281'728 bytes compressed into 2'345'678'277 bytes (ratio approx. 23.3141)">dProofs29‑unfiltered25+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">100 115 373 391</td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/dProofs29-unfiltered25+_64cpu.log">2364.16</a><br><sup><code>-q 50</code></sup><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/dProofs29-unfiltered25+_64cpu-2.log">2121.81</a></td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/utilization/29-25.log">409.23</a></td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L57-L64">1327.37</a><br><sup><code>-q 50</code></sup><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L66-L73">746.09</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=54687281728%2F24722013566" title="size(dProofs29-unfiltered25+.txt) / size(dProofs28-unfiltered25+.txt)">2.2120...</a></td>
+</tr>
+<tr>
+<td><small><a href="https://rwth-aachen.sciebo.de/s/h0ipKwDK8xwU9ce" title="118'130'673'527 bytes compressed into 4'950'709'496 bytes (ratio approx. 23.8614)">dProofs30‑unfiltered25+.txt</a></small><sup>✻</sup></td>
+<td style="text-align:right">218 246 046 918</td>
+<td style="text-align:right"><sup><code>-q 50</code></sup><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/dProofs30-unfiltered25+_64cpu.log">4774.60</a></td>
+<td style="text-align:right"><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/utilization/30-25.log">870.21</a></td>
+<td style="text-align:right"><sup><code>-q 50</code></sup><a href="log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L75-L82">1563.51</a></td>
+<td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=118130673527%2F54687281728" title="size(dProofs30-unfiltered25+.txt) / size(dProofs29-unfiltered25+.txt)">2.1601...</a></td>
 </tr>
 </tbody>
 </table>

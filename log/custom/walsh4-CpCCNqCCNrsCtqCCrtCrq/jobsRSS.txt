@@ -44,3 +44,57 @@ $ sacct -j 40401578 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,M
 > 40401578.ba+                    64  COMPLETED      0:0   04:44:01 209448160K 
 > 40401578.ex+                    64  COMPLETED      0:0   04:44:01          0 
 209448160 / 1024^2 = 199.745330810546875 ≈ 199.75
+
+159-153:
+$ sacct -j 40688357 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40688357     optane_low         64  COMPLETED      0:0   07:05:15            
+> 40688357.ba+                    64  COMPLETED      0:0   07:05:15 307892876K 
+> 40688357.ex+                    64  COMPLETED      0:0   07:05:15          0 
+307892876 / 1024^2 = 293.629528045654296875 ≈ 293.63
+
+161-153:
+$ sacct -j 40717596 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40717596     optane_low         64  COMPLETED      0:0   10:04:33            
+> 40717596.ba+                    64  COMPLETED      0:0   10:04:33 448109944K 
+> 40717596.ex+                    64  COMPLETED      0:0   10:04:33          0 
+448109944 / 1024^2 = 427.35094451904296875 ≈ 427.35
+
+163-153:
+$ sacct -j 40729402 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40729402     optane_low         64  COMPLETED      0:0   14:26:31            
+> 40729402.ba+                    64  COMPLETED      0:0   14:26:31 643670720K 
+> 40729402.ex+                    64  COMPLETED      0:0   14:26:31          0 
+643670720 / 1024^2 = 613.85223388671875 ≈ 613.85
+
+165-153:
+$ sacct -j 40744889 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40744889     optane_low         64  COMPLETED      0:0   21:27:37            
+> 40744889.ba+                    64  COMPLETED      0:0   21:27:37 943289300K 
+> 40744889.ex+                    64  COMPLETED      0:0   21:27:37          0 
+943289300 / 1024^2 = 899.590778350830078125 ≈ 899.59
+
+167-153:
+$ sacct -j 40761176 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40761176     optane_low         64  COMPLETED      0:0 1-07:29:02             
+> 40761176.ba+                    64  COMPLETED      0:0 1-07:29:02 1380072888K 
+> 40761176.ex+                    64  COMPLETED      0:0 1-07:29:02         16K 
+1380072888 / 1024^2 = 1316.14006805419921875 ≈ 1316.14
+
+169-153:
+$ sacct -j 40785834 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40785834     optane_low         64  COMPLETED      0:0 1-23:51:50             
+> 40785834.ba+                    64  COMPLETED      0:0 1-23:51:50 2027042640K 
+> 40785834.ex+                    64  COMPLETED      0:0 1-23:51:50          8K 
+2027042640 / 1024^2 = 1933.1385040283203125 ≈ 1933.14
