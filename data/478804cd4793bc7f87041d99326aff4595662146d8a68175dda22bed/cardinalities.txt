@@ -37,3 +37,6 @@
  45156728 dProofs73-unfiltered71+.txt
  80141395 dProofs75-unfiltered71+.txt
 143296899 dProofs77-unfiltered71+.txt
+263540491 dProofs79-unfiltered71+.txt
+489824924 dProofs81-unfiltered71+.txt
+905043886 dProofs83-unfiltered71+.txt

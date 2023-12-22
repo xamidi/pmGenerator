@@ -1,0 +1,53 @@
+% S5 (CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp)
+%
+% Proof system configuration: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp    (or "-N 1" for faster – but incomplete – generation via outruling consecutive necessitation steps)
+% SHA-512/224 hash: d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f    (or 360ceff28c45b2d8ea630fc79a7dad68b04acdceaf41521e9f6ecd95)
+%
+% Full summary: pmGenerator --transform data/s5.txt -f -n -t . -j 1
+% Step counting: pmGenerator --transform data/s5.txt -f -n -t . -p -2 -d
+%                pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -p -2 -d
+
+% Axiom 1 by Frege (CpCqp), i.e. 0→(1→0)
+    CpCqp = 1
+
+% Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2))
+    CCpCqrCCpqCpr = 2
+
+% Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0)
+    CCNpNqCqp = 3
+
+% Axiom T (CLpp), i.e. □0→0
+    CLpp = 4
+
+% Axiom K by Kripke (CLCpqCLpLq), i.e. □(0→1)→(□0→□1)
+    CLCpqCLpLq = 5
+
+% Axiom 5 by Lewis (CMpLMp, i.e. CNLNpLNLNp), i.e. ¬□¬0→□¬□¬0, alias ◇0→□◇0
+    CNLNpLNLNp = 6
+
+[0] CCpCNqNrCpCrq = D2D13
+[1] CNNpCqp = D[0]D[0]1
+[2] CCNNpqCNNpp = D2[1]
+[3] CNNpp = D[2]1
+[4] CpNNp = D3[3]
+[5] CLpLNNp = D5N[4]
+[6] CCpqCpNNq = D2D1[4]
+
+% Alternative to axiom T (CpMp, i.e. CpNLNp), i.e 0→¬□¬0, alias 0→◇0 ; 25 steps
+[7] CpNLNp = D3DD2D14[3]
+
+[8] CCpCqrCpCqNNr = D2D1[6]
+
+% Axiom B by Brouwer (CpLMp, i.e. CpLNLNp), i.e. 0→□¬□¬0, alias 0→□◇0 ; 31 steps
+[9] CpLNLNp = DD2D16[7]
+
+% Axiom D (CLpMp, i.e. CLpNLNp), i.e. 0→□¬□¬0, alias 0→◇0 ; 31 steps
+[10] CLpNLNp = DD2D1[7]4
+
+[11] CCpqCNqNp = D[0]D[8]DD2D1DD22[2]1
+
+% Axiom 4 by Lewis (CLpLLp), i.e. □0→□□0 ; 302 steps
+[12] CLpLLp = DD2D1D5NDD2D1DD2D1D5N[3][3]DD2D[0]DD2D1D2D1D[6]6D1[3]DD[0]D[8]DD2D1D2DD2D1D2DD2D15D5N[11][1]1N[5][9]
+
+% Alternative to axiom 4 (CMMpMp, i.e. CNLNNLNpNLNp of CNLNNLpNLp), i.e. ¬□¬¬□0→¬□0, schema of ¬□¬¬□¬0→¬□¬0, alias ◇◇0→◇0 ; 401 steps
+[13] CNLNNLpNLp = D[11]DDDD2D1D2DD2D1211[12][5]

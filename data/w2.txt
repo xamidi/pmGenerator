@@ -1,0 +1,33 @@
+% Walsh's 2nd Axiom (CpCCqCprCCNrCCNstqCsr), i.e. 0→((1→(0→2))→((¬2→((¬3→4)→1))→(3→2)))
+% TODO: Completeness w.r.t. CpCqp,CCpCqrCCpqCpr,CCNpNqCqp and CCpqCCqrCpr,CCNppp,CpCNpq.
+%
+% Proof system configuration: pmGenerator -c -n -s CpCCqCprCCNrCCNstqCsr
+% SHA-512/224 hash: db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff
+%
+% Full summary: pmGenerator --transform data/w2.txt -f -n -t . -j 1
+% Step counting: pmGenerator --transform data/w2.txt -f -n -t . -p -2 -d
+%                pmGenerator --transform data/w2.txt -f -n -t CpCqp,Cpp,CpCNpq -p -2 -d
+
+    CpCCqCprCCNrCCNstqCsr = 1
+[0] CCpCCqCCrCqsCCNsCCNturCtsvCCNvCCNwxpCwv = D11
+[1] CCNCCNCCNpCCNqrsCqpCCNtuvCtCCNpCCNqrsCqpCCNwxCsCvpCwCCNCCNpCCNqrsCqpCCNtuvCtCCNpCCNqrsCqp = D[0]1
+[2] CpCCNqCCNrsCNqCCNCCNtCCNuvNpCutwNCxCCyCxzCCNzCCNabyCazCrq = DDD[1]111
+[3] CCCpCCqCprCCNrCCNstqCsruCvu = DD[0][0][2]
+[4] CpCqCCNpCCNrstCrp = DD[0]D[1][2][2]
+
+% Identity principle (Cpp), i.e. 0→0 ; 35 steps
+[5] Cpp = DD[0][3][2]
+
+[6] CpCqCCrCqsCCNsCCNturCts = DDD[4]111
+
+% Axiom 1 by Frege (CpCqp), i.e. 0→(1→0) ; 69 steps
+[7] CpCqp = DD[0]DD[0]D[0][4][2][2]
+
+[8] CpCCNqCCNrsCCNptqCrq = DDD1[5][5][6]
+[9] CCNCpCqrCCNstrCsCpCqr = D[0][8]
+[10] CCNpCCNqrCCNCsstpCqp = D[8][5]
+[11] CpCqCrCsp = D[9]D[10][6]
+[12] CpCqCrCsCtCuCvs = D[11][11]
+
+% Axiom 3 by Łukasiewicz (CpCNpq), i.e. 0→(¬0→1) ; 2011 steps
+[13] CpCNpq = D[10]DD[0]DDD1[0]1D[12][12]D[10]D[11]D[9]DDD1[2]DDD1[3]111

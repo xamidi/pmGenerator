@@ -44,3 +44,39 @@ $ sacct -j 40424812 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,M
 > 40424812.ba+                    64  COMPLETED      0:0   07:05:52 320692464K 
 > 40424812.ex+                    64  COMPLETED      0:0   07:05:52          0 
 320692464 / 1024^2 = 305.8361663818359375 ≈ 305.84
+
+28-25:
+$ sacct -j 40824213 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40824213     optane_low         64  COMPLETED      0:0   16:39:11            
+> 40824213.ba+                    64  COMPLETED      0:0   16:39:11 663500824K 
+> 40824213.ex+                    64  COMPLETED      0:0   16:39:11          0 
+663500824 / 1024^2 = 632.76369476318359375 ≈ 632.76
+
+29-25:
+$ sacct -j 40838462 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 40838462     optane_low         64  COMPLETED      0:0 1-13:27:08             
+> 40838462.ba+                    64  COMPLETED      0:0 1-13:27:08 1391843280K 
+> 40838462.ex+                    64  COMPLETED      0:0 1-13:27:08         76K 
+1391843280 / 1024^2 = 1327.3651885986328125 ≈ 1327.37
+
+29-25:
+$ sacct -j 40864037 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed     MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ---------- 
+> 40864037     optane_low         64  COMPLETED      0:0 1-09:43:01            
+> 40864037.ba+                    64  COMPLETED      0:0 1-09:43:01 782331668K 
+> 40864037.ex+                    64  COMPLETED      0:0 1-09:43:01          0 
+782331668 / 1024^2 = 746.089618682861328125 ≈ 746.09
+
+30-25:
+$ sacct -j 41374980 --format="JobID,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS%11"
+> JobID         Partition  AllocCPUS      State ExitCode    Elapsed      MaxRSS 
+> ------------ ---------- ---------- ---------- -------- ---------- ----------- 
+> 41374980     optane_low         64  COMPLETED      0:0 3-03:51:28             
+> 41374980.ba+                    64  COMPLETED      0:0 3-03:51:28 1601031.50M 
+> 41374980.ex+                    64  COMPLETED      0:0 3-03:51:28           0 
+1601031.50 / 1024^1 = 1563.50732421875 ≈ 1563.51

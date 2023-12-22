@@ -1,0 +1,64 @@
+% Walsh's 1st Axiom (CCpCCNpqrCsCCNtCrtCpt), i.e. (0→((¬0→1)→2))→(3→((¬4→(2→4))→(0→4)))
+% Completeness follows w.r.t. CpCqp,CCpCqrCCpqCpr,CCNpNqCqp and CCpqCCqrCpr,CCNppp,CpCNpq.
+%
+% Proof system configuration: pmGenerator -c -n -s CCpCCNpqrCsCCNtCrtCpt
+% SHA-512/224 hash: 02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c
+%
+% Full summary: pmGenerator --transform data/w1.txt -f -n -t . -j 1
+% Step counting: pmGenerator --transform data/w1.txt -f -n -t . -p -2 -d
+%                pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
+
+    CCpCCNpqrCsCCNtCrtCpt = 1
+[0] CpCCNqCCCNrCsrCtrqCCtCCNtusq = D11
+[1] CpCCNqCCCrCCNrstuqCuq = D1[0]
+[2] CpCCNqCCrsqCsq = D1[1]
+[3] CCNpCCqrpCrp = D[2]1
+[4] CCCCNpCqpCrpsCCrCCNrtqs = D[3][0]
+[5] CCCCpCCNpqrstCst = D[3][1]
+[6] CCCpqrCqr = D[3][2]
+[7] CCCNCpCCNpqrstCuCCNvCtvCCpCCNpqrv = D[5]1
+[8] CCCNpqrCsCCNtCrtCpt = D[6]1
+[9] CCNpCCqCCNrCsrCNtrpCtp = DD[8]11
+[10] CpCCNqCrqCCNrCCCNsCCCNtCutCvtsCCvCCNvwusrq = D1DD[7][0]1
+[11] CCpCCNpqrCCrsCps = D[4][6]
+[12] CpCCNqCrqCrq = D1D[6][4]
+[13] CpCCNqCCNrsqCrq = D1D[9][2]
+
+% Axiom 1 by Frege (CpCqp), i.e. 0→(1→0) ; 33 steps
+[14] CpCqp = D[6][5]
+
+[15] CCNpCqpCqp = D[12]1
+[16] CCpqCCNpCCCNrCCCNsCtsCusrCCuCCNuvtrpq = D[3][10]
+[17] CCCNpqrCpr = D[3][13]
+[18] CCCCNpCqpCrpsCqs = D[3]D1D[5][8]
+[19] CCCNpqrCCrsCps = D[6][11]
+[20] CpCCpqCrq = D[5][19]
+
+% Axiom 3 by Łukasiewicz (CpCNpq), i.e. 0→(¬0→1) ; 87 steps
+[21] CpCNpq = D[17]D[3][12]
+
+[22] CCCCNNpCpNpqrCpr = D[3]D1D[5]D[5]D[4][11]
+
+% Identity principle (Cpp), i.e. 0→0 ; 143 steps
+[23] Cpp = DD[13]1D[22][6]
+
+% Axiom 1 by Łukasiewicz (CCpqCCqrCpr), i.e. (0→1)→((1→2)→(0→2)) ; 151 steps
+[24] CCpqCCqrCpr = D[6]DD[3]D1DD[3]D[8]DD[10]1[10][8][6]
+
+[25] CpCCqrCCpqr = D[5]D[5]DD[3]D1DD[3]D[7]DD[3]D1D[16]1[6]1[6]
+[26] CCCCpqCrqsCCrps = D[24][24]
+[27] CCCpqrCNCspr = D[19]D[11]D[6]DD[19]D[3]D[8]D[15]D[17][16][9]
+[28] CpCCpqq = DD[11]D[18]D[4]D[20]D[22]D[3]D[8][14][6]
+
+% Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 475 steps
+[29] CCNppp = D[3]D[18]D[4]DD[11]DD[6][20][23][23]
+
+[30] CNCpqCrNq = D[15]DD[11]D[27][9]D[6][21]
+[31] CCpCqrCqCpr = D[26]D[11]D[18]D[28]D[14][28]
+[32] CCNpCqCrpCqCrp = D[15]DD[11]DD[11][30][30][28]
+
+% Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 2753 steps
+[33] CCNpNqCqp = D[31]D[17]D[32][25]
+
+% Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 3489 steps
+[34] CCpCqrCCpqCpr = D[31]D[26]D[32]DD[11]D[15]D[27][21][25]
