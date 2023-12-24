@@ -2633,7 +2633,7 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 	}
 }
 
-void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, bool debug) {
+void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, size_t bound, bool debug) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<string> dProofs;
 	if ((method == ExtractionMethod::ProofSystemFromTopList && !extractAmount) || (method == ExtractionMethod::ProofSystemFromString && (!config || config->empty()))) {
@@ -2755,7 +2755,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 				startTime = chrono::steady_clock::now();
 			topList.clear();
 			sizes.clear();
-			tbb::concurrent_map<size_t, atomic<bool>> check; // check[<symbolic conclusion length>] = true iff. size is not yet known to not fit into the list
+			tbb::concurrent_map<size_t, atomic<bool>> check; // check[<symbolic conclusion length>] = true iff size is not yet known to not fit into the list
 			tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
 				chrono::time_point<chrono::steady_clock> startTime;
 				for (vector<uint32_t>::const_iterator it = range.begin(); run && it != range.end(); ++it) {
@@ -2918,10 +2918,13 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 			if (!filenames.count("extraction-" + to_string(i)))
 				return i;
 	};
-	auto createExtractionInfoFile = [&](const string& extractionInfoLine) {
+	auto createExtractionInfoFile = [&](const string& extractionInfoLine, string* optOut_infoFileDir = nullptr) {
 		string originalDataLocation;
 		size_t id = findNextAvailableId(originalDataLocation);
-		string infoFilePath = originalDataLocation + "extraction-" + to_string(id) + "/!.def";
+		string infoFileDir = originalDataLocation + "extraction-" + to_string(id) + "/";
+		if (optOut_infoFileDir)
+			*optOut_infoFileDir = infoFileDir;
+		string infoFilePath = infoFileDir + "!.def";
 		stringstream ss;
 		vector<string> normalizedCustomAxiomFormulas;
 		string::size_type maxNormalizedLen = 0;
@@ -3115,7 +3118,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 
 		// 3. Create info file.
 		string infoFilePath = createExtractionInfoFile(extractionInfoLine);
-		cout << "Created " << infoFilePath << " with " << counter << " extracted theorems." << endl;
+		cout << "Created " << infoFilePath << " with " << counter << " extracted theorem" << (counter == 1 ? "" : "s") << "." << endl;
 		break;
 	}
 	case ExtractionMethod::ProofSystemFromString:
@@ -3153,7 +3156,119 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 
 		// 3. Create info file.
 		string infoFilePath = createExtractionInfoFile(extractionInfoLine);
-		cout << "Created " << infoFilePath << " with " << dProofs.size() << " extracted theorems." << endl;
+		cout << "Created " << infoFilePath << " with " << dProofs.size() << " extracted theorem" << (dProofs.size() == 1 ? "" : "s") << "." << endl;
+		break;
+	}
+	case ExtractionMethod::CopyWithLimitedConclusions: {
+		// 2. Create info file and proof file directory.
+		string extractionInfoLine;
+		const vector<string>& axiomNames = *currentRepresentatives()[0];
+		const vector<string>& axioms = *currentConclusions()[0];
+		if (axiomNames.size() != axioms.size())
+			throw logic_error("|axiomNames| = " + to_string(axiomNames.size()) + " != " + to_string(axioms.size()) + " |axioms|");
+		for (size_t i = 0; i < axioms.size(); i++) {
+			if (i)
+				extractionInfoLine += ",";
+			extractionInfoLine += axiomNames[i] + ":" + axioms[i];
+		}
+		string infoFileDir;
+		string infoFilePath = createExtractionInfoFile(extractionInfoLine, &infoFileDir);
+		string targetPath = infoFileDir + "dProofs-withConclusions/";
+		FctHelper::ensureDirExists(targetPath);
+		string targetPrefix = targetPath + "dProofs";
+		cout << "Created " << infoFilePath << " with " << axioms.size() << " copied axiom" << (axioms.size() == 1 ? "" : "s") << "." << endl;
+
+		// 3. Copy specified proofs to files in 'targetPath'.
+		string searchPath = "data/" + _customizedPath + "dProofs-withConclusions/";
+		cout << "Going to extract proofs from " << searchPath << " with conclusions of symbolic lengths up to " << bound << "." << endl;
+		string filePrefix = searchPath + "dProofs";
+		string filePostfix = ".txt";
+		string filePostfix_unf;
+		uint32_t unfiltered = 0;
+		const uint32_t c = _necessitationLimit ? 1 : 2;
+		uint32_t limit;
+		vector<uint32_t> limits;
+		for (limit = 1; true; limit += c)
+			if (!filesystem::exists(filePrefix + to_string(limit) + filePostfix)) {
+				if (limit > c) {
+					if (!unfiltered) {
+						unfiltered = limit;
+						limit -= c;
+						filePostfix = "-unfiltered" + to_string(unfiltered) + "+" + filePostfix;
+					} else
+						break; // remains to generate
+				}
+			} else
+				limits.push_back(limit);
+		filePostfix_unf = filePostfix;
+		filePostfix = ".txt";
+
+		mutex mtx_cout;
+		atomic<bool> run = true;
+		atomic<size_t> counter = 0;
+		if (debug)
+			startTime = chrono::steady_clock::now();
+
+		tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
+			chrono::time_point<chrono::steady_clock> startTime;
+			for (vector<uint32_t>::const_iterator it = range.begin(); run && it != range.end(); ++it) {
+				uint32_t wordLengthLimit = *it;
+
+				// 3.1 Read current file.
+				const string& currentFilePostfix = wordLengthLimit < unfiltered ? filePostfix : filePostfix_unf;
+				string file = filePrefix + to_string(wordLengthLimit) + currentFilePostfix;
+				string target = targetPrefix + to_string(wordLengthLimit) + currentFilePostfix;
+				if (debug)
+					startTime = chrono::steady_clock::now();
+				ifstream fin(file, fstream::in | fstream::binary);
+				if (!fin.is_open()) {
+					run = false; // stop all threads
+					throw runtime_error("Failed to read the data file \"" + file + "\".");
+				}
+				ofstream fout(filesystem::u8path(target), fstream::out | fstream::binary);
+				if (!fout.is_open()) {
+					run = false; // stop all threads
+					throw runtime_error("Cannot write to file \"" + target + "\".");
+				}
+
+				// 3.2 Copy from current file.
+				string line;
+				size_t lineNo = 1;
+				size_t localCounter = 0;
+				map<size_t, string> substitutions;
+				bool first = true;
+				while (run && getline(fin, line)) {
+					if (line.length() < wordLengthLimit + 2) {
+						run = false; // stop all threads
+						throw domain_error("Erroneous proof file at \"" + file + "\": Line " + to_string(lineNo) + " (\"" + line + "\") too short.");
+					} else if (line[wordLengthLimit] != ':') {
+						run = false; // stop all threads
+						throw domain_error("Erroneous proof file at \"" + file + "\": Line " + to_string(lineNo) + " (\"" + line + "\") should contain ':' at index " + to_string(wordLengthLimit) + ".");
+					}
+					if (DlCore::symbolicLen_polishNotation_noRename_numVars(line.substr(wordLengthLimit + 1)) <= bound) {
+						if (first)
+							first = false;
+						else
+							fout << "\n";
+						fout << line;
+						localCounter++;
+						counter++;
+					}
+					lineNo++;
+				}
+				if (run && debug) {
+					stringstream ss;
+					ss << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to load and search " << lineNo - 1 << " lines from 'dProofs" << wordLengthLimit << currentFilePostfix << "', of which " << localCounter << (localCounter == 1 ? " was" : " were") << " copied. Currently extracted ";
+					size_t x = counter;
+					ss << x << " proof" << (x == 1 ? "" : "s") << " in total. [tid:" << this_thread::get_id() << "]";
+					lock_guard<mutex> lock(mtx_cout);
+					cout << ss.str() << endl;
+				}
+			}
+		});
+		if (debug)
+			cout << "Extraction completed after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
+		cout << "Extracted " << counter << " proof" << (counter == 1 ? "" : "s") << "." << endl;
 		break;
 	}
 	}
