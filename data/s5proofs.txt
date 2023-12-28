@@ -10,7 +10,7 @@ Command to reduce: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp
 Command to reassemble: pmGenerator -c -n -N -1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -a SD data/empty.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
                    or: pmGenerator -c -n -N 1 -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp -a SD data/empty.txt data/s5proofs.txt data/s5proofs-result-all.txt -l -d -w
 
-Note that these proofs may also be reducible from S5 without N-rule (configuration without "-N <limit or -1>", hash f3080a7440bc4f7a8149647365da7c36fea7e287fa6b198737e9837d),
+Note that these proofs may also be reducible from S5 without N-rule (configuration without "-N <limit or -1>", hash f3080a7440bc4f7a8149647365da7c36fea7e287fa6b198737e9837d).
 Some proofs may even be reducible from systems with proper subsets of the same axioms. But since proofs with axioms missing from the system cannot be parsed,
 one would have to place the proof files of a subsystem in a system with all here used axioms, and address the latter system.
 
