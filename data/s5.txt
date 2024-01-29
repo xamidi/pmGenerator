@@ -6,6 +6,8 @@
 % Full summary: pmGenerator --transform data/s5.txt -f -n -t . -j 1
 % Step counting: pmGenerator --transform data/s5.txt -f -n -t . -p -2 -d
 %                pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -p -2 -d
+% Compact (466 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -j -1 -s CNNpCqp,CNNpp,CCpqCNqNp
+% Concrete (971 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -j -1 -e
 
 % Axiom 1 by Frege (CpCqp), i.e. 0→(1→0)
     CpCqp = 1
