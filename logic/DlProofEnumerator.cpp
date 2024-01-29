@@ -2173,8 +2173,9 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& dat
 	}
 }
 
-void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool normalPolishNotation, bool searchProofs, unsigned schemaSearch, const string* inputFile, bool debug) {
+map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool normalPolishNotation, bool searchProofs, unsigned schemaSearch, const string* inputFile, bool debug) {
 	chrono::time_point<chrono::steady_clock> startTime;
+	map<string, string> bestResults;
 	vector<string> searchTermsFromFile;
 	if (inputFile) {
 		string fileString;
@@ -2347,12 +2348,15 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 								{
 									stringstream ss;
 									ss << "Found [" << i << "] : \"" << term << "\"" << (modified[i] ? " (originally \"" + _searchTerms[i] + "\")" : "") << "\n\tin line " << lineNo << " - " + line + "\n\tof 'dProofs" << wordLengthLimit << currentFilePostfix << "'.";
+									string searchTerm = modified[i] ? _searchTerms[i] : term;
+									string searchResult = searchProofs ? line.substr(wordLengthLimit + 1) : line.substr(0, wordLengthLimit);
 									if (debug) {
 										lock_guard<mutex> lock(mtx_cout);
 										cout << ss.str() << endl;
 									}
 									lock_guard<mutex> lock(mtx_results);
 									results[i] = ss.str();
+									bestResults.emplace(searchTerm, searchResult);
 								}
 								if (totalResults == _searchTerms.size()) {
 									run = false;
@@ -2402,7 +2406,7 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 		vector<mutex> mtxs(_searchTerms.size());
 		condition_variable cond; // cond is to be notified whenever a term is found, so all threads can update for which terms[i] they still need to search
 		atomic<size_t> cond_updateId { 0 };
-		map<size_t, map<uint32_t, string>> results;
+		map<size_t, map<uint32_t, pair<string, string>>> results;
 		tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
 			chrono::time_point<chrono::steady_clock> startTime;
 			for (vector<uint32_t>::const_iterator it = range.begin(); run && it != range.end(); ++it) {
@@ -2512,7 +2516,7 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 										cout << ss.str() << endl;
 									}
 									lock_guard<mutex> lock(mtx_results);
-									results[i].emplace(wordLengthLimit, ss.str());
+									results[i].emplace(wordLengthLimit, make_pair(ss.str(), line.substr(0, wordLengthLimit)));
 								}
 								cond_updateId++;
 								cond.notify_all();
@@ -2538,7 +2542,13 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 		});
 		if (debug)
 			cout << "Search completed after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula schema" << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " Minimal results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, string>>& p) { return p.second.begin()->second; }, { }, { }, "\n")) << endl;
+		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula schema" << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " Minimal results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, pair<string, string>>>& p) { return p.second.begin()->second.first; }, { }, { }, "\n")) << endl;
+		for (const pair<const size_t, map<uint32_t, pair<string, string>>>& p : results) {
+			size_t i = p.first;
+			string searchTerm = modified[i] ? _searchTerms[i] : terms[i];
+			string searchResult = p.second.begin()->second.second;
+			bestResults.emplace(searchTerm, searchResult);
+		}
 
 		// 5. List missing entries.
 		bool first = true;
@@ -2558,7 +2568,7 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 	}
 
 	case 2: { // search for formula schemas ; there can be multiple results for each search term, and we want them all
-		map<size_t, map<uint32_t, vector<string>>> results;
+		map<size_t, map<uint32_t, pair<vector<string>, string>>> results;
 		tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
 			chrono::time_point<chrono::steady_clock> startTime;
 			for (vector<uint32_t>::const_iterator it = range.begin(); run && it != range.end(); ++it) {
@@ -2598,7 +2608,10 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 								cout << ss.str() << endl;
 							}
 							lock_guard<mutex> lock(mtx_results);
-							results[i][wordLengthLimit].push_back(ss.str());
+							pair<vector<string>, string>& p = results[i][wordLengthLimit];
+							if (p.first.empty())
+								p.second = line.substr(0, wordLengthLimit);
+							p.first.push_back(ss.str());
 						}
 					}
 					lineNo++;
@@ -2613,7 +2626,13 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 		});
 		if (debug)
 			cout << "Search completed after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula schema" << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " All results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, vector<string>>>& p) { return FctHelper::mapStringF(p.second, [](const pair<const uint32_t, vector<string>>& q) { return FctHelper::vectorString(q.second, { }, { }, "\n"); }, { }, { }, "\n"); }, { }, { }, "\n")) << endl;
+		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula schema" << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " All results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, pair<vector<string>, string>>>& p) { return FctHelper::mapStringF(p.second, [](const pair<const uint32_t, pair<vector<string>, string>>& q) { return FctHelper::vectorString(q.second.first, { }, { }, "\n"); }, { }, { }, "\n"); }, { }, { }, "\n")) << endl;
+		for (pair<const size_t, map<uint32_t, pair<vector<string>, string>>> p : results) {
+			size_t i = p.first;
+			string searchTerm = modified[i] ? _searchTerms[i] : terms[i];
+			string searchResult = p.second.begin()->second.second;
+			bestResults.emplace(searchTerm, searchResult);
+		}
 
 		// 3. List missing entries.
 		bool first = true;
@@ -2632,6 +2651,9 @@ void DlProofEnumerator::searchProofFiles(const vector<string>& searchTerms, bool
 		break;
 	}
 	}
+
+	//#cout << "bestResults = " << FctHelper::mapStringF(bestResults, [](const pair<const string, string>& p) { return "(" + p.first + ", " + p.second + ")"; }) << endl;
+	return bestResults;
 }
 
 void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, size_t bound, bool debug) {

@@ -100,7 +100,7 @@ public:
 	static void createGeneratorFilesWithoutConclusions(const std::string& dataLocation = "data", const std::string& inputFilePrefix = "dProofs-withConclusions/dProofs", const std::string& outputFilePrefix = "dProofs-withoutConclusions/dProofs", bool memoryOnly = false, bool debug = false, const std::uint32_t* proofLenStepSize = nullptr);
 
 	// Data search ; input files with conclusions are required
-	static void searchProofFiles(const std::vector<std::string>& searchTerms, bool normalPolishNotation = false, bool searchProofs = false, unsigned schemaSearch = 0, const std::string* inputFile = nullptr, bool debug = false);
+	static std::map<std::string, std::string> searchProofFiles(const std::vector<std::string>& searchTerms, bool normalPolishNotation = false, bool searchProofs = false, unsigned schemaSearch = 0, const std::string* inputFile = nullptr, bool debug = false);
 	static void extractConclusions(ExtractionMethod method, std::uint32_t extractAmount, const std::string* config = nullptr, bool allowRedundantSchemaRemoval = false, std::size_t bound = 0, bool debug = false);
 
 	// Data representation ; input files with conclusions are required
