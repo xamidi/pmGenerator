@@ -3296,7 +3296,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 	}
 }
 
-void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength, bool table, int64_t cutX, int64_t cutY, const string& dataLocation, const string& inputFilePrefix, ostream* mout, bool debug, const uint32_t* proofLenStepSize) {
+void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength, bool table, int64_t cutX, int64_t cutY, const string& dataLocation, const string& inputFilePrefix, bool includeUnfiltered, ostream* mout, bool debug, const uint32_t* proofLenStepSize) {
 	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
 	ostream& _mout = mout ? *mout : cout;
 	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
@@ -3309,8 +3309,15 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 		cerr << "Failed to load generated D-proof data after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl; //
 		return;
 	}
+	uint32_t unfilteredStart = 0;
+	if (includeUnfiltered) {
+		unfilteredStart = firstMissingIndex;
+		string filePostfix = "-unfiltered" + to_string(unfilteredStart) + "+.txt";
+		if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &firstMissingIndex, debug, fullInputFilePrefix, filePostfix, false))
+			return;
+	}
 	if (debug) // e.g. Loaded 5181578 D-proof representatives and conclusions in 2249.86 ms (2 s 249.85 ms). firstMissingIndex = 31
-		cout << "Loaded " << allRepresentativesCount << " D-proof representative" << (allRepresentativesCount == 1 ? "" : "s") << " and conclusion" << (allRepresentativesCount == 1 ? "" : "s") << " in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << ". firstMissingIndex = " << firstMissingIndex << endl;
+		cout << "Loaded " << allRepresentativesCount << " D-proof representative" << (allRepresentativesCount == 1 ? "" : "s") << " and conclusion" << (allRepresentativesCount == 1 ? "" : "s") << " in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << ". firstMissingIndex = " << firstMissingIndex << (unfilteredStart ? ", unfilteredStart = " + to_string(unfilteredStart) : "") << endl;
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += c) {
 		const vector<string>& conclusions = allConclusions[wordLengthLimit];
 		map<size_t, size_t> allAmounts;
@@ -3324,7 +3331,11 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			//#	_mout << wordLengthLimit << ": " << allRepresentatives[wordLengthLimit][index] << ":" << conclusion << ", formula representation length: " << conclusion.length() << ", len = " << len << endl;
 			//#index++;
 		}
-		_mout << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is " << totalLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(totalLen) / static_cast<long double>(conclusions.size()), 2) << "." << endl;
+		_mout << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is ";
+		if (conclusions.empty())
+			_mout << "undefined (since there are no D-proofs of length " << wordLengthLimit << ")." << endl;
+		else
+			_mout << totalLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(totalLen) / static_cast<long double>(conclusions.size()), 2) << "." << endl;
 		//  1: Average symbolic conclusion length is        27/      3 ≈   9.00.
 		//  3: Average symbolic conclusion length is        74/      6 ≈  12.33.
 		//  5: Average symbolic conclusion length is       180/     12 ≈  15.00.
@@ -3367,7 +3378,8 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			if (it->first % 2 == 0)
 				amountEvenConclusionLen += it->second;
 		size_t amountOddConclusionLen = conclusions.size() - amountEvenConclusionLen;
-		_mout << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  There " << (amountEvenConclusionLen == 1 ? "is " : "are ") << amountEvenConclusionLen << " minimal D-proof" << (amountEvenConclusionLen == 1 ? "" : "s") << " with " << (amountEvenConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountEvenConclusionLen == 1 ? "" : "s") << " of even " << (measureSymbolicLength ? "symbolic " : "") << "length, and there " << (amountOddConclusionLen == 1 ? "is " : "are ") << amountOddConclusionLen << " minimal D-proof" << (amountOddConclusionLen == 1 ? "" : "s") << " with " << (amountOddConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountOddConclusionLen == 1 ? "" : "s") << " of odd " << (measureSymbolicLength ? "symbolic " : "") << "length. [" << amountEvenConclusionLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(amountEvenConclusionLen * 100) / static_cast<long double>(conclusions.size()), 2) << "% even]" << endl;
+		if (!conclusions.empty())
+			_mout << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  There " << (amountEvenConclusionLen == 1 ? "is " : "are ") << amountEvenConclusionLen << " minimal D-proof" << (amountEvenConclusionLen == 1 ? "" : "s") << " with " << (amountEvenConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountEvenConclusionLen == 1 ? "" : "s") << " of even " << (measureSymbolicLength ? "symbolic " : "") << "length, and there " << (amountOddConclusionLen == 1 ? "is " : "are ") << amountOddConclusionLen << " minimal D-proof" << (amountOddConclusionLen == 1 ? "" : "s") << " with " << (amountOddConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountOddConclusionLen == 1 ? "" : "s") << " of odd " << (measureSymbolicLength ? "symbolic " : "") << "length. [" << amountEvenConclusionLen << "/" << conclusions.size() << " ≈ " << FctHelper::round(static_cast<long double>(amountEvenConclusionLen * 100) / static_cast<long double>(conclusions.size()), 2) << "% even]" << endl;
 		// 'measureSymbolicLength' true:
 		//  1:     0/      3 ≈ 0.00% even
 		//  3:     0/      6 ≈ 0.00% even
@@ -3403,7 +3415,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 		// 29: 1430031/3449251 ≈  41.46% even
 		// Plot data: 1, 1, 3, 0.5, 5, 0.5833, 7, 0.5, 9, 0.4382, 11, 0.4454, 13, 0.4256, 15, 0.4035, 17, 0.4082, 19, 0.4089, 21, 0.4084, 23, 0.4115, 25, 0.4118, 27, 0.4130, 29, 0.4146
 
-		size_t maxLen = prev(allAmounts.end())->first;
+		size_t maxLen = conclusions.empty() ? 0 : prev(allAmounts.end())->first;
 		if (cutX >= 0) {
 			maxLen = min(maxLen, static_cast<size_t>(cutX));
 			for (size_t i = 1; i <= maxLen; i++)

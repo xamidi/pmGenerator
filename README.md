@@ -129,6 +129,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -l: customize data location path ; default: "data"
            -i: customize input file path prefix in data location ; requires files with conclusions ; default: "dProofs-withConclusions/dProofs"
            -s: measure symbolic length (in contrast to conclusion representation length)
+           -u: include unfiltered proof files
            -t: table arrangement, one data point per row
            -x: upper horizontal limit
            -y: upper vertical limit

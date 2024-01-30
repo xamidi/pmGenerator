@@ -104,7 +104,7 @@ public:
 	static void extractConclusions(ExtractionMethod method, std::uint32_t extractAmount, const std::string* config = nullptr, bool allowRedundantSchemaRemoval = false, std::size_t bound = 0, bool debug = false);
 
 	// Data representation ; input files with conclusions are required
-	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, std::int64_t cutX = -1, std::int64_t cutY = -1, const std::string& dataLocation = "data", const std::string& inputFilePrefix = "dProofs-withConclusions/dProofs", std::ostream* mout = nullptr, bool debug = false, const std::uint32_t* proofLenStepSize = nullptr);
+	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, std::int64_t cutX = -1, std::int64_t cutY = -1, const std::string& dataLocation = "data", const std::string& inputFilePrefix = "dProofs-withConclusions/dProofs", bool includeUnfiltered = false, std::ostream* mout = nullptr, bool debug = false, const std::uint32_t* proofLenStepSize = nullptr);
 
 	// Helper functions
 private:
