@@ -71,7 +71,15 @@ public:
 		return _meaning;
 	}
 private:
-	void recurse_height(const TreeNode<T>* node, std::size_t depth, std::size_t& height) {
+	void recurse_size(const TreeNode<T>* node, std::size_t& size) const {
+		if (!node->_children.empty()) {
+			std::size_t numChildren = node->_children.size();
+			size += numChildren;
+			for (std::size_t i = 0; i < numChildren; i++)
+				recurse_size(node->_children[i].get(), size);
+		}
+	}
+	void recurse_height(const TreeNode<T>* node, std::size_t depth, std::size_t& height) const {
 		if (node->_children.empty()) {
 			if (depth > height)
 				height = depth;
@@ -80,6 +88,11 @@ private:
 				recurse_height(node->_children[i].get(), depth + 1, height);
 	}
 public:
+	std::size_t size() const {
+		std::size_t size = 1;
+		recurse_size(this, size);
+		return size;
+	}
 	std::size_t height() const {
 		std::size_t height = 0;
 		recurse_height(this, 0, height);
@@ -102,7 +115,7 @@ public:
 
 	// Representations
 private:
-	std::string recurse_toAddressString(const TreeNode<T>* node, const std::uint32_t& indent = 0) {
+	std::string recurse_toAddressString(const TreeNode<T>* node, const std::uint32_t& indent = 0) const {
 		auto toBase16 = [](std::size_t value) {
 			std::stringstream ss;
 			ss << std::setbase(16) << value;
