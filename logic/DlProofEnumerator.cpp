@@ -1248,7 +1248,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 // A D-N-proof Nα has conclusion Lβ iff α has conclusion β (according to Łukasiewicz notation). If we know (α,β), there is no need to parse Nα.
 // But this also requires a (proofs -> conclusions) lookup table, so it is more memory intensive. Do it when chosen by the user (i.e. when 'lookup_speedupN' is not null).
 // Note that the caller is still responsible to ensure proofs with leading N's are parsed last. Which is entailed when building up proofs incrementally by their length.
-pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnumerator::parseAndInsertDProof_speedupN(const string& dProof, tbb::concurrent_unordered_map<string, string>& results, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, bool permissive, atomic<uint64_t>* misses_speedupN) {
+pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnumerator::parseAndInsertDProof_speedupN(const string& dProof, tbb::concurrent_unordered_map<string, string>& results, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, bool permissive, atomic<uint64_t>* misses_speedupN, size_t maxSymbolicConclusionLength) {
 	if (lookup_speedupN) { // NOTE: There shall never be N-rules without them being enabled, i.e. this should imply _necessitationLimit > 0.
 		auto countLeadingNs = [](const string& p) { size_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
 		size_t leadingNs = countLeadingNs(dProof);
@@ -1264,6 +1264,8 @@ pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnume
 		if (permissive && rawParseData.empty())
 			return make_pair(results.end(), false);
 		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		if (maxSymbolicConclusionLength < SIZE_MAX && conclusion->size() > maxSymbolicConclusionLength)
+			return make_pair(results.end(), false);
 		pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = results.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
 		if (lookup_speedupN && !leadingNs) // NOTE: Also memorizing proofs that were not inserted (as by emplaceResult.second), so their conclusions can be found regardless of potential proof variants.
 			lookup_speedupN->emplace(dProof, emplaceResult.first); // to save memory only store iterators of formulas without leading N's
@@ -1275,6 +1277,8 @@ pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnume
 		if (permissive && rawParseData.empty())
 			return make_pair(results.end(), false);
 		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		if (maxSymbolicConclusionLength < SIZE_MAX && conclusion->size() > maxSymbolicConclusionLength)
+			return make_pair(results.end(), false);
 		return results.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
 	}
 }
@@ -1462,13 +1466,13 @@ map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
 	return _;
 }
 
-void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions, size_t* candidateQueueCapacities) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
+void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Load representative D-proof strings.
 	auto myInfo = [&]() -> string {
 		stringstream ss;
-		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (candidateQueueCapacities ? ", candidate queue capacities: " + to_string(*candidateQueueCapacities) : "") << "]";
+		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (limit == UINT32_MAX ? "" : ", limit: " + to_string(limit)) << (redundantSchemaRemoval ? "" : ", unfiltered") << (candidateQueueCapacities ? ", candidate queue capacities: " + to_string(*candidateQueueCapacities) : "") << (maxSymbolicConclusionLength < SIZE_MAX ? ", conclusion length limit: " + to_string(maxSymbolicConclusionLength) : "") << "]";
 		return ss.str();
 	};
 	cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. " << myInfo() << endl;
@@ -1693,7 +1697,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 		const unsigned knownLimit = wordLengthLimit - c;
 		startTime = chrono::steady_clock::now();
-		_collectProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives, candidateQueueCapacities);
+		_collectProvenFormulas(representativeProofs, wordLengthLimit, DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives, candidateQueueCapacities, maxSymbolicConclusionLength);
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to collect " << representativeCounter << " D-proof" << (representativeCounter == 1 ? "" : "s") << " of length " << wordLengthLimit << ". [iterated " << counter << " condensed detachment proof strings]" << (misses_speedupN ? " (Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / counter, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results.)" : "") << endl;
 		// e.g. 17:    1631.72 ms (        1 s 631.72 ms) taken to collect    6649 [...]
 		//      19:    5586.94 ms (        5 s 586.94 ms) taken to collect   19416 [...] ;    5586.94 /   1631.72 ≈ 3.42396
@@ -2655,7 +2659,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 	return bestResults;
 }
 
-void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, size_t bound, bool debug) {
+void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, size_t bound, bool debug, string* optOut_createdExDir) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<string> dProofs;
 	if ((method == ExtractionMethod::ProofSystemFromTopList && !extractAmount) || (method == ExtractionMethod::ProofSystemFromString && (!config || config->empty()))) {
@@ -2697,12 +2701,18 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 			}
 		}), fileString.end());
 
-		dProofs = FctHelper::stringSplit(fileString, ",");
+		if (fileString == ".")
+			dProofs = *currentRepresentatives()[0];
+		else
+			dProofs = FctHelper::stringSplit(fileString, ",");
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << *config << "\"." << endl;
-	} else if (method == ExtractionMethod::ProofSystemFromString) // NOTE: 'config' should contain comma-separated string of proofs.
-		dProofs = FctHelper::stringSplit(*config, ",");
-	if ((method == ExtractionMethod::ProofSystemFromString || method == ExtractionMethod::ProofSystemFromFile) && (dProofs.empty() || dProofs.size() > 35)) {
+	} else if (method == ExtractionMethod::ProofSystemFromString) { // NOTE: 'config' should contain comma-separated string of proofs.
+		if (*config == ".")
+			dProofs = *currentRepresentatives()[0];
+		else
+			dProofs = FctHelper::stringSplit(*config, ",");
+	} if ((method == ExtractionMethod::ProofSystemFromString || method == ExtractionMethod::ProofSystemFromFile) && (dProofs.empty() || dProofs.size() > 35)) {
 		cerr << "Requested " << (dProofs.empty() ? "empty" : "oversized") << " proof system. Aborting." << endl;
 		return;
 	}
@@ -2940,10 +2950,10 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 			if (!filenames.count("extraction-" + to_string(i)))
 				return i;
 	};
-	auto createExtractionInfoFile = [&](const string& extractionInfoLine, string* optOut_infoFileDir = nullptr) {
+	auto createExtractionInfoFile = [&](const string& extractionInfoLine, size_t& out_id, string* optOut_infoFileDir = nullptr) {
 		string originalDataLocation;
-		size_t id = findNextAvailableId(originalDataLocation);
-		string infoFileDir = originalDataLocation + "extraction-" + to_string(id) + "/";
+		out_id = findNextAvailableId(originalDataLocation);
+		string infoFileDir = originalDataLocation + "extraction-" + to_string(out_id) + "/";
 		if (optOut_infoFileDir)
 			*optOut_infoFileDir = infoFileDir;
 		string infoFilePath = infoFileDir + "!.def";
@@ -3139,8 +3149,9 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 			throw domain_error("Top list is empty ; cannot initialize empty system.");
 
 		// 3. Create info file.
-		string infoFilePath = createExtractionInfoFile(extractionInfoLine);
-		cout << "Created " << infoFilePath << " with " << counter << " extracted theorem" << (counter == 1 ? "" : "s") << "." << endl;
+		size_t id;
+		string infoFilePath = createExtractionInfoFile(extractionInfoLine, id, optOut_createdExDir);
+		cout << "Created " << infoFilePath << " with " << counter << " extracted theorem" << (counter == 1 ? "" : "s") << ". [id = " << id << "]" << endl;
 		break;
 	}
 	case ExtractionMethod::ProofSystemFromString:
@@ -3177,8 +3188,9 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		}
 
 		// 3. Create info file.
-		string infoFilePath = createExtractionInfoFile(extractionInfoLine);
-		cout << "Created " << infoFilePath << " with " << dProofs.size() << " extracted theorem" << (dProofs.size() == 1 ? "" : "s") << "." << endl;
+		size_t id;
+		string infoFilePath = createExtractionInfoFile(extractionInfoLine, id, optOut_createdExDir);
+		cout << "Created " << infoFilePath << " with " << dProofs.size() << " extracted theorem" << (dProofs.size() == 1 ? "" : "s") << ". [id = " << id << "]" << endl;
 		break;
 	}
 	case ExtractionMethod::CopyWithLimitedConclusions: {
@@ -3193,12 +3205,15 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 				extractionInfoLine += ",";
 			extractionInfoLine += axiomNames[i] + ":" + axioms[i];
 		}
+		size_t id;
 		string infoFileDir;
-		string infoFilePath = createExtractionInfoFile(extractionInfoLine, &infoFileDir);
+		string infoFilePath = createExtractionInfoFile(extractionInfoLine, id, &infoFileDir);
+		if (optOut_createdExDir)
+			*optOut_createdExDir = infoFileDir;
 		string targetPath = infoFileDir + "dProofs-withConclusions/";
 		FctHelper::ensureDirExists(targetPath);
 		string targetPrefix = targetPath + "dProofs";
-		cout << "Created " << infoFilePath << " with " << axioms.size() << " copied axiom" << (axioms.size() == 1 ? "" : "s") << "." << endl;
+		cout << "Created " << infoFilePath << " with " << axioms.size() << " copied axiom" << (axioms.size() == 1 ? "" : "s") << ". [id = " << id << "]" << endl;
 
 		// 3. Copy specified proofs to files in 'targetPath'.
 		string searchPath = "data/" + _customizedPath + "dProofs-withConclusions/";
@@ -3454,14 +3469,14 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 	}
 }
 
-void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, size_t* candidateQueueCapacities) {
+void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) {
 	atomic<uint64_t> counter = 0;
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
 	atomic<uint64_t> invalidCounter = 0;
-	auto process = [&representativeProofs, &progressData, &misses_speedupN, &lookup_speedupN, &counter, &conclusionCounter, &redundantCounter, &invalidCounter](string& sequence) {
+	auto process = [&representativeProofs, &progressData, &misses_speedupN, &lookup_speedupN, &maxSymbolicConclusionLength, &counter, &conclusionCounter, &redundantCounter, &invalidCounter](string& sequence) {
 		counter++;
-		pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = parseAndInsertDProof_speedupN(sequence, representativeProofs, lookup_speedupN, true, misses_speedupN);
+		pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = parseAndInsertDProof_speedupN(sequence, representativeProofs, lookup_speedupN, true, misses_speedupN, maxSymbolicConclusionLength);
 		if (emplaceResult.first != representativeProofs.end()) { // parse was permissive
 			if (!emplaceResult.second) { // a proof for the conclusion is already known
 				redundantCounter++;

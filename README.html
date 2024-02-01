@@ -415,11 +415,12 @@ Configuring:
        -d: default system ; ignore all other arguments except '-e'
 
 Composable:
-  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-s]
+  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-s] [-l &lt;limit or -1&gt;]
      Generate proof files ; at ./data/[&lt;hash&gt;/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[&lt;hash&gt;/]/dProofs-withoutConclusions/
        -u: unfiltered (significantly faster, but generates redundant proofs)
        -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
        -s: proof files without conclusions, requires additional parsing
+       -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory
   -r &lt;D-proof database&gt; &lt;output file&gt; [-l &lt;path&gt;] [-i &lt;prefix&gt;] [-s] [-d]
      Replacements file creation based on proof files
        -l: customize data location path ; default: "data"
@@ -480,7 +481,7 @@ Composable:
        -o: specify output file path for '-t' ; relative to effective data location ; default: "top&lt;amount&gt;SmallestConclusions_&lt;min proof length&gt;to&lt;max proof length&gt;Steps&lt;unfiltered info&gt;.txt"
        -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false
        -#: initialize proof system at ./data/[&lt;hash&gt;/]/extraction-&lt;id&gt;/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c &lt;parent system&gt; -e &lt;id&gt;'
-       -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs
+       -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; "." to not modify axioms
        -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have a symbolic length of at most the given number
        -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -d: print debug information

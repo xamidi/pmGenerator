@@ -70,6 +70,19 @@ public:
 	std::vector<std::uint32_t>& meaning() { // to freely manipulate meaning
 		return _meaning;
 	}
+	std::size_t size() const {
+		std::size_t size = 1;
+		auto recurse = [&size](const TreeNode<T>* node, const auto& me) -> void {
+			if (!node->_children.empty()) {
+				std::size_t numChildren = node->_children.size();
+				size += numChildren;
+				for (std::size_t i = 0; i < numChildren; i++)
+					me(node->_children[i].get(), me);
+			}
+		};
+		recurse(this, recurse);
+		return size;
+	}
 	std::size_t height() const {
 		std::size_t height = 0;
 		auto recurse = [&height](const TreeNode<T>* node, std::size_t depth, const auto& me) -> void {

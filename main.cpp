@@ -64,11 +64,12 @@ static const map<Task, string>& cmdInfo() {
 				"         -e: specify extracted system with the given identifier\n"
 				"         -d: default system ; ignore all other arguments except '-e'\n";
 		_[Task::Generate] =
-				"    -g <limit or -1> [-u] [-q <limit>] [-s]\n"
+				"    -g <limit or -1> [-u] [-q <limit>] [-s] [-l <limit or -1>]\n"
 				"       Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/\n"
 				"         -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"         -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)\n"
-				"         -s: proof files without conclusions, requires additional parsing\n";
+				"         -s: proof files without conclusions, requires additional parsing\n"
+				"         -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory\n";
 		_[Task::CreateReplacements] =
 				"    -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]\n"
 				"       Replacements file creation based on proof files\n"
@@ -136,7 +137,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -o: specify output file path for '-t' ; relative to effective data location ; default: \"top<amount>SmallestConclusions_<min proof length>to<max proof length>Steps<unfiltered info>.txt\"\n"
 				"         -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false\n"
 				"         -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'\n"
-				"         -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs\n"
+				"         -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; \".\" to not modify axioms\n"
 				"         -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have a symbolic length of at most the given number\n"
 				"         -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
@@ -775,6 +776,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 
 	string mpiArg;
 	size_t mpiIgnoreCount = 0;
+	bool extractedEnv = false;
 	for (int i = 1; i < argc; i++) {
 		auto recent = [&](const string& s = "?") {
 			if (s == "c")
@@ -811,12 +813,13 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Invalid argument \"-" + string { c } + "\": Cannot configure after \"" + mpiArg + "\".");
 			tasks.emplace_back(Task::Customize, map<string, string> { { "axiomString", "C0C1.0,CC0C1.2CC0.1C0.2,CCN0N1C1.0" }, { "axiomFilePath", "" }, { "extractedSystemId", "" } }, map<string, int64_t> { { "necessitationLimit", 0 } }, map<string, bool> { { "useInputFile", false }, { "normalPolishNotation", false }, { "speedupN", true }, { "extractedSystem", false }, { "defaultSystem", false } });
 			mpiIgnoreCount++;
+			extractedEnv = false;
 			break;
-		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-s]
+		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-s] [-l <limit or -1>]
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 			try {
-				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "whether -q was called", false } });
+				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 }, { "maxSymbolicConclusionLength", -1 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "whether -q was called", false } });
 			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
 			}
@@ -947,6 +950,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 				tasks.back().str["extractedSystemId"] = argv[++i];
 				tasks.back().bln["extractedSystem"] = true;
+				extractedEnv = true;
 				break;
 			case Task::ParseAndPrintProofs: //       --parse -e (keep expanded proof strings)
 			case Task::TransformProofSummary: // --transform -e (keep expanded proof strings)
@@ -1042,6 +1046,17 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+			case Task::Generate: // -g -l <limit or -1> (limit symbolic length of generated conclusions to at most the given number)
+				if (!extractedEnv)
+					return printUsage("Invalid argument \"-" + string { c } + "\" for \"-g\": Specific filters can only be used in extracted environments. [Hint: '--extract -h .' extracts a system with all axioms unmodified that can be specified with '-c <parent system> -e <id>'.]", recent(string { c }));
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
+				try {
+					tasks.back().num["maxSymbolicConclusionLength"] = stoi(argv[++i]);
+				} catch (...) {
+					return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
+				}
+				break;
 			case Task::Customize: // -c -l (disable lazy N-rule parsing)
 				tasks.back().bln["speedupN"] = false;
 				break;
@@ -1332,7 +1347,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					ss << ++index << ". resetRepresentativesFor(" << (t.bln["defaultSystem"] ? "null" : "\"" + (t.bln["useInputFile"] ? t.str["axiomFilePath"] : t.str["axiomString"]) + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (unsigned) t.num["necessitationLimit"] << ", " << bstr(t.bln["speedupN"]) << (t.bln["extractedSystem"] ? ", \"" + t.str["extractedSystemId"] + "\"" : "") << ")\n";
 					break;
 				case Task::Generate: // -g
-					ss << ++index << ". generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << ")\n";
+					ss << ++index << ". generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(t.bln["whether -q was called"] ? "" : ", null") + ", " + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : "") << ")\n";
 					break;
 				case Task::CreateReplacements: // -r
 					ss << ++index << ". createReplacementsFile(\"" << t.str["dProofDB"] << "\", \"" << t.str["outputFile"] << "\", \"" << t.str["dataLocation"] << "\", \"" << t.str["inputFilePrefix"] << "\", " << bstr(t.bln["withConclusions"]) << ", " << bstr(t.bln["debug"]) << ")\n";
@@ -1422,10 +1437,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				}
 				break;
 			}
-			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-s]
-				cout << "[Main] Calling generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << ")." << endl;
+			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-s] [-l <limit or -1>]
+				cout << "[Main] Calling generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(t.bln["whether -q was called"] ? "" : ", null") + ", " + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : "") << ")." << endl;
 				size_t candidateQueueCapacities = static_cast<size_t>(t.num["candidateQueueCapacities"]);
-				DlProofEnumerator::generateDProofRepresentativeFiles((unsigned) t.num["limit"], t.bln["redundantSchemaRemoval"], t.bln["withConclusions"], t.bln["whether -q was called"] ? &candidateQueueCapacities : nullptr);
+				DlProofEnumerator::generateDProofRepresentativeFiles((unsigned) t.num["limit"], t.bln["redundantSchemaRemoval"], t.bln["withConclusions"], t.bln["whether -q was called"] ? &candidateQueueCapacities : nullptr, t.num["maxSymbolicConclusionLength"]);
 				break;
 			}
 			case Task::CreateReplacements: // -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]
