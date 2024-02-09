@@ -5,9 +5,9 @@
 %
 % Full summary: pmGenerator --transform data/s5.txt -f -n -t . -j 1
 % Step counting: pmGenerator --transform data/s5.txt -f -n -t . -p -2 -d
-%                pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -p -2 -d
-% Compact (466 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -j -1 -s CNNpCqp,CNNpp,CCpqCNqNp
-% Concrete (971 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp -j -1 -e
+%                pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -p -2 -d
+% Compact (568 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -s CNNpCqp,CNNpp,CCpqCNqNp,CNLNLpLp,CpCNLqLNLq
+% Concrete (1730 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -e
 
 % Axiom 1 by Frege (CpCqp), i.e. 0→(1→0)
     CpCqp = 1
@@ -28,28 +28,36 @@
     CNLNpLNLNp = 6
 
 [0] CCpCNqNrCpCrq = D2D13
-[1] CNNpCqp = D[0]D[0]1
-[2] CCNNpqCNNpp = D2[1]
-[3] CNNpp = D[2]1
-[4] CpNNp = D3[3]
-[5] CLpLNNp = D5N[4]
-[6] CCpqCpNNq = D2D1[4]
+[1] CCpqCCrpCrq = DD2D121
+[2] CNNpCqp = D[0]D[0]1
+[3] CCNNpqCNNpp = D2[2]
+[4] CNNpp = D[3]1
+[5] CpCNNqq = D1[4]
+[6] CpNNp = D3[4]
+[7] CLpLNNp = D5N[6]
+[8] CCpqCpNNq = D2D1[6]
 
 % Alternative to axiom T (CpMp, i.e. CpNLNp), i.e 0→¬□¬0, alias 0→◇0 ; 25 steps
-[7] CpNLNp = D3DD2D14[3]
+[9] CpNLNp = D3DD2D14[4]
 
-[8] CCpCqrCpCqNNr = D2D1[6]
+[10] CCpCqrCpCqNNr = D2D1[8]
 
 % Axiom B by Brouwer (CpLMp, i.e. CpLNLNp), i.e. 0→□¬□¬0, alias 0→□◇0 ; 31 steps
-[9] CpLNLNp = DD2D16[7]
+[11] CpLNLNp = DD2D16[9]
 
 % Axiom D (CLpMp, i.e. CLpNLNp), i.e. 0→□¬□¬0, alias 0→◇0 ; 31 steps
-[10] CLpNLNp = DD2D1[7]4
+[12] CLpNLNp = DD2D1[9]4
 
-[11] CCpqCNqNp = D[0]D[8]DD2D1DD22[2]1
+[13] CCpqCNqNp = D[0]D[10]DD2D1DD22[3]1
+[14] CNLNLpLp = DD2D1DD2D1D5N[4][4]DD2D[0]DD2D1D2D1D[8]6[5]DD[0]D[10]DD2D1D2DD2D1D2DD2D15D5N[13][2]1N[7]
 
 % Axiom 4 by Lewis (CLpLLp), i.e. □0→□□0 ; 302 steps
-[12] CLpLLp = DD2D1D5NDD2D1DD2D1D5N[3][3]DD2D[0]DD2D1D2D1D[6]6D1[3]DD[0]D[8]DD2D1D2DD2D1D2DD2D15D5N[11][1]1N[5][9]
+[15] CLpLLp = DD2D1D5N[14][11]
+
+[16] CpCNLqLNLq = D[0]D[0]DD[1]D[1]D[13][14][5]
 
 % Alternative to axiom 4 (CMMpMp, i.e. CNLNNLNpNLNp of CNLNNLpNLp), i.e. ¬□¬¬□0→¬□0, schema of ¬□¬¬□¬0→¬□¬0, alias ◇◇0→◇0 ; 401 steps
-[13] CNLNNLpNLp = D[11]DDDD2D1D2DD2D1211[12][5]
+[17] CNLNNLpNLp = D[13]DDDD2D1D2[1]1[15][7]
+
+% Alternative to axiom 5 (CNLpLNLp), i.e. ¬□0→□¬□0 ; 743 steps
+[18] CNLpLNLp = D[16][16]
