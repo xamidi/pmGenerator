@@ -72,7 +72,7 @@ vector<string> DRuleParser::readFromMmsolitaireFile(const string& file, vector<s
 map<size_t, set<string>> DRuleParser::prepareDProofsByLength(const string& file, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, vector<string>* optOut_dProofsInFile, vector<string>* optOut_dProofNamesInFile, bool debug) {
 	vector<string> dProofsInFile = readFromMmsolitaireFile(file, optOut_dProofNamesInFile, debug);
 	map<size_t, set<string>> knownDProofsByLength;
-	parseDProofs_raw(dProofsInFile, customAxioms, minUseAmountToCreateHelperProof, &knownDProofsByLength, false, debug, false, true, true);
+	parseDProofs_raw(dProofsInFile, customAxioms, minUseAmountToCreateHelperProof, &knownDProofsByLength, debug, false, true, true);
 	if (optOut_dProofsInFile)
 		*optOut_dProofsInFile = dProofsInFile;
 	return knownDProofsByLength;
@@ -344,13 +344,12 @@ shared_ptr<DlFormula> DRuleParser::_ax3(const shared_ptr<DlFormula>& psi, const 
 	});
 }
 
-vector<DProofInfo> DRuleParser::parseDProof_raw(const string& dProof, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, bool reversedAbstractProofStrings) {
-	vector<DProofInfo> rawParseData = parseDProofs_raw( { dProof }, customAxioms, minUseAmountToCreateHelperProof, nullptr, verifyingConstruct, debug, calculateMeanings, exceptionOnUnificationFailure, false, reversedAbstractProofStrings);
-	return rawParseData;
+vector<DProofInfo> DRuleParser::parseDProof_raw(const string& dProof, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, bool reversedAbstractProofStrings) {
+	return parseDProofs_raw( { dProof }, customAxioms, minUseAmountToCreateHelperProof, nullptr, debug, calculateMeanings, exceptionOnUnificationFailure, false, reversedAbstractProofStrings);
 }
 
-vector<DProofInfo> DRuleParser::parseDProof_raw_permissive(const string& dProof, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, bool verifyingConstruct, bool debug, bool calculateMeanings, bool reversedAbstractProofStrings) {
-	return parseDProof_raw(dProof, customAxioms, minUseAmountToCreateHelperProof, verifyingConstruct, debug, calculateMeanings, false, reversedAbstractProofStrings);
+vector<DProofInfo> DRuleParser::parseDProof_raw_permissive(const string& dProof, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, bool debug, bool calculateMeanings, bool reversedAbstractProofStrings) {
+	return parseDProof_raw(dProof, customAxioms, minUseAmountToCreateHelperProof, debug, calculateMeanings, false, reversedAbstractProofStrings);
 }
 
 
@@ -415,7 +414,7 @@ void appendNewPrimitivesOfFormula(const shared_ptr<DlFormula>& formula, vector<D
 			appendNewPrimitivesOfFormula(subformula, primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
 }
 }
-vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, map<size_t, set<string>>* optOut_knownDProofsByLength, bool verifyingConstruct, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, bool prepareOnly, bool reversedAbstractProofStrings, vector<size_t>* optOut_indexTranslation, unordered_map<size_t, size_t>* optOut_indexOrigins, map<size_t, size_t>* optOut_duplicates, vector<string>* optOut_otherProofStrings) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
+vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, map<size_t, set<string>>* optOut_knownDProofsByLength, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, bool prepareOnly, bool reversedAbstractProofStrings, vector<size_t>* optOut_indexTranslation, unordered_map<size_t, size_t>* optOut_indexOrigins, map<size_t, size_t>* optOut_duplicates, vector<string>* optOut_otherProofStrings) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
 	// 1. Group and order the (in D-notation) given proofs by their length, and create a context lookup table
 	map<size_t, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length
 	if (optOut_indexTranslation)
@@ -1584,8 +1583,13 @@ vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>&
 		if (inOut_abstractDProof.size() != requiredIntermediateResults->size())
 			throw invalid_argument("|inOut_abstractDProof| = " + to_string(inOut_abstractDProof.size()) + " != " + to_string(requiredIntermediateResults->size()) + " = |requiredIntermediateResults|");
 		for (size_t i = 0; i < inOut_abstractDProof.size(); i++)
-			if (*out_abstractDProofConclusions[i] != *(*requiredIntermediateResults)[i].refinedAxiom)
-				throw invalid_argument("Validation failed for index " + to_string(i) + ": Resulted in " + DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) + ", but requested " + (*requiredIntermediateResults)[i].name + ".");
+			if (*out_abstractDProofConclusions[i] != *(*requiredIntermediateResults)[i].refinedAxiom) {
+				if (DlCore::isSchemaOf(out_abstractDProofConclusions[i], (*requiredIntermediateResults)[i].refinedAxiom)) {
+					if (debug)
+						cout << "[NOTE] Index " << i << ": Resulted in proper schema " << DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) << ", requested " << (*requiredIntermediateResults)[i].name << "." << endl;
+				} else
+					throw invalid_argument("Validation failed for index " + to_string(i) + ": Resulted in " + DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) + ", but requested " + (*requiredIntermediateResults)[i].name + ".");
+			}
 		if (debug)
 			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to validate " << inOut_abstractDProof.size() << " conclusion" << (inOut_abstractDProof.size() == 1 ? "" : "s") << "." << endl;
 	}

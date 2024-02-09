@@ -834,7 +834,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 	unordered_map<size_t, size_t> indexOrigins;
 	map<size_t, size_t> duplicates;
 	try {
-		rawParseData = DRuleParser::parseDProofs_raw(_dProofs, _customAxiomsPtr, minUseAmountToCreateHelperProof, nullptr, true, debug, false, true, false, conclusionsOnly ? true : abstractProofStrings, conclusionsOnly ? &indexTranslation : nullptr, &indexOrigins, &duplicates);
+		rawParseData = DRuleParser::parseDProofs_raw(_dProofs, _customAxiomsPtr, minUseAmountToCreateHelperProof, nullptr, debug, false, true, false, conclusionsOnly ? true : abstractProofStrings, conclusionsOnly ? &indexTranslation : nullptr, &indexOrigins, &duplicates);
 	} catch (exception& e) {
 		cerr << e.what() << endl;
 		throw domain_error("Parse error.");

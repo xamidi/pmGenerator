@@ -26,7 +26,7 @@ void DRuleReducer::createReplacementsFile(const string& dProofDB, const string& 
 		startTime = chrono::steady_clock::now();
 	// Parse all proofs - including subproofs - from 'dProofDB'. Since such collections tend to contain only a few but large proofs
 	// it it is likely fastest to parse them all combined (so redundant parts are never parsed twice), even when single-threaded.
-	vector<DProofInfo> allProofs = DRuleParser::parseDProofs_raw(dProofsInFile, DlProofEnumerator::getCustomAxioms(), 1, nullptr, false, debug, false, true, false, false);
+	vector<DProofInfo> allProofs = DRuleParser::parseDProofs_raw(dProofsInFile, DlProofEnumerator::getCustomAxioms(), 1, nullptr, debug, false, true, false, false);
 	//#cout << FctHelper::vectorStringF(allProofs, [](const DProofInfo& p) { return p.first + ":" + DlCore::toPolishNotation_noRename(get<0>(p.second).back()); }, "{\n\t", "\n}", "\n\t") << endl;
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for parsing altogether." << endl;
