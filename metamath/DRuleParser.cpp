@@ -1001,8 +1001,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 						// 2. Obtain substitutions via unification and partial cloning
 						map<string, shared_ptr<DlFormula>> substitutions;
 						if (!DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
-							if (debug)
-								cerr << formulas.size() << ". " << DlCore::formulaRepresentation_traverse(formulas.back()) << "\t\t" << dReasons.back() << endl;
+							//#cerr << formulas.size() << ". " << DlCore::formulaRepresentation_traverse(formulas.back()) << "\t\t" << dReasons.back() << endl;
 							if (exceptionOnUnificationFailure)
 								throw invalid_argument("DRuleParser::parseDProofs(): Failed to find unification for " + DlCore::formulaRepresentation_traverse(antecedent) + " and " + DlCore::formulaRepresentation_traverse(conditional_children[0]) + ".");
 							else
