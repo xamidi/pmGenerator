@@ -248,8 +248,1529 @@ void orderLog(const string& path) {
 	cout << "Permuted " << indices.size() << " lines" << endl;
 }
 
+#if 1
 //#include <cmath>
+#include "logic/DlCore.h"
+#include "tree/TreeNode.h"
+string prover9Formula(const string& theorem, bool showLabel = false, bool printDot = true, bool TPTPConvention = false) {
+	shared_ptr<DlFormula> consequent;
+	if (!DlCore::fromPolishNotation(consequent, theorem)) {
+		cerr << "Failed to parse " << theorem << "." << endl;
+		return 0;
+	}
+
+	static const unordered_map<string, string> operatorNames = { { DlCore::terminalStr_and(), "K" }, { DlCore::terminalStr_or(), "A" }, { DlCore::terminalStr_nand(), "D" }, { DlCore::terminalStr_nor(), "X" }, { DlCore::terminalStr_imply(), "i" }, { DlCore::terminalStr_implied(), "B" }, { DlCore::terminalStr_nimply(), "F" }, { DlCore::terminalStr_nimplied(), "G" }, { DlCore::terminalStr_equiv(), "E" }, { DlCore::terminalStr_xor(), "J" }, { DlCore::terminalStr_com(), "S" }, { DlCore::terminalStr_app(), "U" }, { DlCore::terminalStr_not(), "n" }, { DlCore::terminalStr_nece(), "L" }, { DlCore::terminalStr_poss(), "M" }, { DlCore::terminalStr_obli(), "Z" }, { DlCore::terminalStr_perm(), "P" }, { DlCore::terminalStr_top(), "V" }, { DlCore::terminalStr_bot(), "O" } };
+	map<string, string> operatorTranslations;
+	map<string, string> variableTranslations;
+	unsigned next = 0;
+	auto recurse = [&](const shared_ptr<DlFormula>& node, const auto& me) -> string {
+		auto valToString = [&](const string& s) -> string {
+			// 1. Operator names
+			map<string, string>::const_iterator itOperator = operatorTranslations.find(s);
+			if (itOperator == operatorTranslations.end()) {
+				unordered_map<string, string>::const_iterator searchResult = operatorNames.find(s);
+				if (searchResult != operatorNames.end())
+					return operatorTranslations[s] = searchResult->second;
+			} else
+				return itOperator->second;
+			if (DlCore::dlOperators().count(s))
+				return operatorTranslations[s] = "<" + s + ">"; // unsupported operator
+
+			// 2. Variable names
+			map<string, string>::const_iterator itVariable = variableTranslations.find(s);
+			if (itVariable == variableTranslations.end())
+				return variableTranslations[s] = (TPTPConvention ? "X" : "x") + to_string(next++);
+			else
+				return itVariable->second;
+		};
+		string str = valToString(node->getValue()->value);
+		bool leaf = node->getChildren().empty();
+		if (!leaf)
+			str += "(";
+		bool first= true;
+		for (size_t i = 0; i < node->getChildren().size(); i++) {
+			if (first)
+				first = false;
+			else
+				str += ",";
+			str += me(node->getChildren()[i], me);
+		}
+		return str + (leaf ? "" : ")");
+	};
+	return "t(" + recurse(consequent, recurse) + ")" + (showLabel ? " #label(" + theorem + ")" : "") + (printDot ? "." : "");
+}
+#endif
+
+//#include "logic/DlFormula.h"
+#include "logic/DlCore.h" //TODO
+#include <numeric> //TODO for iota
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
+#if 0 //### TODO ./dProofsToDB ; convert comma-separated proofs to proof database
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. path to file with comma-separated proofs, and 3. path for new proof database" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	chrono::time_point<chrono::steady_clock> startTime;
+	string fileString;
+	startTime = chrono::steady_clock::now();
+	if (!FctHelper::readFile(argv[2], fileString)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	string::size_type len = fileString.length();
+
+	// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+	bool startOfLine = true;
+	bool erasingLine = false;
+	fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+		switch (c) {
+		case '\r':
+		case '\n':
+			startOfLine = true;
+			erasingLine = false;
+			return true;
+		case '\t':
+		case ' ':
+			startOfLine = false;
+			return true;
+		case '%':
+			if (startOfLine) {
+				startOfLine = false;
+				erasingLine = true;
+				return true;
+			} else {
+				startOfLine = false;
+				return false;
+			}
+		default:
+			startOfLine = false;
+			return erasingLine;
+		}
+	}), fileString.end());
+
+	vector<string> dProofsFromFile = FctHelper::stringSplit(fileString, ",");
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << argv[2] << "\"." << endl;
+	string result;
+	for (const string& dProof : dProofsFromFile)
+		result += DRuleParser::toDBProof(dProof, DlProofEnumerator::getCustomAxioms()) + "\n";
+	if (!FctHelper::writeToFile(argv[3], result))
+		cerr << "Failed." << endl;
+	else
+		cout << result.length() << " bytes written to \"" << argv[3] << "\"." << endl;
+	return 0;
+#endif //###
+#if 0 //### TODO ./prover9OutputConverter ; parse proofs from Prover9 output
+	if (argc <= 1) {
+		cerr << "Need 1. path to file with Prover9 output. Optional: 2. output file path" << endl;
+		return 0;
+	}
+	string _outputFile;
+	string* outputFile = nullptr;
+	if (argc >= 3) {
+		_outputFile = argv[2];
+		outputFile = &_outputFile;
+	}
+
+	// 1. Extract proof steps.
+	map<size_t, string> formulas;
+	map<size_t, string> reasons;
+	map<size_t, set<string>> labels;
+	set<size_t> finalIndices;
+	{
+		string content;
+		if (!FctHelper::readFile(argv[1]/*"D:/Dropbox/eclipse/pmGenerator/Release64bitDynamicGcc11.3/w2-proof-l2_1.txt"*/, content)) {
+			cerr << "Invalid file path" << endl;
+			return 0;
+		}
+		boost::replace_all(content, "\r\n", "\n");
+		stringstream ss(content);
+		string line;
+		smatch m;
+		while (getline(ss, line))
+			if (regex_search(line, m, regex("[0-9]+ ")) && !m.position()) {
+				string id_str = line.substr(0, m.length() - 1);
+				size_t id = strtoull(id_str.c_str(), nullptr, 10);
+				line = line.substr(FctHelper::digitsNum_uint64(id) + 1);
+				//#cout << "[" << id << "] " << line << endl;
+
+				string::size_type pos = line.find("  ");
+				string step = line.substr(0, pos);
+				string type = line.substr(pos + 2);
+				//#cout << "[" << id << "] \"" << step << "\" ; \"" << type << "\"" << endl;
+				bool isPos = step.starts_with("t(");
+				bool isNeg = step.starts_with("-t(");
+				bool isEnd = step.starts_with("$F");
+				if (!isPos && !isNeg && !isEnd) {
+					cerr << "[" << id << "] Step \"" << step << "\" starts with neither \"t(\", nor \"-t(\", nor \"$F\"." << endl;
+					return 0;
+				}
+				if (!step.ends_with(".")) {
+					cerr << "[" << id << "] Step \"" << step << "\" does not end with '.'." << endl;
+					return 0;
+				}
+				if (!type.starts_with("[")) {
+					cerr << "[" << id << "] Type \"" << type << "\" does not start with '['." << endl;
+					return 0;
+				}
+				if (!type.ends_with("].")) {
+					cerr << "[" << id << "] Type \"" << type << "\" does not end with \"].\"." << endl;
+					return 0;
+				}
+				string formula;
+				string reason = type.substr(1, type.length() - 3);
+				vector<string> labelSeq;
+				pos = step.find(" # ");
+				if (pos == string::npos) {
+					formula = step.substr(0, step.length() - 1);
+				} else {
+					formula = step.substr(0, pos);
+					while (pos != string::npos) {
+						string::size_type nextPos = step.find(" # ", pos + 1);
+						if (nextPos == string::npos)
+							labelSeq.push_back(step.substr(pos + 3, step.length() - pos - 4)); // without ending '.'
+						else
+							labelSeq.push_back(step.substr(pos + 3, nextPos - pos - 3));
+						pos = nextPos;
+					}
+				}
+				//#cout << "[" << id << "] formula = \"" << formula << "\", reason = \"" << reason << "\", labelSeq = " << FctHelper::vectorStringF(labelSeq, [](const string& s) { return "\"" + s + "\""; }) << endl;
+				formulas.emplace(id, formula);
+				reasons.emplace(id, reason);
+				labels.emplace(id, set<string>(labelSeq.begin(), labelSeq.end()));
+				if (isEnd)
+					finalIndices.emplace(id);
+			}
+	}
+
+	// 2. Extract assumptions.
+	unordered_set<size_t> isModusPonensAssumption;
+	unordered_set<size_t> isNecessitationAssumption;
+	unordered_map<size_t, string> isGoalDeclaration;
+	for (const pair<const size_t, set<string>>& p : labels) {
+		const set<string>& m = p.second;
+		if (m.count("label(non_clause)")) {
+			//cout << FctHelper::setString(m) << endl;
+			if (m.count("label(MP)"))
+				isModusPonensAssumption.emplace(p.first);
+			if (m.count("label(NE)"))
+				isNecessitationAssumption.emplace(p.first);
+			if (m.count("label(goal)")) {
+				if (m.size() < 3) {
+					cerr << "[" << p.first << "] Goal is missing a custom label." << endl;
+					return 0;
+				}
+				string name;
+				for (set<string>::const_iterator it = m.begin(); it != m.end(); ++it)
+					if (*it != "label(non_clause)" && *it != "label(goal)") {
+						const string& s = *it;
+						if (s.starts_with("label(") && s.ends_with(")")) {
+							name = s.substr(6, s.length() - 7);
+							break;
+						} else if (s.starts_with("answer(") && s.ends_with(")")) {
+							name = s.substr(7, s.length() - 8);
+							break;
+						}
+					}
+				if (name.empty()) {
+					cerr << "[" << p.first << "] Goal is missing a custom label." << endl;
+					return 0;
+				}
+				isGoalDeclaration.emplace(p.first, name);
+			}
+		}
+	}
+	//#cout << "isModusPonensAssumption = " << FctHelper::setString(set<size_t>(isModusPonensAssumption.begin(), isModusPonensAssumption.end())) << endl;
+	//#cout << "isNecessitationAssumption = " << FctHelper::setString(set<size_t>(isNecessitationAssumption.begin(), isNecessitationAssumption.end())) << endl;
+	//#cout << "isGoalDeclaration = " << FctHelper::mapString(map<size_t, string>(isGoalDeclaration.begin(), isGoalDeclaration.end())) << endl;
+
+	// 3. Obtain connections.
+	unordered_set<size_t> isModusPonens;
+	unordered_set<size_t> isNecessitation;
+	unordered_map<size_t, string> isAxiom;
+	unordered_map<size_t, string> isGoalNegation;
+	auto toParamList = [](const string& s) {
+		vector<size_t> paramList;
+		vector<string> args = FctHelper::stringSplit(s, ",");
+		for (const string& a : args) {
+			size_t link = 0;
+			try {
+				link = strtoull(a.c_str(), nullptr, 10);
+			} catch (...) {
+			}
+			if (link)
+				paramList.push_back(link);
+		}
+		return paramList;
+	};
+	map<size_t, array<size_t, 2>> refs;
+	map<size_t, string> conclusionsById;
+	for (map<size_t, string>::const_iterator it = reasons.begin(); it != reasons.end(); ++it) {
+		//#cout << it->first << ":" << it->second << endl;
+		const string& reason = it->second;
+		if (reason.starts_with("hyper(")) {
+			string link_str = reason.substr(6, reason.length() - 7);
+			vector<size_t> params = toParamList(link_str);
+			//#cout << "[" << it->first << ", hyper] " << link_str << " ; " << FctHelper::vectorString(params) << endl;
+			if (isModusPonens.count(params[0])) {
+				if (params.size() != 3) {
+					cerr << "[" << it->first << "] (MP) Hyper param list has length " << params.size() << " != 3." << endl;
+					return 0;
+				}
+				refs.emplace(it->first, array<size_t, 2> { params[1], params[2] });
+			} else if (isNecessitation.count(params[0])) {
+				if (params.size() != 2) {
+					cerr << "[" << it->first << "] (NE) Hyper param list has length " << params.size() << " != 2." << endl;
+					return 0;
+				}
+				refs.emplace(it->first, array<size_t, 2> { params[1], 0 });
+			} else {
+				cerr << "[" << it->first << "] Hyper param list does not start with (MP) (but with " << params[0] << ")." << endl;
+				return 0;
+			}
+
+		} else if (reason.starts_with("resolve(")) {
+			string link_str = reason.substr(8, reason.length() - 9);
+			vector<size_t> params = toParamList(link_str);
+			//cout << "[" << it->first << ", resolve] " << link_str << " ; " << FctHelper::vectorString(params) << endl;
+			if (params.size() != 2) {
+				cerr << "[" << it->first << "] Resolve param list has length " << params.size() << " != 2." << endl;
+				return 0;
+			}
+			// One param needs to be in isGoalNegation, the other one should be the conclusion.
+			if (isGoalNegation.count(params[0]))
+				conclusionsById.emplace(params[1], isGoalNegation.at(params[0]));
+			else if (isGoalNegation.count(params[1]))
+				conclusionsById.emplace(params[0], isGoalNegation.at(params[1]));
+			else {
+				cerr << "[" << it->first << "] Resolve param list is missing a goal negation. (isGoalNegation: " << FctHelper::mapString(map<size_t, string>(isGoalNegation.begin(), isGoalNegation.end())) << ")" << endl;
+				return 0;
+			}
+		} else if (reason.starts_with("clausify(")) {
+			string link_str = reason.substr(9, reason.length() - 10);
+			//#cout << "[" << it->first << ", clausify] " << link_str << endl;
+			size_t link = strtoull(link_str.c_str(), nullptr, 10);
+			if (isModusPonensAssumption.count(link))
+				isModusPonens.emplace(it->first);
+			else if (isNecessitationAssumption.count(link))
+				isNecessitation.emplace(it->first);
+			else {
+				cerr << "[" << it->first << "] " << "Clausified non-(MP)/(NE) rule." << endl;
+				return 0;
+			}
+		} else if (reason.starts_with("deny(")) {
+			string link_str = reason.substr(5, reason.length() - 6);
+			//#cout << "[" << it->first << ", deny] " << link_str << endl;
+			size_t link = strtoull(link_str.c_str(), nullptr, 10);
+			if (!isGoalDeclaration.count(link)) {
+				cerr << "[" << it->first << "] Denied non-goal." << endl;
+				return 0;
+			}
+			isGoalNegation.emplace(it->first, isGoalDeclaration.at(link));
+		} else if (reason == "assumption") {
+			if (!isModusPonensAssumption.count(it->first) && !isNecessitationAssumption.count(it->first)) {
+				const set<string>& s = labels.at(it->first);
+				if (s.size() > 1) {
+					cerr << "[" << it->first << "] Axiom resolve has " << s.size() << " != 1 labels. (labels: " << FctHelper::setString(s) << ")" << endl;
+					return 0;
+				}
+				string label = *s.begin();
+				if (!label.starts_with("label(") || !label.ends_with(")")) {
+					cerr << "[" << it->first << "] Axiom resolve has invalid label \"" << label << "\"." << endl;
+					return 0;
+				}
+				label = label.substr(6, label.length() - 7);
+				//#cout << "[" << it->first << ", assumption] " << it->second << " (axiom: " << label << ")" << endl;
+				isAxiom.emplace(it->first, label);
+			}
+		}
+	}
+
+	// 4. Obtain axiom order
+	map<string, set<size_t>> axiomNames;
+	map<size_t, string> axioms;
+	for (const pair<const size_t, string>& p : isAxiom)
+		axiomNames[p.second].emplace(p.first);
+	size_t num = 1;
+	for (const pair<const string, set<size_t>>& p : axiomNames) {
+		if (num > 35) {
+			cerr << "Too many axioms." << endl;
+			return 0;
+		}
+		string ax = num < 10 ? to_string(num) : string { char('a' - 10 + num) };
+		for (size_t id : p.second)
+			axioms.emplace(id, ax);
+		num++;
+	}
+	cout << "Axiom translations: " << FctHelper::mapStringF(axioms, [&](const pair<const size_t, string>& p) { return "(id:" + to_string(p.first) + ",name:" + isAxiom.at(p.first) + ",translation:" + p.second + ")"; }) << endl;
+
+	// 5. Build proofs.
+	for (const pair<const size_t, string>& conclusion : conclusionsById) {
+		cout << "% " << conclusion.second << " : " << formulas[conclusion.first] << endl;
+
+		set<size_t> relevantIndices;
+		set<size_t> recent;
+		if (!isAxiom.count(conclusion.first))
+			recent.emplace(conclusion.first);
+		while (!recent.empty()) {
+			relevantIndices.insert(recent.begin(), recent.end());
+			set<size_t> newCandidates;
+			for (size_t i : recent) {
+				const array<size_t, 2>& a = refs.at(i);
+				if (!isAxiom.count(a[0]))
+					newCandidates.emplace(a[0]);
+				if (a[1] && !isAxiom.count(a[1]))
+					newCandidates.emplace(a[1]);
+			}
+			recent = newCandidates;
+		}
+		//#cout << "relevantIndices = " << FctHelper::setString(relevantIndices) << endl;
+		unordered_map<size_t, size_t> idTranslations;
+		for (size_t id : relevantIndices)
+			idTranslations.emplace(id, idTranslations.size());
+		//#cout << "idTranslations = " << FctHelper::mapString(map<size_t, size_t>(idTranslations.begin(), idTranslations.end())) << endl;
+
+		vector<string> abstractDProof(relevantIndices.size());
+		for (size_t id : relevantIndices) {
+			size_t i = idTranslations.at(id);
+			const array<size_t, 2>& a = refs.at(id);
+			if (a[1]) // (MP)
+				abstractDProof[i] = "D" + (isAxiom.count(a[1]) ? axioms.at(a[1]) : "[" + to_string(idTranslations.at(a[1])) + "]") + (isAxiom.count(a[0]) ? axioms.at(a[0]) : "[" + to_string(idTranslations.at(a[0])) + "]");
+			else // (NE)
+				abstractDProof[i] = "N" + (isAxiom.count(a[0]) ? axioms.at(a[0]) : "[" + to_string(idTranslations.at(a[0])) + "]");
+		}
+		//#cout << FctHelper::vectorString(abstractDProof) << endl;
+
+		vector<DRuleParser::AxiomInfo> customAxioms;
+		for (const pair<const string, set<size_t>>& p : axiomNames) {
+			size_t id = *p.second.begin();
+			string axStr = formulas.at(id);
+			if (!axStr.starts_with("t(") || !axStr.ends_with(")")) {
+				cerr << "[" << id << "] Invalid axiom formula \"" << axStr << "\"." << endl;
+				return 0;
+			}
+
+			//Translate formula to polish notation with variable strings encapsulated by '<' and '>', e.g. "t(i(x,i(i(y,i(x,z)),i(i(n(z),i(i(n(u),w),y)),i(u,z)))))" -> "C<x>CC<y>C<x><z>CCN<z>CCN<u><w><y>C<u><z>"
+			axStr = axStr.substr(2, axStr.length() - 3);
+			boost::replace_all(axStr, "i(", "C(");
+			boost::replace_all(axStr, "n(", "N(");
+			boost::replace_all(axStr, "nece(", "L(");
+			boost::replace_all(axStr, "(", "<");
+			boost::replace_all(axStr, ")", ">");
+			boost::replace_all(axStr, ",", "><");
+			axStr = regex_replace(axStr, regex(">+"), ">");
+			axStr = regex_replace(axStr, regex("<+"), "<");
+			boost::replace_all(axStr, "<C", "C");
+			boost::replace_all(axStr, "<N", "N");
+			boost::replace_all(axStr, "<L", "L");
+
+			shared_ptr<DlFormula> f;
+			if (!DlCore::fromPolishNotation(f, axStr)) {
+				cerr << "[" << id << "] Invalid axiom formula \"" << axStr << "\"." << endl;
+				return 0;
+			}
+			customAxioms.push_back(DRuleParser::AxiomInfo(axioms.at(id), f));
+		}
+
+		vector<shared_ptr<DlFormula>> conclusions;
+		bool normalPolishNotation = true; //###
+		//#cout << "abstractDProof = " << FctHelper::vectorString(abstractDProof) << endl;
+		abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &customAxioms, nullptr, nullptr, 2, nullptr, true, -2);
+		//#cout << "conclusions = " << FctHelper::vectorStringF(conclusions, [](const shared_ptr<DlFormula>& f) { return DlCore::toPolishNotation(f); }) << endl;
+		auto print = [&](ostream& mout) -> string::size_type {
+			string::size_type bytes = 0;
+			for (const DRuleParser::AxiomInfo& ax : customAxioms) {
+				string f = normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
+				mout << "    " << f << " = " << ax.name << "\n";
+				bytes += 9 + f.length();
+			}
+			for (size_t i = 0; i < abstractDProof.size(); i++) {
+				string f = normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
+				const string& p = abstractDProof[i];
+				mout << "[" << i << "] " << f << " = " << p << "\n";
+				bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
+			}
+			return bytes;
+		};
+		chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+		if (outputFile) {
+			filesystem::path file = filesystem::u8path(*outputFile);
+			while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+				cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+			string::size_type bytes;
+			{
+				ofstream fout(file, fstream::out | fstream::binary);
+				bytes = print(fout);
+			}
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
+		} else {
+			string::size_type bytes = print(cout);
+			cout << flush;
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+		}
+	}
+	return 0;
+#endif //###
+#if 0 //### TODO ./formulasFromProofs ; intermediate conclusions from comma-separated proofs in normal polish notation
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. path to file with comma-separated proofs, and 3. path for output file" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	string inputFile = argv[2]; // e.g. "D:/Dropbox/eclipse/pmGenerator/Release64bitDynamicGcc11.3/data/w5-in.txt"
+	string outputFile = argv[3];
+	DlProofEnumerator::printProofs( { }, DlFormulaStyle::PolishStandard, false, true, 1, true, &inputFile, &outputFile, true);
+	string fileString;
+	if (!FctHelper::readFile(outputFile, fileString)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	fileString = regex_replace(fileString, regex("    [^\n]+\n"), "");
+	fileString = regex_replace(fileString, regex("\\[[0-9]+\\] "), "");
+	fileString = regex_replace(fileString, regex(" = [^\n]+\n"), "\n");
+	//#cout << fileString << flush;
+	vector<string> formulas = FctHelper::stringSplit(fileString, "\n");
+	stringstream ss;
+	bool first = true;
+	for (const string& f : formulas)
+		if (!f.empty()) {
+			if (first)
+				first = false;
+			else
+				ss << ",";
+			ss << f;
+		}
+	ss << "\n";
+	if (!FctHelper::writeToFile(outputFile, ss.str()))
+		cerr << "Failed." << endl;
+	else
+		cout << ss.str().length() << " bytes written to \"" << outputFile << "\"." << endl;
+	return 0;
+#endif
+#if 0 //### TODO ./prover9HintsFromSeparateProofs ; individual intermediate conclusions from comma-separated proofs in normal polish notation to OTTER / Prover9 format
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. path to file with comma-separated proofs, and 3. path for output file" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	string inputFile = argv[2]; // e.g. "D:/Dropbox/eclipse/pmGenerator/Release64bitDynamicGcc11.3/data/w5-in.txt"
+	string outputFile = argv[3];
+	//###
+	string fileString;
+	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	if (!FctHelper::readFile(inputFile, fileString))
+		throw runtime_error("Failed to read file \"" + inputFile + "\".");
+	string::size_type len = fileString.length();
+
+	// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+	bool startOfLine = true;
+	bool erasingLine = false;
+	fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+		switch (c) {
+		case '\r':
+		case '\n':
+			startOfLine = true;
+			erasingLine = false;
+			return true;
+		case '\t':
+		case ' ':
+			startOfLine = false;
+			return true;
+		case '%':
+			if (startOfLine) {
+				startOfLine = false;
+				erasingLine = true;
+				return true;
+			} else {
+				startOfLine = false;
+				return false;
+			}
+		default:
+			startOfLine = false;
+			return erasingLine;
+		}
+	}), fileString.end());
+
+	vector<string> dProofsFromFile = FctHelper::stringSplit(fileString, ",");
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read and convert " << len << " bytes from \"" << inputFile << "\"." << endl;
+	vector<vector<string>> allFormulas;
+	//###
+	for (const string& dProof : dProofsFromFile) {
+		DlProofEnumerator::printProofs( { dProof }, DlFormulaStyle::PolishStandard, false, true, 1, true, nullptr, &outputFile, true);
+		string fileString;
+		if (!FctHelper::readFile(outputFile, fileString)) {
+			cerr << "Invalid file path" << endl;
+			return 0;
+		}
+		fileString = regex_replace(fileString, regex("    [^\n]+\n"), "");
+		fileString = regex_replace(fileString, regex("\\[[0-9]+\\] "), "");
+		fileString = regex_replace(fileString, regex(" = [^\n]+\n"), "\n");
+		//#cout << fileString << flush;
+		allFormulas.resize(allFormulas.size() + 1);
+		allFormulas.back() = FctHelper::stringSplit(fileString, "\n");
+	}
+	stringstream ss;
+	ss << "formulas(hints).\n\n";
+	bool first = true;
+	for (const vector<string>& formulas : allFormulas) {
+		if (first)
+			first = false;
+		else
+			ss << "\n";
+		for (const string& f : formulas)
+			if (!f.empty())
+				ss << prover9Formula(f) << "\n";
+	}
+	ss << "\nend_of_list.\n";
+	if (!FctHelper::writeToFile(outputFile, ss.str()))
+		cerr << "Failed." << endl;
+	else
+		cout << ss.str().length() << " bytes written to \"" << outputFile << "\"." << endl;
+	return 0;
+#endif
+#if 0 //### TODO ./prover9HintsFromProofs ; intermediate conclusions from comma-separated proofs in normal polish notation to OTTER / Prover9 format
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. path to file with comma-separated proofs, and 3. path for output file" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	string inputFile = argv[2]; // e.g. "D:/Dropbox/eclipse/pmGenerator/Release64bitDynamicGcc11.3/data/w5-in.txt"
+	string outputFile = argv[3];
+	DlProofEnumerator::printProofs( { }, DlFormulaStyle::PolishStandard, false, true, 1, true, &inputFile, &outputFile, true);
+	string fileString;
+	if (!FctHelper::readFile(outputFile, fileString)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	fileString = regex_replace(fileString, regex("    [^\n]+\n"), "");
+	fileString = regex_replace(fileString, regex("\\[[0-9]+\\] "), "");
+	fileString = regex_replace(fileString, regex(" = [^\n]+\n"), "\n");
+	//#cout << fileString << flush;
+	vector<string> formulas = FctHelper::stringSplit(fileString, "\n");
+	stringstream ss;
+	ss << "formulas(hints).\n\n";
+	for (const string& f : formulas)
+		if (!f.empty())
+			ss << prover9Formula(f) << "\n";
+	ss << "\nend_of_list.\n";
+	if (!FctHelper::writeToFile(outputFile, ss.str()))
+		cerr << "Failed." << endl;
+	else
+		cout << ss.str().length() << " bytes written to \"" << outputFile << "\"." << endl;
+	return 0;
+#endif
+#if 0 //### TODO ./prover9Formulas ; formulas in normal polish notation to OTTER / Prover9 format
+	if (argc <= 1) {
+		cerr << "Need formulas in normal polish notation" << endl;
+		return 0;
+	}
+	vector<string> formulas = FctHelper::stringSplit(argv[1], ",");
+	for (const string& f : formulas)
+		cout << prover9Formula(f) << endl;
+	return 0;
+#endif //###
+#if 0 //### TODO ./findCompactSummary ; determine which args for '--transform <param1> -f -n -t <param2> -j -1 -s <args>' yields a small output (in bytes)
+	// e.g.: ./findCompactSummary data/w3.txt CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq
+	if (argc <= 2) {
+		cerr << "Need 1. path to proof summary, and 2. requested theorem list in normal Polish notation" << endl;
+		return 0;
+	}
+	string tmpFile = "data/tmp.txt";
+
+	string inputFile = argv[1];
+	unsigned minUseAmountToCreateHelperProof = 2;
+	size_t maxLengthToKeepProof = SIZE_MAX;
+	string filterForTheorems = argv[2];
+	size_t maxLengthToComputeDProof = 134217728;
+	bool debug = true;
+	DlProofEnumerator::recombineProofSummary(inputFile, true, nullptr, minUseAmountToCreateHelperProof, maxLengthToKeepProof, true, &filterForTheorems, true, SIZE_MAX, maxLengthToComputeDProof, &tmpFile, debug);
+	string summary;
+	if (!FctHelper::readFile(tmpFile, summary)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	size_t smallestResultLen = summary.length();
+	string bestDedicatedConclusions = "all of '-j 2'";
+	cout << "|summary| = " << smallestResultLen << endl;
+	vector<string> lines = FctHelper::stringSplitAndSkip(summary, "\n", " ", true);
+	//#for (const string& line : lines)
+	//#	cout << line << endl;
+	for (size_t i = 0; i < lines.size(); i++) {
+		string& line = lines[i];
+		string::size_type start = line.find(' ');
+		string::size_type end = line.find(' ', start + 1);
+		if (start == string::npos || end == string::npos) {
+			cerr << "Invalid summary: Could not read intermediate conclusions." << endl;
+			return 0;
+		}
+		line = line.substr(start + 1, end - start - 1);
+	}
+	//#cout << "lines = " << FctHelper::vectorString(lines) << endl;
+	minUseAmountToCreateHelperProof = -1;
+	vector<string> theoremsVec = FctHelper::stringSplit(filterForTheorems, ",");
+	//#cout << "theorems = " << FctHelper::vectorString(theoremsVec) << endl;
+	set<string> theorems(theoremsVec.begin(), theoremsVec.end());
+	vector<string> sharedConclusions;
+	for (const string& line : lines)
+		if (!theorems.count(line))
+			sharedConclusions.push_back(line);
+	cout << "sharedConclusions = " << FctHelper::vectorString(sharedConclusions) << endl;
+	cout << "|sharedConclusions| = " << sharedConclusions.size() << endl;
+
+	set<string> usedConclusions = set<string>(sharedConclusions.begin(), sharedConclusions.end());
+	size_t oldSmallestResultLen;
+	do {
+		oldSmallestResultLen = smallestResultLen;
+		string usedSequence;
+		for (set<string>::iterator it = usedConclusions.begin(); it != usedConclusions.end(); ++it) {
+			if (it != usedConclusions.begin())
+				usedSequence += ",";
+			usedSequence += *it;
+		}
+		for (const string& conclusion : sharedConclusions) {
+			string conclusionsWithHelperProofs;
+			if (usedConclusions.count(conclusion)) { // used, try to not use it
+				bool first = true;
+				for (const string& c : sharedConclusions)
+					if (usedConclusions.count(c) && c != conclusion) { // iterate used conclusion in correct order (since space for indices may vary)
+						if (first)
+							first = false;
+						else
+							conclusionsWithHelperProofs += ",";
+						conclusionsWithHelperProofs += c;
+					}
+			} else { // not used, try to use it
+				bool first = true;
+				for (const string& c : sharedConclusions)
+					if (usedConclusions.count(c) || c == conclusion) { // iterate used conclusion in correct order (since space for indices may vary)
+						if (first)
+							first = false;
+						else
+							conclusionsWithHelperProofs += ",";
+						conclusionsWithHelperProofs += c;
+					}
+			}
+			//#cout << "[NOTE conclusion = " << conclusion << "] Trying " << conclusionsWithHelperProofs << "." << endl;
+
+			string bestToggledConclusion;
+			debug = false;
+			try {
+				DlProofEnumerator::recombineProofSummary(inputFile, true, &conclusionsWithHelperProofs, minUseAmountToCreateHelperProof, maxLengthToKeepProof, true, &filterForTheorems, true, SIZE_MAX, maxLengthToComputeDProof, &tmpFile, debug);
+				if (!FctHelper::readFile(tmpFile, summary)) {
+					cerr << "Invalid file path" << endl;
+					return 0;
+				}
+				size_t resultLen = summary.length();
+				//#cout << "[NOTE] Result: " << resultLen << "(best: " << smallestResultLen << ")" << endl;
+				if (resultLen < smallestResultLen || (resultLen == smallestResultLen && conclusionsWithHelperProofs.length() < bestDedicatedConclusions.length() && bestDedicatedConclusions != "all of '-j 2'")) {
+					smallestResultLen = resultLen;
+					bestDedicatedConclusions = conclusionsWithHelperProofs;
+					bestToggledConclusion = conclusion;
+					cout << "new smallestResultLen: " << smallestResultLen << endl;
+					cout << "new bestDedicatedConclusions: " << bestDedicatedConclusions << endl;
+				}
+			} catch (...) {
+			}
+
+			if (!bestToggledConclusion.empty()) {
+				if (usedConclusions.count(bestToggledConclusion)) { // used, do not use it
+					usedConclusions.erase(bestToggledConclusion);
+				} else { // not used, use it
+					usedConclusions.emplace(bestToggledConclusion);
+				}
+			}
+		}
+	} while (oldSmallestResultLen != smallestResultLen);
+	return 0;
+#endif //###
+#if 0 //### TODO ./importExtractionFromDB ; import proofs from DB into proof files
+	// NOTE: Requires '#include <tbb/concurrent_map.h>' and '#include <tbb/parallel_for.h>' before 'using namespace' directives.
+	// e.g. ./importExtractionFromDB CpCCqCprCCNrCCNstqCsr data/exs/w2-topDB-shaky.txt
+	//      ./importExtractionFromDB CpCCqCprCCNrCCNstqCsr data/exs/w2-topDB-modifications-shaky.txt
+	if (argc <= 2) {
+		cerr << "Need 1. axioms in normal Polish notation, and 2. path to proof database. Optional: 3. necessitation limit (or -1)" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	string pathProofDB = argv[2];
+	uint32_t necessitationLimit = 0;
+	if (argc >= 4) {
+		try {
+			necessitationLimit = stoi(argv[3]);
+			cout << "Necessitation limit set to " << necessitationLimit << "." << endl;
+		} catch (...) {
+			cerr << "Invalid format for \"3. necessitation limit (or -1)\"." << endl;
+			return 0;
+		}
+	}
+	vector<string> dProofsInFile = DRuleParser::readFromMmsolitaireFile(pathProofDB, nullptr, true);
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true, necessitationLimit);
+	vector<string> conclusionsForFile(dProofsInFile.size());
+
+	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	cout << "Going to parse " << dProofsInFile.size() << " D-proofs." << endl;
+	tbb::parallel_for(size_t(0), dProofsInFile.size(), [&dProofsInFile, &conclusionsForFile](size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
+		const string& dProof = dProofsInFile[i];
+		vector<DProofInfo> rawParseData = DRuleParser::parseDProof_raw(dProof, DlProofEnumerator::getCustomAxioms(), 1);
+		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		conclusionsForFile[i] = DlCore::toPolishNotation_noRename(conclusion);
+	});
+	//#cout << "conclusionsForFile = " << conclusionsForFile[0] << ", " << conclusionsForFile[1] << ", " << conclusionsForFile[2] << ", ..." << endl;
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to parse " << dProofsInFile.size() << " D-proofs." << endl;
+
+	string axiomProofList;
+	for (size_t i = 1; i <= axioms.size(); i++) {
+		if (i > 1)
+			axiomProofList += ",";
+		axiomProofList += to_string(i);
+	}
+	//#cout << "axiomProofList = " << axiomProofList << endl;
+	string targetDir;
+	DlProofEnumerator::extractConclusions(ExtractionMethod::ProofSystemFromString, 0, &axiomProofList, true, 0, true, &targetDir);
+	targetDir += "dProofs-withConclusions/";
+	if (!FctHelper::ensureDirExists(targetDir)) {
+		cerr << "Created extraction folder, but failed to create \"" << targetDir << "\"." << endl;
+		return 0;
+	}
+	cout << "Created target directory at \"" << targetDir << "\"." << endl;
+
+	cout << "Going to arrange " << dProofsInFile.size() << " D-proofs with conclusions for new proof files." << endl;
+	tbb::concurrent_map<size_t, tbb::concurrent_map<string, string, cmpStringGrow>> collections;
+	startTime = chrono::steady_clock::now();
+	tbb::parallel_for(size_t(0), dProofsInFile.size(), [&dProofsInFile, &conclusionsForFile, &collections](size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
+		const string& dProof = dProofsInFile[i];
+		collections[dProof.length()][dProof] = conclusionsForFile[i];
+	});
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to arrange " << dProofsInFile.size() << " D-proofs into " << collections.size() << " collections." << endl;
+	map<size_t, size_t> collectionSizes;
+	for (tbb::concurrent_map<size_t, tbb::concurrent_map<string, string, cmpStringGrow>>::iterator it = collections.begin(); it != collections.end(); ++it)
+		collectionSizes.emplace(it->first, it->second.size());
+	cout << "\"<D-proof length>:<amount>\"-pairs: " << FctHelper::mapStringF(collectionSizes, [](const pair<const size_t, size_t>& p) { return to_string(p.first) + ":" + to_string(p.second); }, { }, { }) << endl;
+	const uint32_t c = necessitationLimit ? 1 : 2;
+	if (!collections.empty()) {
+		size_t maxProofLen = prev(collectionSizes.end())->first;
+		//#cout << "maxProofLen = " << maxProofLen << endl;
+		size_t oldColSize = collections.size();
+		for (size_t len = 1 + c; len < maxProofLen; len += c)
+			collections[len];
+		if (oldColSize < collections.size())
+			cout << "Inserted " << collections.size() - oldColSize << " missing (empty) collections. There are now " << collections.size() << " collections." << endl;
+	}
+
+	cout << "Going to write " << dProofsInFile.size() << " D-proofs with conclusions into new proof files." << endl;
+	startTime = chrono::steady_clock::now();
+	mutex mtx_cout;
+	tbb::parallel_for(collections.range(), [&](tbb::concurrent_map<size_t, tbb::concurrent_map<string, string, cmpStringGrow>>::range_type& range) {
+		chrono::time_point<chrono::steady_clock> startTime;
+		for (tbb::concurrent_map<size_t, tbb::concurrent_map<string, string, cmpStringGrow>>::const_iterator it_range = range.begin(); it_range != range.end(); ++it_range) {
+			string targetFile = "dProofs" + to_string(it_range->first) + ".txt";
+			const tbb::concurrent_map<string, string, cmpStringGrow>& collection = it_range->second;
+			startTime = chrono::steady_clock::now();
+			{
+				ofstream fout(targetDir + targetFile, fstream::out | fstream::binary); // print directly to file to save memory
+				for (tbb::concurrent_map<string, string, cmpStringGrow>::const_iterator it = collection.begin(); it != collection.end(); ++it) {
+					if (it != collection.begin())
+						fout << "\n";
+					fout << it->first << ":" << it->second; // <dProof>:<conclusion>
+				}
+			}
+			chrono::microseconds dur = chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime);
+			lock_guard<mutex> lock(mtx_cout);
+			cout << FctHelper::durationStringMs(dur) << " taken to write " << collection.size() << " D-proofs with conclusions to " << targetFile << "." << endl;
+		}
+	});
+	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to write all " << dProofsInFile.size() << " D-proofs." << endl;
+	return 0;
+#endif //###
+#if 0 //### TODO ./searchShorterSubproofs ; search shorter proofs for conclusions used in a given proof summary ; TODO: Use as concept for a low-memory proof reduction function.
+	// e.g. ./searchShorterSubproofs data/w3.txt 0 data/tmp.txt CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq 0
+	if (argc <= 1) {
+		cerr << "Need 1. path to proof summary. Optional: 2. necessitation limit (or -1), 3. output file path, 4. target theorems in normal Polish notation, 5. extracted system ID" << endl;
+		return 0;
+	}
+	string proofSummaryFile = argv[1];
+	uint32_t necessitationLimit = 0;
+	if (argc >= 3) {
+		try {
+			necessitationLimit = stoi(argv[2]);
+			cout << "Necessitation limit set to " << necessitationLimit << "." << endl;
+		} catch (...) {
+			cerr << "Invalid format for \"2. necessitation limit (or -1)\"." << endl;
+			return 0;
+		}
+	}
+	string tmpFile = "data/tmp.txt";
+	string _outputFile;
+	string* outputFile = nullptr;
+	if (argc >= 4) {
+		_outputFile = argv[3];
+		outputFile = &_outputFile;
+	}
+	vector<DRuleParser::AxiomInfo>* targetTheorems = nullptr;
+	vector<DRuleParser::AxiomInfo> _targetTheorems;
+	if (argc >= 5) {
+		vector<string> theorems = FctHelper::stringSplit(argv[4], ",");
+		for (const string& theorem : theorems) {
+			shared_ptr<DlFormula> f;
+			if (!DlCore::fromPolishNotation(f, theorem)) {
+				cerr << "Invalid format for \"4. target theorems in normal Polish notation\"." << endl;
+				return 0;
+			}
+			_targetTheorems.push_back(DRuleParser::AxiomInfo(theorem, f));
+		}
+		targetTheorems = &_targetTheorems;
+	}
+	string _extractedSystemId;
+	string* extractedSystemId = nullptr;
+	if (argc >= 6) {
+		_extractedSystemId = argv[5];
+		extractedSystemId = &_extractedSystemId;
+	}
+
+	// 1. Obtain all conclusions used by proof summary (i.e. all which are relevant).
+	string filterForTheorems = ".";
+	DlProofEnumerator::recombineProofSummary(proofSummaryFile, true, nullptr, 1, SIZE_MAX, true, &filterForTheorems, true, SIZE_MAX, 134217728, &tmpFile, false);
+	vector<string> conclusions;
+	vector<size_t> fundamentalProofLengths;
+	vector<DRuleParser::AxiomInfo> customAxioms;
+	vector<string> abstractDProof;
+	vector<shared_ptr<DlFormula>> abstractDProofConclusions;
+	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+	{
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(tmpFile, customAxioms, abstractDProof, &requiredIntermediateResults, true, true, false);
+		for (const DRuleParser::AxiomInfo& info : requiredIntermediateResults) {
+			const shared_ptr<DlFormula>& f = info.refinedAxiom;
+			abstractDProofConclusions.push_back(f);
+			//conclusions.push_back(DlCore::toPolishNotation(f));
+			conclusions.push_back(DlCore::toPolishNotation_noRename(f));
+		}
+		vector<size_t> targetIndices(abstractDProof.size());
+		iota(targetIndices.begin(), targetIndices.end(), 0);
+		fundamentalProofLengths = DRuleParser::measureFundamentalLengthsInAbstractDProof(targetIndices, abstractDProof, abstractDProofConclusions);
+
+	}
+	if (conclusions.size() != fundamentalProofLengths.size()) {
+		cerr << "|conclusions| = " << conclusions.size() << " != " << fundamentalProofLengths.size() << " = |fundamentalProofLengths|" << endl;
+		return 0;
+	}
+	cout << "Found " << conclusions.size() << " relevant conclusions." << endl;
+	cout << "<conclusion>:<fundamental proof length>-pairs:" << endl;
+	for (size_t i = 0; i < conclusions.size(); i++)
+		cout << conclusions[i] << ":" << fundamentalProofLengths[i] << endl;
+	cout << "[Copy] List of Conclusions: " << FctHelper::vectorString(conclusions, { }, { }, ",") << endl;
+	cout << "[Copy] List of fundamental proof lengths: " << FctHelper::vectorString(fundamentalProofLengths, { }, { }, ",") << endl;
+
+	// 2. Search conclusions in proof files.
+	//#
+	{
+		vector<string> axioms;
+		for (const DRuleParser::AxiomInfo& ax : customAxioms)
+			axioms.push_back(DlCore::toPolishNotation_noRename(ax.refinedAxiom));
+		DlProofEnumerator::resetRepresentativesFor(&axioms, false, necessitationLimit, true, extractedSystemId);
+	}
+	//#
+	vector<string> improvedAbstractDProof = abstractDProof;
+	map<string, string> bestResults = DlProofEnumerator::searchProofFiles(conclusions, false, false, true, nullptr, true);
+	vector<size_t> indicesToCheck;
+	vector<string> proofsToCheck;
+	for (size_t i = 0; i < conclusions.size(); i++) {
+		const string& conclusion = conclusions[i];
+		map<string, string>::const_iterator searchResult = bestResults.find(conclusion);
+		if (searchResult != bestResults.end()) {
+			size_t usedLen = fundamentalProofLengths[i];
+			const string& storedProof = searchResult->second;
+			if (storedProof.length() < usedLen) {
+				cout << "Found shorter proof " << storedProof << " (length " << storedProof.length() << ") for " << conclusion << " (" << DlCore::toPolishNotation(abstractDProofConclusions[i]) << "), for which a proof of fundamental length " << usedLen << " was given." << endl;
+				improvedAbstractDProof[i] = storedProof;
+			} else if (storedProof.length() == usedLen) { // Proof of same length is stored => Need to unfold proof in order to compare alphanumerically.
+				indicesToCheck.push_back(i);
+				proofsToCheck.push_back(storedProof);
+			}
+		}
+	}
+
+	// 3. Replace with shorter (sub)-proofs.
+	vector<string> unfoldedProofs = DRuleParser::unfoldRulesInAbstractDProof(indicesToCheck, abstractDProof);
+	for (size_t j = 0; j < indicesToCheck.size(); j++) {
+		size_t i = indicesToCheck[j];
+		const string& conclusion = conclusions[i];
+		const string& storedProof = proofsToCheck[j];
+		if (storedProof.length() != fundamentalProofLengths[i])
+			throw logic_error("storedProof.length() = " + to_string(storedProof.length()) + " != " + to_string(fundamentalProofLengths[i]) + " = fundamentalProofLengths[" + to_string(i) + "]");
+		const string& unfoldedProof = unfoldedProofs[j];
+		if (storedProof < unfoldedProof) {
+			cout << "Found alphanumerically smaller proof " << storedProof << " of the same fundamental length (" << storedProof.length() << ") for " << conclusion << " (" << DlCore::toPolishNotation(abstractDProofConclusions[i]) << ")." << endl;
+			improvedAbstractDProof[i] = storedProof;
+		}
+	}
+
+	// 4. Regenerate resulting abstract proof.
+	vector<shared_ptr<DlFormula>> improvedConclusions;
+	improvedAbstractDProof = DRuleParser::recombineAbstractDProof(improvedAbstractDProof, improvedConclusions, &customAxioms, targetTheorems, nullptr, 2, &requiredIntermediateResults, true, -2);
+
+	// 5. Print result.
+	bool normalPolishNotation = true; //###
+	auto print = [&](ostream& mout) -> string::size_type {
+		string::size_type bytes = 0;
+		for (const DRuleParser::AxiomInfo& ax : customAxioms) {
+			string f = normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
+			mout << "    " << f << " = " << ax.name << "\n";
+			bytes += 9 + f.length();
+		}
+		for (size_t i = 0; i < improvedAbstractDProof.size(); i++) {
+			string f = normalPolishNotation ? DlCore::toPolishNotation(improvedConclusions[i]) : DlCore::toPolishNotation_noRename(improvedConclusions[i]);
+			const string& p = improvedAbstractDProof[i];
+			mout << "[" << i << "] " << f << " = " << p << "\n";
+			bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
+		}
+		return bytes;
+	};
+	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+	if (outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		filesystem::path file = filesystem::u8path(*outputFile);
+		while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+			cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+		string::size_type bytes;
+		{
+			ofstream fout(file, fstream::out | fstream::binary);
+			bytes = print(fout);
+		}
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
+	} else {
+		string::size_type bytes = print(cout);
+		cout << flush;
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+	}
+	return 0;
+#endif
+#if 0 //### TODO ./DBExtractBySummary ; extract those proofs from a proof database which appear in a given proof summary
+	if (argc <= 3) {
+		cerr << "Need 1. path to proof database (with conclusions commented in normal Polish notation), 2. path to proof summary, and 3. path for output file." << endl;
+		return 0;
+	}
+	string proofDBFile = argv[1];
+	string proofSummaryFile = argv[2];
+	string outputFile = argv[3];
+
+	// 1. Obtain all conclusions used by proof summary (i.e. all which are relevant).
+	string filterForTheorems = ".";
+	DlProofEnumerator::recombineProofSummary(proofSummaryFile, true, nullptr, 1, SIZE_MAX, true, &filterForTheorems, true, SIZE_MAX, 134217728, &outputFile, false);
+	unordered_set<string> conclusions;
+	vector<DRuleParser::AxiomInfo> customAxioms;
+	{
+		//vector<DRuleParser::AxiomInfo> customAxioms;
+		vector<string> abstractDProof;
+		vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(outputFile, customAxioms, abstractDProof, &requiredIntermediateResults, true, true, false);
+		//#cout << "abstractDProof = " << FctHelper::vectorString(abstractDProof) << endl;
+		//#cout << "|abstractDProof| = " << abstractDProof.size() << endl;
+		//#cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::toPolishNotation(ax.refinedAxiom); }) << endl;
+		//#cout << "|requiredIntermediateResults| = " << requiredIntermediateResults.size() << endl;
+		for (const DRuleParser::AxiomInfo& info : requiredIntermediateResults)
+			conclusions.emplace(DlCore::toPolishNotation(info.refinedAxiom));
+	}
+	cout << "Found " << conclusions.size() << " relevant conclusions." << endl;
+
+	vector<string> dProofNamesInFile;
+	vector<string> dProofsInFile = DRuleParser::readFromMmsolitaireFile(proofDBFile, &dProofNamesInFile, true);
+
+	// 2. Copy relevant conclusion's D-proofs into new proof database.
+	vector<size_t> relevantIndices;
+	string result;
+	for (size_t i = 0; i < dProofNamesInFile.size(); i++) {
+		string dProof = dProofsInFile[i];
+		//vector<DProofInfo> rawParseData = DRuleParser::parseDProof_raw(dProof, &customAxioms);
+		//const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		//string f_ = DlCore::toPolishNotation(conclusion);
+		string dProofName = dProofNamesInFile[i];
+		string::size_type pos = dProofName.find("; ! ");
+		if (pos == string::npos) {
+			cerr << "Invalid DB file" << endl;
+			return 0;
+		}
+		string::size_type posEnd = dProofName.find(' ', pos + 5);
+		string f = dProofName.substr(pos + 4, posEnd == string::npos ? string::npos : posEnd - pos - 4);
+		//if (f != f_) {
+		//	cerr << "f: " << f << ", f_: " << f_ << ", for " << dProofNamesInFile[i] << endl;
+		//	return 0;
+		//}
+		if (conclusions.count(f)) {
+			result += DRuleParser::toDBProof(dProof, &customAxioms, posEnd == string::npos ? f : dProofName.substr(pos + 4)) + "\n";
+			relevantIndices.push_back(i);
+		}
+	}
+	cout << "Copied for " << relevantIndices.size() << " relevant indices: " << FctHelper::vectorString(relevantIndices) << endl;
+
+	if (!FctHelper::writeToFile(outputFile, result))
+		cerr << "Failed." << endl;
+	else
+		cout << result.length() << " bytes written to \"" << outputFile<< "\"." << endl;
+
+	// e.g. ./DBExtractBySummary data/exs/m-topDB.txt data/m.txt data/exs/m-relevantDB.txt
+	return 0;
+#endif
+#if 0 //### TODO ./CNFFromTopList ; create proof databases from smallest conclusion lists in TPTP's CNF format
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. comma-separated list of paths to smallest conclusion list files, and 3. path for output file. Optional: 4. minimal proof length, 5. minimal conclusion length" << endl;
+		return 0;
+	}
+	size_t minProofLen = 0;
+	if (argc >= 5) {
+		try {
+			minProofLen = stoll(argv[4]);
+			cout << "Minimal proof length set to " << minProofLen << "." << endl;
+		} catch (...) {
+			cerr << "Invalid format for \"4. minimal proof length\"." << endl;
+			return 0;
+		}
+	}
+	size_t minConcLen = 0;
+	if (argc >= 6) {
+		try {
+			minConcLen = stoll(argv[5]);
+			cout << "Minimal conclusion length set to " << minConcLen << "." << endl;
+		} catch (...) {
+			cerr << "Invalid format for \"5. minimal conclusion length\"." << endl;
+			return 0;
+		}
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+
+	vector<string> inputFiles = FctHelper::stringSplit(argv[2], ",");
+	string outputFile = argv[3];
+	vector<string> contents(inputFiles.size());
+	size_t i = 0;
+	for (const string& inputFile : inputFiles) {
+		if (!FctHelper::readFile(inputFile, contents[i])) {
+			cerr << "Invalid file path \"" << inputFile << "\"" << endl;
+			return 0;
+		}
+		i++;
+	}
+
+	//map<string, string, cmpStringGrow> dProofsWithConclusions;
+	map<string, string, cmpStringGrow> conclusionsWithDProofs;
+	for (const string& content : contents)
+		for (string line : FctHelper::stringSplitAndSkip(content, "\n", "%", true)) {
+			string::size_type posA = line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ') + 1) + 1) + 1);
+			string::size_type posB = line.find(' ', posA + 1);
+			string conclusion = line.substr(posA, posB - posA);
+			string::size_type posC = line.find_first_not_of(' ', posB + 1);
+			string::size_type posD = line.find(':', posC + 1);
+			string dProof = line.substr(posC, posD - posC);
+			if (conclusion.length() >= minConcLen && dProof.length() >= minProofLen) {
+#if 0			// filter for useful formulas
+				bool use = false;
+				{
+					map<char, set<size_t>> occurrences;
+					size_t i = 0;
+					for (char c : conclusion) {
+						occurrences[c].emplace(i);
+						i++;
+					}
+					size_t goodVars = 0;
+					for (const pair<const char, set<size_t>>& p : occurrences) {
+						const set<size_t>& occurrence = p.second;
+						char c = p.first;
+						if ('a' <= c && c <= 'z' && occurrence.size() >= 2) {
+							if (occurrence.size() >= 3 || *occurrence.begin() + 1 < *next(occurrence.begin()))
+								goodVars++;
+						}
+						if (goodVars >= 3)
+							use = true;
+					}
+				}
+#else
+				bool use = true;
+#endif
+				//dProofsWithConclusions.emplace(dProof, conclusion);
+				if (use)
+					conclusionsWithDProofs.emplace(conclusion, dProof);
+			}
+		}
+
+	//size_t tmpI = 0;
+	size_t c = 0;
+	stringstream ss;
+	for (const pair<const string, string>& p : conclusionsWithDProofs) {
+		ss << "% " << p.first << " (" << p.first.length() << " symbols, " << p.second.length() << " step" << (p.second.length() == 1 ? "" : "s") << ")\n";
+		ss << "cnf(eax" << c++ << ", axiom, " << prover9Formula(p.first, false, false, true) << " ).\n";
+		//tmpI++;
+		//if (tmpI > 5)
+		//	exit(0);
+	}
+	FctHelper::writeToFile(outputFile, ss.str());
+
+	return 0;
+#endif
+#if 0 //### TODO ./DBFromTopList ; create proof databases from smallest conclusion lists
+	if (argc <= 3) {
+		cerr << "Need 1. axioms in normal Polish notation, 2. comma-separated list of paths to smallest conclusion list files, and 3. path for output file. Optional: 4. minimal proof length" << endl;
+		return 0;
+	}
+	size_t minProofLen = 0;
+	if (argc >= 5) {
+		try {
+			minProofLen = stoll(argv[4]);
+			cout << "Minimal proof length set to " << minProofLen << "." << endl;
+		} catch (...) {
+			cerr << "Invalid format for \"4. minimal proof length\"." << endl;
+			return 0;
+		}
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	// default:
+	// ./DBFromTopList CpCqp,CCpCqrCCpqCpr,CCNpNqCqp data/top1000SmallestConclusions_1to39Steps.txt data/topDB.txt
+	// m:
+	// ./DBFromTopList CCCCCpqCNrNsrtCCtpCsp data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt data/m-topDB.txt
+	// ./DBFromTopList CCCCCpqCNrNsrtCCtpCsp "data/exs/m/top131032SmallestConclusions_1to133Steps.txt,data/exs/m/top15254SmallestConclusions_1to203Steps.txt" data/exs/m-topDB-exs.txt
+	// w1:
+	// ./DBFromTopList CCpCCNpqrCsCCNtCrtCpt data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt data/w1-topDB.txt
+	// ./DBFromTopList CCpCCNpqrCsCCNtCrtCpt "data/exs/w1/top371445SmallestConclusions_1to211Steps.txt,data/exs/w1/top79976SmallestConclusions_1to337Steps.txt,data/exs/w1/top21935SmallestConclusions_1to433Steps.txt,data/exs/w1/top11238SmallestConclusions_1to491Steps.txt" data/exs/w1-topDB-exs.txt
+	// w2:
+	// ./DBFromTopList CpCCqCprCCNrCCNstqCsr data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt data/w2-topDB.txt
+	// ./DBFromTopList CpCCqCprCCNrCCNstqCsr "data/exs/w2/top100000SmallestConclusions_1to139Steps.txt,data/exs/w2/top100000SmallestConclusions_1to177Steps.txt,data/exs/w2/top63668SmallestConclusions_1to277Steps.txt,data/exs/w2/top15790SmallestConclusions_1to313Steps.txt,data/exs/w2/top13235SmallestConclusions_1to339Steps.txt" data/exs/w2-topDB-exs.txt
+	// w3:
+	// ./DBFromTopList CpCCNqCCNrsCptCCtqCrq data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt data/w3-topDB.txt
+	// ./DBFromTopList CpCCNqCCNrsCptCCtqCrq "data/exs/w3/top61944SmallestConclusions_1to159Steps.txt,data/exs/w3/top50818SmallestConclusions_1to231Steps.txt,data/exs/w3/top18515SmallestConclusions_1to257Steps.txt,data/exs/w3/top16062SmallestConclusions_1to277Steps.txt,data/exs/w3/top4006SmallestConclusions_1to309Steps.txt" data/exs/w3-topDB-exs.txt
+	// w4:
+	// ./DBFromTopList CpCCNqCCNrsCtqCCrtCrq data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt data/w4-topDB.txt
+	// ./DBFromTopList CpCCNqCCNrsCtqCCrtCrq "data/exs/w4/top160102SmallestConclusions_1to261Steps.txt,data/exs/w4/top6717SmallestConclusions_1to495Steps.txt" data/exs/w4-topDB-exs.txt
+	// w5:
+	// ./DBFromTopList CCpqCCCrCstCqCNsNpCps data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt data/w5-topDB.txt
+	// ./DBFromTopList CCpqCCCrCstCqCNsNpCps "data/exs/w5/top684361SmallestConclusions_1to111Steps.txt,data/exs/w5/top100000SmallestConclusions_1to149Steps.txt,data/exs/w5/top100000SmallestConclusions_1to159Steps.txt,data/exs/w5/top135154SmallestConclusions_1to161Steps.txt" data/exs/w5-topDB-exs.txt
+	// w6:
+	// ./DBFromTopList CCCpqCCCNrNsrtCCtpCsp data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt data/w6-topDB.txt
+	// ./DBFromTopList CCCpqCCCNrNsrtCCtpCsp "data/exs/w6/top297996SmallestConclusions_1to149Steps.txt,data/exs/w6/top16393SmallestConclusions_1to327Steps.txt" data/exs/w6-topDB-exs.txt
+	// S5:
+	// ./DBFromTopList CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt data/s5-topDB.txt
+	// ./DBFromTopList CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp "data/exs/s5/top244329SmallestConclusions_1to45Steps.txt,data/exs/s5/top39663SmallestConclusions_1to85Steps.txt" data/exs/s5-topDB-exs.txt
+	vector<string> inputFiles = FctHelper::stringSplit(argv[2], ",");
+	string outputFile = argv[3];
+	vector<string> contents(inputFiles.size());
+	size_t i = 0;
+	for (const string& inputFile : inputFiles) {
+		if (!FctHelper::readFile(inputFile, contents[i])) {
+			cerr << "Invalid file path \"" << inputFile << "\"" << endl;
+			return 0;
+		}
+		i++;
+	}
+	set<string, cmpStringGrow> dProofs;
+	for (const string& content : contents)
+		for (string line : FctHelper::stringSplitAndSkip(content, "\n", "%", true)) {
+			string::size_type posC = line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ') + 1) + 1) + 1) + 1) + 1);
+			string::size_type posD = line.find(':', posC + 1);
+			string dProof = line.substr(posC, posD - posC);
+			if (dProof.length() >= minProofLen)
+				dProofs.emplace(dProof);
+		}
+	//#cout << FctHelper::setString(dProofs) << endl;
+
+	string result;
+	for (const string& dProof : dProofs)
+		result += DRuleParser::toDBProof(dProof, DlProofEnumerator::getCustomAxioms()) + "\n";
+	if (!FctHelper::writeToFile(outputFile, result))
+		cerr << "Failed." << endl;
+	else
+		cout << result.length() << " bytes written to \"" << outputFile<< "\"." << endl;
+	return 0;
+#endif //###
+#if 0 //### TODO ./prover9HintsFromTopList ; create hints from smallest conclusion lists
+	if (argc <= 3) {
+		//cerr << "Need 1. axioms in normal Polish notation, 2. path to file with comma-separated proofs, and 3. path for output file" << endl;
+		cerr << "Need 1. axioms in normal Polish notation, 2. path to smallest conclusion list file, and 3. path for output file" << endl;
+		return 0;
+	}
+	vector<string> axioms = FctHelper::stringSplit(argv[1], ",");
+	DlProofEnumerator::resetRepresentativesFor(&axioms, true);
+	// default:
+	// "data/top1000SmallestConclusions_1to39Steps.txt"
+	// m:
+	// ./prover9HintsFromTopList CCCCCpqCNrNsrtCCtpCsp data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt data/m-topHints.txt
+	// w1:
+	// ./prover9HintsFromTopList CCpCCNpqrCsCCNtCrtCpt data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt data/w1-topHints.txt
+	// w2:
+	// ./prover9HintsFromTopList CpCCqCprCCNrCCNstqCsr data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt data/w2-topHints.txt
+	// w3:
+	// ./prover9HintsFromTopList CpCCNqCCNrsCptCCtqCrq data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt data/w3-topHints.txt
+	// w4:
+	// ./prover9HintsFromTopList CpCCNqCCNrsCtqCCrtCrq data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt data/w4-topHints.txt
+	// w5:
+	// ./prover9HintsFromTopList CCpqCCCrCstCqCNsNpCps data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt data/w5-topHints.txt
+	// w6:
+	// ./prover9HintsFromTopList CCCpqCCCNrNsrtCCtpCsp data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt data/w6-topHints.txt
+	// NOTE: Proof translations from extracted modified systems are not supported.
+	string inputFile = argv[2];
+	string outputFile = argv[3];
+	string content;
+	if (!FctHelper::readFile(inputFile, content)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	vector<string> dProofs;
+	for (string line : FctHelper::stringSplitAndSkip(content, "\n", "%", true)) {
+		string::size_type posC = line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ') + 1) + 1) + 1) + 1) + 1);
+		string::size_type posD = line.find(':', posC + 1);
+		dProofs.push_back(line.substr(posC, posD - posC));
+	}
+	//#cout << FctHelper::vectorString(dProofs) << endl;
+
+	//#for (const string& dProof : dProofs)
+	//#	DlProofEnumerator::printProofs( { dProof }, DlFormulaStyle::PolishStandard, false, true, 2, true, nullptr, nullptr, true);
+	//#exit(0);
+
+	DlProofEnumerator::printProofs(dProofs, DlFormulaStyle::PolishStandard, false, true, 1, true, nullptr, &outputFile, true);
+	string fileString;
+	if (!FctHelper::readFile(outputFile, fileString)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	fileString = regex_replace(fileString, regex("    [^\n]+\n"), "");
+	fileString = regex_replace(fileString, regex("\\[[0-9]+\\] "), "");
+	fileString = regex_replace(fileString, regex(" = [^\n]+\n"), "\n");
+	//#cout << fileString << flush;
+	vector<string> formulas = FctHelper::stringSplit(fileString, "\n");
+	stringstream ss;
+	ss << "formulas(hints).\n\n";
+	for (const string& f : formulas)
+		if (!f.empty())
+			ss << prover9Formula(f) << "\n";
+	ss << "\nend_of_list.\n";
+	if (!FctHelper::writeToFile(outputFile, ss.str()))
+		cerr << "Failed." << endl;
+	else
+		cout << ss.str().length() << " bytes written to \"" << outputFile << "\"." << endl;
+	return 0;
+#endif
+#if 0 //### TODO ./gkcHintsFromProof ; extract hints from GKC output, parsed with "strategy":["hyper"]
+	if (argc <= 1) {
+		cerr << "Need path to file with GKC output (with strategy 'hyper' used)" << endl;
+		return 0;
+	}
+	string content;
+	if (!FctHelper::readFile(argv[1]/*"D:/Dropbox/eclipse/pmGenerator/Release64bitDynamicGcc11.3/gkc-out.txt"*/, content)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	boost::replace_all(content, "\r\n", "\n");
+	vector<string> lines = FctHelper::stringSplit(content, "\n");
+	{
+		vector<string> _lines;
+		for (const string& line : lines)
+			if (line.starts_with(" ") && line.find('-') == string::npos) {
+				string::size_type pos = line.find(" t(");
+				if (pos != string::npos)
+					_lines.push_back(line.substr(pos + 1));
+			}
+		lines = _lines;
+	}
+	cout << "formulas(hints).\n\n" << FctHelper::stringJoin("\n", lines) << "\n\nend_of_list." << endl;
+	return 0;
+#endif //###
+#if 0 //### search proofs of the form D_(D_)*_ in smallest conclusion lists
+	size_t maxRecursionDepth = 3;
+
+	//string targetStr = "CpCqp";
+	string targetStr = "CCpCqrCCpqCpr";
+	//string targetStr = "CCNpNqCqp";
+	//string targetStr = "CNCpCqCNCrCsCttuv"; // D21 for 1:CNCpCqCrrs, 2:CpCNCqCrps from dProofs11.txt:68849, dProofs13-unfiltered13+.txt:568457 (in data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/extraction-1/top1000SmallestConclusions_1to13Steps.txt)
+
+	shared_ptr<DlFormula> target;
+	if (!DlCore::fromPolishNotation(target, targetStr)) {
+		cerr << "Invalid target formula" << endl;
+		return 0;
+	}
+	DlCore::fromPolishNotation_noRename(target, DlCore::toPolishNotation_numVars(target));
+	cout << "Target formula is " << DlCore::toPolishNotation_noRename(target) << "." << endl;
+
+	// default
+	// "data/top1000SmallestConclusions_1to39Steps.txt"
+
+	// w2
+	// "data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt"
+	// "data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/extraction-1/top1000SmallestConclusions_1to13Steps.txt"
+	// "data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/extraction-0/top1000SmallestConclusions_1to7Steps.txt"
+
+	// w3
+	// "data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt"
+	// "data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/extraction-0/top1000SmallestConclusions_1to13Steps-unfiltered11+.txt"
+	// "data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/extraction-1/top1000SmallestConclusions_1to11Steps-unfiltered11+.txt"
+	// "data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/extraction-2/top1000SmallestConclusions_1to11Steps-unfiltered11+.txt"
+	// "data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/extraction-3/top1000SmallestConclusions_1to11Steps-unfiltered11+.txt"
+
+	// w6
+	// "data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to87Steps.txt"
+	// "data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/extraction-0/top1000SmallestConclusions_1to11Steps-unfiltered11+.txt"
+
+	string content;
+	if (!FctHelper::readFile("data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to87Steps.txt", content)) {
+		cerr << "Invalid file path" << endl;
+		return 0;
+	}
+	vector<pair<string, string>> conclusionProofPairs;
+	unordered_map<string, size_t> conclusions;
+	vector<shared_ptr<DlFormula>> candidates;
+	vector<string> candidatesDotted;
+	size_t index = 0;
+	for (string line : FctHelper::stringSplitAndSkip(content, "\n", "%", true)) {
+		string::size_type posA = line.find_first_not_of(' ', line.find(' ', line.find_first_not_of(' ', line.find(' ') + 1) + 1) + 1);
+		string::size_type posB = line.find(' ', posA + 1);
+		string::size_type posC = line.find_first_not_of(' ', posB + 1);
+		string::size_type posD = line.find(':', posC + 1);
+		shared_ptr<DlFormula> f;
+		if (!DlCore::fromPolishNotation(f, conclusions.emplace(conclusionProofPairs.emplace_back(line.substr(posA, posB - posA), line.substr(posC, posD - posC)).first, index++).first->first)) {
+			cerr << "Invalid formula \"" << conclusionProofPairs.back().first << "\"" << endl;
+			return 0;
+		}
+		candidates.push_back(f);
+		string::size_type posE = line.find(' ', posD + 1);
+		candidatesDotted.push_back(posE == string::npos ? line.substr(posD + 1) : line.substr(posD + 1, posE - posD - 1));
+	}
+	//#cout << FctHelper::vectorStringF(conclusionProofPairs, [](const pair<string, string>& p) { return p.second + ":" + p.first; }) << endl;
+
+	// NOTE: 'target' must have numeric variables, so DlCore::tryUnifyTrees() does not mix up its variables with those of candidates.
+	auto recurse = [&](shared_ptr<DlFormula>& target, const auto& me, vector<string> history = { }, size_t depth = 0) {
+		if (depth > maxRecursionDepth)
+			return;
+		for (size_t i = 0; i < candidates.size(); i++) {
+			const shared_ptr<DlFormula>& candidate = candidates[i];
+			if (candidate->getValue()->value != DlCore::terminalStr_imply())
+				continue;
+			map<string, shared_ptr<DlFormula>> substitutions;
+			if (DlCore::tryUnifyTrees(candidate->getChildren()[1], target, &substitutions) && substitutions.size() > 1) {
+				shared_ptr<DlFormula> unifiedCandidate = DlCore::substitute(candidate, substitutions);
+				shared_ptr<DlFormula> requiredAntecedent = unifiedCandidate->getChildren()[0];
+				if (DlCore::isSchemaOf(requiredAntecedent, target))
+					continue; // cyclic dependency
+
+				// Verify that substituted consequent is still a schema of target (i.e. not more specialized such that target could not be proven anymore).
+				if (DlCore::isSchemaOf(unifiedCandidate->getChildren()[1], target)) {
+					if (!depth)
+						cout << "." << flush;
+					string requiredAntecedentDotted = DlCore::toPolishNotation_numVars(requiredAntecedent);
+
+					// Verify that 'requiredAntecedent' is valid.
+					vector<string> vars = DlCore::primitivesOfFormula_ordered(requiredAntecedent);
+					unordered_map<string, size_t> varIndices;
+					for (size_t i = 0; i < vars.size(); i++)
+						varIndices[vars[i]] = i;
+					uint32_t limit = 1 << vars.size();
+					bool valid = true;
+					//#size_t c = 0;
+					for (uint32_t bits = 0; bits < limit; bits++) {
+						auto evalFormula = [&](const shared_ptr<DlFormula>& f, const auto& me) -> bool {
+							unordered_map<string, DlOperator>::const_iterator itOperator = DlCore::dlOperators().find(f->getValue()->value);
+							if (itOperator != DlCore::dlOperators().end()) { // at an operator
+								const vector<shared_ptr<DlFormula>>& children = f->getChildren();
+								auto evalFirst = [&]() { return me(children[0], me); };
+								auto evalSecond = [&]() { return me(children[1], me); };
+								switch (itOperator->second) {
+								case DlOperator::And:
+									return evalFirst() && evalSecond();
+								case DlOperator::Or:
+									return evalFirst() || evalSecond();
+								case DlOperator::Nand:
+									return !(evalFirst() && evalSecond());
+								case DlOperator::Nor:
+									return !(evalFirst() || evalSecond());
+								case DlOperator::Imply:
+									return !evalFirst() || evalSecond();
+								case DlOperator::Implied:
+									return evalFirst() || !evalSecond();
+								case DlOperator::Nimply:
+									return evalFirst() && !evalSecond();
+								case DlOperator::Nimplied:
+									return !evalFirst() && evalSecond();
+								case DlOperator::Equiv:
+									return evalFirst() == evalSecond();
+								case DlOperator::Xor:
+									return evalFirst() != evalSecond();
+								case DlOperator::Com:
+								case DlOperator::App:
+								case DlOperator::Nece:
+								case DlOperator::Poss:
+								case DlOperator::Obli:
+								case DlOperator::Perm: {
+									cerr << "Modal operators are not supported for tautology testing." << endl;
+									exit(0);
+								}
+								case DlOperator::Not:
+									return !evalFirst();
+								case DlOperator::Top:
+									return true;
+								case DlOperator::Bot:
+									return false;
+								default: {
+									cerr << "Unknown operator \"" << itOperator->first << "\" for tautology testing." << endl;
+									exit(0);
+								}
+								}
+							} else // not at an operator, i.e. at a variable
+								return bits & (1 << varIndices[f->getValue()->value]);
+						};
+						//#c++;
+						if (!evalFormula(requiredAntecedent, evalFormula)) {
+							valid = false;
+							break;
+						}
+					}
+					if (!valid)
+						continue;
+					//#cout << "\n[NOTE] " << requiredAntecedentDotted << " is " << (valid ? "" : "in") << "valid. Tested " << c << " variable configurations." << endl;
+
+					//#string unifiedCandidateDotted = DlCore::toPolishNotation_numVars(unifiedCandidate);
+					//#string targetDotted = DlCore::toPolishNotation_noRename(target);
+					//#cout << "[Target formula:      " << string(unifiedCandidateDotted.length() - targetDotted.length(), ' ') << targetDotted << "]" << endl;
+					//#cout << "[Unification result:  " << unifiedCandidateDotted << "]" << endl;
+					//#cout << "[Required antecedent:  " << requiredAntecedentDotted << string(unifiedCandidateDotted.length() - requiredAntecedentDotted.length() - 1, ' ') << "]" << endl;
+					//#cout << "Fit: candidate " << conclusionProofPairs[i].first << " [i.e. " << candidatesDotted[i] << "] for " << DlCore::toPolishNotation_noRename(target) << ", using substitutions " << DlCore::substitutionRepresentation_traverse(substitutions) << endl;
+					vector<string> history_copy = history;
+					history_copy.push_back(conclusionProofPairs[i].first);
+					size_t j = 0;
+					for (const string& f : candidatesDotted) {
+						if (DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(f, requiredAntecedentDotted)) {
+							//#cout << "\nFit: candidate " << conclusionProofPairs[i].first << " [i.e. " << candidatesDotted[i] << "] for " << DlCore::toPolishNotation_noRename(target) << ", using substitutions " << DlCore::substitutionRepresentation_traverse(substitutions) << endl;
+							//#cout << "Required antecedent: " << requiredAntecedentDotted << endl;
+							//#cout << "### MATCH! " << f << " is schema of " << requiredAntecedentDotted << "." << endl;
+							vector<string> history_copy2 = history_copy;
+							history_copy2.push_back(conclusionProofPairs[j].first);
+							//#cout << "### history: " << FctHelper::vectorString(history_copy2) << endl;
+							string resultAbs = "<" + history_copy2.back() + ">";
+							string resultPrf = conclusionProofPairs[conclusions.at(history_copy2.back())].second;
+							history_copy2.pop_back();
+							while (!history_copy2.empty()) {
+								string conclusion = history_copy2.back();
+								history_copy2.pop_back();
+								string dProof = conclusionProofPairs[conclusions.at(conclusion)].second;
+								resultAbs = "D<" + conclusion + ">" + resultAbs;
+								resultPrf = "D" + dProof + "" + resultPrf;
+							}
+							cout << "\nMatch: " << resultAbs << endl;
+							cout << "       " << resultPrf << endl;
+						}
+						j++;
+					}
+					shared_ptr<DlFormula> nextTarget;
+					if (!DlCore::fromPolishNotation_noRename(nextTarget, requiredAntecedentDotted)) {
+						cerr << "Failed to parse \"" << requiredAntecedentDotted << "\"." << endl;
+						exit(0);
+					}
+					me(nextTarget, me, history_copy, depth + 1);
+				}
+			}
+		}
+	};
+	recurse(target, recurse);
+	cout << endl;
+	return 0;
+#endif //###
 #if 0 //### proofs in database format
 	cout << "mproofs.txt:\n" << endl;
 	vector<string> axioms = { "CCCCCpqCNrNsrtCCtpCsp" };

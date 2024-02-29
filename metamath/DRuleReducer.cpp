@@ -11,6 +11,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <numeric>
+
 using namespace std;
 using namespace xamidi::helper;
 using namespace xamidi::logic;
@@ -284,6 +286,189 @@ void DRuleReducer::createReplacementsFile(const string& dProofDB, const string& 
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for " << schemaCheckCounter << " schema checks." << endl;
 		startTime = chrono::steady_clock::now();
 	}
+
+#if 1 //### TODO: "shaking": To combine strengths of multiple heterogeneous proofs. Some smaller rules may be better than some larger rules. Look for better paths to take!
+	// (down,large) : ./pmGenerator_shaky ; (!down,large) : ./pmGenerator_shakyUp ; (down,!large) : ./pmGenerator_shakyN ; (!down,!large) : ./pmGenerator_shakyNUp
+	bool shakeDown = true;
+	bool largeShaking = true;
+	vector<tbb::concurrent_map<string, string, cmpStringShrink>::iterator> reverseShorteningReplacements;
+	if (!shakeDown) { // tbb::concurrent_map lacks reverse iterators, so reverse iterate manually
+		reverseShorteningReplacements.resize(shorteningReplacements.size());
+		size_t i = shorteningReplacements.size();
+		for (tbb::concurrent_map<string, string, cmpStringShrink>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it)
+			reverseShorteningReplacements[--i] = it;
+	}
+	size_t num = 0;
+	auto replacementLengths = [&](size_t* sum) { if (sum) *sum = 0; stringstream ss; bool first = true; for (tbb::concurrent_map<string, string, cmpStringShrink>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it) { if (first) first = false; else ss << ", "; if (sum) *sum += it->second.length(); ss << it->second.length(); } return ss.str(); };
+	size_t sum;
+	cout << "[NOTE] Lengths before: " << replacementLengths(&sum) << endl;
+	cout << "[NOTE] Summed up lengths before: " << sum << endl;
+	auto procEntry = [&](tbb::concurrent_map<string, string, cmpStringShrink>::iterator it) {
+		const string& key = it->first;
+		string& replacement = it->second;
+		//#size_t counter = 0;
+		vector<tbb::concurrent_map<string, string, cmpStringShrink>::iterator> candidatesForImprovement;
+		while (++it != shorteningReplacements.end()) { // long to short keys that are shorter than the key of the current replacement to improve
+			if (largeShaking || key.find(it->first) != string::npos)
+				candidatesForImprovement.push_back(it);
+			//#counter++;
+		}
+		//#cout << "[keylen " << key.length() << ", replen " << replacement.length() << "] has " << counter << " shorter replacements. ; " << candidatesForImprovement.size() << " candidates for improvement" << endl; //### TODO
+		if (!candidatesForImprovement.empty()) {
+			string bestResult;
+			vector<thread> threads;
+			unsigned concurrencyCount = thread::hardware_concurrency(); //### TODO As parameter?
+			tbb::concurrent_bounded_queue<vector<size_t>> queue;
+			queue.set_capacity(5 * concurrencyCount);
+			mutex mtx;
+			atomic<bool> incomplete = true;
+			auto process = [&](const vector<size_t>& indices) {
+				string key_copy = key;
+				for (size_t i : indices) {
+					tbb::concurrent_map<string, string, cmpStringShrink>::iterator& entry = candidatesForImprovement[i];
+					boost::replace_all(key_copy, entry->first, entry->second);
+				}
+				{
+					lock_guard<mutex> lock(mtx);
+					if (bestResult.empty() || key_copy.length() < bestResult.length()) {
+						//#if (!bestResult.empty())
+						//#	cout << "NOTE: New best result, previously " << bestResult.length() << ", now " << key_copy.length() << "." << endl;
+						bestResult = key_copy;
+					}
+				}
+			};
+			auto worker = [&process, &queue, &incomplete]() {
+				// NOTE: It is important to check '!queue.empty()' in loop header _after_ 'incomplete', since 'queue' might
+				//       become filled and 'incomplete' false, while this condition is being processed in this thread.
+				//       Since 'incomplete' can only become false after all queues are filled and no more balancing will
+				//       take place, evaluating 'incomplete' first ensures that whenever 'queue' is not filled completely,
+				//       the loop remains active, i.e. whenever !incomplete holds (such that '!queue.empty()' is checked here),
+				//       the loop is discontinued only if there is nothing left to process.
+				while (incomplete || !queue.empty()) {
+					vector<size_t> s;
+					if (queue.try_pop(s))
+						process(s);
+					else
+						this_thread::yield();
+				}
+			};
+			for (unsigned t = 0; t < concurrencyCount; t++)
+				threads.emplace_back(worker);
+			auto registerReplacements = [&](const vector<size_t>& indices) {
+				queue.push(indices);
+			};
+			if (candidatesForImprovement.size() <= 7) {
+				// NOTE: Choose 7! as the maximum amount of permutations to test for guaranteed perfect results. (6! = 720, 7! = 5040, 8! = 40320, 9! = 362880)
+				vector<size_t> indices(candidatesForImprovement.size());
+				iota(indices.begin(), indices.end(), 0);
+				size_t counter = 0;
+				startTime = chrono::steady_clock::now(); //### TODO
+				do {
+					registerReplacements(indices);
+					counter++;
+				} while (next_permutation(indices.begin(), indices.end()));
+				incomplete = false;
+				for (thread& t : threads)
+					t.join();
+				//# TODO
+				cout << "[Full, " << ++num << " / " << shorteningReplacements.size() << "] Applied " << counter << " permutations in " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms." << endl;
+			} else {
+				size_t counter = 0;
+				startTime = chrono::steady_clock::now(); //### TODO
+				// NOTE: There are too many possibilities. We only test all indices as start, then all valid 2-tuples over { start -> bottom, start -> top, top -> start, bottom -> start }, of which there are
+				//       |{ up, down }^2 x { top first, bottom first }| = 4 * 2 = 8. This makes 8 * |candidatesForImprovement| an upper bound for the amount of sequences to be tested per replacements entry. [O(n^2) overall]
+				vector<size_t> indices(candidatesForImprovement.size());
+				for (size_t start = 0; start < candidatesForImprovement.size(); start++) {
+					indices[0] = start;
+					// 1. ( start  -> top   , bottom -> start  ) ; e.g. [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
+					if (start && start + 1 < candidatesForImprovement.size()) { // would be the same as (5.) for start == 0 || start == candidatesForImprovement.size() - 1
+						iota(indices.begin() + 1, indices.end() - start, start + 1); // add increasing indices (start + 1, candidatesForImprovement.size() - 1)
+						iota(indices.begin() + indices.size() - start, indices.end(), 0); // add increasing indices (0, start - 1)
+						//#cout << "1. [ start  -> top   , bottom -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 2. ( start  -> top   , start  -> bottom ) ; e.g. [5, 6, 7, 8, 9, 10, 11, 4, 3, 2, 1, 0]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (5.) for start == 0, the same as (4.) for start >= candidatesForImprovement.size() - 2, and the same as (1.) for start == 1
+						iota(indices.begin() + 1, indices.end() - start, start + 1); // add increasing indices (start + 1, candidatesForImprovement.size() - 1)
+						iota(indices.rbegin(), indices.rend() - indices.size() + start, 0); // add decreasing indices (start - 1, ..., 0)
+						//#cout << "2. [ start  -> top   , start  -> bottom ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 3. ( top    -> start , bottom -> start  ) ; e.g. [5, 11, 10, 9, 8, 7, 6, 0, 1, 2, 3, 4]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start <= 1, the same as (5.) for start == candidatesForImprovement.size() - 1, and the same as (1.) for start == candidatesForImprovement.size() - 2
+						iota(indices.rbegin() + start, indices.rend() - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						iota(indices.begin() + indices.size() - start, indices.end(), 0); // add increasing indices (0, start - 1)
+						//#cout << "3. [ top    -> start , bottom -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 4. ( top    -> start , start  -> bottom ) ; e.g. [5, 11, 10, 9, 8, 7, 6, 4, 3, 2, 1, 0]
+					{
+						iota(indices.rbegin() + start, indices.rend() - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						iota(indices.rbegin(), indices.rend() - indices.size() + start, 0); // add decreasing indices (start - 1, ..., 0)
+						//#cout << "4. [ top    -> start , start  -> bottom ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 5. ( bottom -> start , start  -> top    ) ; e.g. [5, 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11]
+					{
+						iota(indices.begin() + 1, indices.begin() + start + 1, 0); // add increasing indices (0, start - 1)
+						iota(indices.begin() + start + 1, indices.end(), start + 1); // add increasing indices (start + 1, ..., candidatesForImprovement.size() - 1)
+						//#cout << "5. [ bottom -> start , start  -> top    ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 6. ( bottom -> start , top    -> start  ) ; e.g. [5, 0, 1, 2, 3, 4, 11, 10, 9, 8, 7, 6]
+					if (start && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start == 0 and the same as (5.) for start >= candidatesForImprovement.size() - 2
+						iota(indices.begin() + 1, indices.begin() + start + 1, 0); // add increasing indices (0, start - 1)
+						iota(indices.rbegin(), indices.rend() - start - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						//#cout << "6. [ bottom -> start , top    -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 7. ( start  -> bottom, start  -> top    ) ; e.g. [5, 4, 3, 2, 1, 0, 6, 7, 8, 9, 10, 11]
+					if (start > 1 && start + 1 < candidatesForImprovement.size()) { // would be the same as (5.) for start <= 1 and the same as (4.) for start == candidatesForImprovement.size() - 1
+						iota(indices.rbegin() + indices.size() - start - 1, indices.rend() - 1, 0); // add decreasing indices (start - 1, ..., 0)
+						iota(indices.begin() + start + 1, indices.end(), start + 1); // add increasing indices (start + 1, ..., candidatesForImprovement.size() - 1)
+						//#cout << "7. [ start  -> bottom, start  -> top    ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 8. ( start  -> bottom, top    -> start  ) ; e.g. [5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start == 0 || start == candidatesForImprovement.size() - 1, the same as (6.) for start == 1, and the same as (7.) for start == candidatesForImprovement.size() - 2
+						iota(indices.rbegin() + indices.size() - start - 1, indices.rend() - 1, 0); // add decreasing indices (start - 1, ..., 0)
+						iota(indices.rbegin(), indices.rend() - start - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						//#cout << "8. [ start  -> bottom, top    -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+				}
+				incomplete = false;
+				for (thread& t : threads)
+					t.join();
+				//# TODO
+				cout << "[Part, " << ++num << " / " << shorteningReplacements.size() << "] Applied " << counter << " permutations in " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms." << endl;
+			}
+			if (replacement.length() > bestResult.length()) {
+				cout << "Replacement improved from length " << replacement.length() << " to " << bestResult.length() << "." << endl;
+				replacement = bestResult;
+			}
+		} else
+			++num;
+	};
+	if (shakeDown)
+		for (tbb::concurrent_map<string, string, cmpStringShrink>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it) // long to short keys
+			procEntry(it);
+	else
+		for (tbb::concurrent_map<string, string, cmpStringShrink>::iterator it : reverseShorteningReplacements) // short to long keys
+			procEntry(it);
+	cout << "[NOTE] Lengths after: " << replacementLengths(&sum) << endl;
+	cout << "[NOTE] Summed up lengths after: " << sum << endl;
+	//### TODO
+#endif
+
 	//#cout << "shorteningReplacements = " << FctHelper::vectorStringF(vector<pair<string, string>>(shorteningReplacements.begin(), shorteningReplacements.end()), [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 	//#cout << "stylingReplacements = " << FctHelper::vectorStringF(vector<pair<string, string>>(stylingReplacements.begin(), stylingReplacements.end()), [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 
@@ -333,6 +518,197 @@ void DRuleReducer::applyReplacements(const string& initials, const string& repla
 		//#cout << "shorteningReplacements = " << FctHelper::vectorStringF(shorteningReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 		//#cout << "stylingReplacements = " << FctHelper::vectorStringF(stylingReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, "{\n\t", "\n}", "\n\t") << endl;
 	}
+
+#if 1 //### TODO: "shaking": To combine strengths of multiple heterogeneous proofs. Some smaller rules may be better than some larger rules. Look for better paths to take!
+	// (down,large) : ./pmGenerator_shaky ; (!down,large) : ./pmGenerator_shakyUp ; (down,!large) : ./pmGenerator_shakyN ; (!down,!large) : ./pmGenerator_shakyNUp
+	bool shakeDown = true;
+	bool largeShaking = true;
+	vector<vector<pair<string, string>>::iterator> reverseShorteningReplacements;
+	if (!shakeDown) { // tbb::concurrent_map lacks reverse iterators, so reverse iterate manually
+		reverseShorteningReplacements.resize(shorteningReplacements.size());
+		size_t i = shorteningReplacements.size();
+		for (vector<pair<string, string>>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it)
+			reverseShorteningReplacements[--i] = it;
+	}
+	size_t num = 0;
+	auto replacementLengths = [&](size_t* sum) { if (sum) *sum = 0; stringstream ss; bool first = true; for (vector<pair<string, string>>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it) { if (first) first = false; else ss << ", "; if (sum) *sum += it->second.length(); ss << it->second.length(); } return ss.str(); };
+	size_t sum;
+	cout << "[NOTE] Lengths before: " << replacementLengths(&sum) << endl;
+	cout << "[NOTE] Summed up lengths before: " << sum << endl;
+	auto procEntry = [&](vector<pair<string, string>>::iterator it) {
+		const string& key = it->first;
+		string& replacement = it->second;
+		//#size_t counter = 0;
+		vector<vector<pair<string, string>>::iterator> candidatesForImprovement;
+		while (++it != shorteningReplacements.end()) { // long to short keys that are shorter than the key of the current replacement to improve
+			if (largeShaking || key.find(it->first) != string::npos)
+				candidatesForImprovement.push_back(it);
+			//#counter++;
+		}
+		//#cout << "[keylen " << key.length() << ", replen " << replacement.length() << "] has " << counter << " shorter replacements. ; " << candidatesForImprovement.size() << " candidates for improvement" << endl; //### TODO
+		if (!candidatesForImprovement.empty()) {
+			string bestResult;
+			vector<thread> threads;
+			unsigned concurrencyCount = thread::hardware_concurrency(); //### TODO As parameter?
+			tbb::concurrent_bounded_queue<vector<size_t>> queue;
+			queue.set_capacity(5 * concurrencyCount);
+			mutex mtx;
+			atomic<bool> incomplete = true;
+			auto process = [&](const vector<size_t>& indices) {
+				string key_copy = key;
+				for (size_t i : indices) {
+					vector<pair<string, string>>::iterator& entry = candidatesForImprovement[i];
+					boost::replace_all(key_copy, entry->first, entry->second);
+				}
+				{
+					lock_guard<mutex> lock(mtx);
+					if (bestResult.empty() || key_copy.length() < bestResult.length()) {
+						//#if (!bestResult.empty())
+						//#	cout << "NOTE: New best result, previously " << bestResult.length() << ", now " << key_copy.length() << "." << endl;
+						bestResult = key_copy;
+					}
+				}
+			};
+			auto worker = [&process, &queue, &incomplete]() {
+				// NOTE: It is important to check '!queue.empty()' in loop header _after_ 'incomplete', since 'queue' might
+				//       become filled and 'incomplete' false, while this condition is being processed in this thread.
+				//       Since 'incomplete' can only become false after all queues are filled and no more balancing will
+				//       take place, evaluating 'incomplete' first ensures that whenever 'queue' is not filled completely,
+				//       the loop remains active, i.e. whenever !incomplete holds (such that '!queue.empty()' is checked here),
+				//       the loop is discontinued only if there is nothing left to process.
+				while (incomplete || !queue.empty()) {
+					vector<size_t> s;
+					if (queue.try_pop(s))
+						process(s);
+					else
+						this_thread::yield();
+				}
+			};
+			for (unsigned t = 0; t < concurrencyCount; t++)
+				threads.emplace_back(worker);
+			auto registerReplacements = [&](const vector<size_t>& indices) {
+				queue.push(indices);
+			};
+			if (candidatesForImprovement.size() <= 7) {
+				// NOTE: Choose 7! as the maximum amount of permutations to test for guaranteed perfect results. (6! = 720, 7! = 5040, 8! = 40320, 9! = 362880)
+				vector<size_t> indices(candidatesForImprovement.size());
+				iota(indices.begin(), indices.end(), 0);
+				size_t counter = 0;
+				startTime = chrono::steady_clock::now(); //### TODO
+				do {
+					registerReplacements(indices);
+					counter++;
+				} while (next_permutation(indices.begin(), indices.end()));
+				incomplete = false;
+				for (thread& t : threads)
+					t.join();
+				//# TODO
+				cout << "[Full, " << ++num << " / " << shorteningReplacements.size() << "] Applied " << counter << " permutations in " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms." << endl;
+			} else {
+				size_t counter = 0;
+				startTime = chrono::steady_clock::now(); //### TODO
+				// NOTE: There are too many possibilities. We only test all indices as start, then all valid 2-tuples over { start -> bottom, start -> top, top -> start, bottom -> start }, of which there are
+				//       |{ up, down }^2 x { top first, bottom first }| = 4 * 2 = 8. This makes 8 * |candidatesForImprovement| an upper bound for the amount of sequences to be tested per replacements entry. [O(n^2) overall]
+				vector<size_t> indices(candidatesForImprovement.size());
+				for (size_t start = 0; start < candidatesForImprovement.size(); start++) {
+					indices[0] = start;
+					// 1. ( start  -> top   , bottom -> start  ) ; e.g. [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
+					if (start && start + 1 < candidatesForImprovement.size()) { // would be the same as (5.) for start == 0 || start == candidatesForImprovement.size() - 1
+						iota(indices.begin() + 1, indices.end() - start, start + 1); // add increasing indices (start + 1, candidatesForImprovement.size() - 1)
+						iota(indices.begin() + indices.size() - start, indices.end(), 0); // add increasing indices (0, start - 1)
+						//#cout << "1. [ start  -> top   , bottom -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 2. ( start  -> top   , start  -> bottom ) ; e.g. [5, 6, 7, 8, 9, 10, 11, 4, 3, 2, 1, 0]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (5.) for start == 0, the same as (4.) for start >= candidatesForImprovement.size() - 2, and the same as (1.) for start == 1
+						iota(indices.begin() + 1, indices.end() - start, start + 1); // add increasing indices (start + 1, candidatesForImprovement.size() - 1)
+						iota(indices.rbegin(), indices.rend() - indices.size() + start, 0); // add decreasing indices (start - 1, ..., 0)
+						//#cout << "2. [ start  -> top   , start  -> bottom ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 3. ( top    -> start , bottom -> start  ) ; e.g. [5, 11, 10, 9, 8, 7, 6, 0, 1, 2, 3, 4]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start <= 1, the same as (5.) for start == candidatesForImprovement.size() - 1, and the same as (1.) for start == candidatesForImprovement.size() - 2
+						iota(indices.rbegin() + start, indices.rend() - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						iota(indices.begin() + indices.size() - start, indices.end(), 0); // add increasing indices (0, start - 1)
+						//#cout << "3. [ top    -> start , bottom -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 4. ( top    -> start , start  -> bottom ) ; e.g. [5, 11, 10, 9, 8, 7, 6, 4, 3, 2, 1, 0]
+					{
+						iota(indices.rbegin() + start, indices.rend() - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						iota(indices.rbegin(), indices.rend() - indices.size() + start, 0); // add decreasing indices (start - 1, ..., 0)
+						//#cout << "4. [ top    -> start , start  -> bottom ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 5. ( bottom -> start , start  -> top    ) ; e.g. [5, 0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11]
+					{
+						iota(indices.begin() + 1, indices.begin() + start + 1, 0); // add increasing indices (0, start - 1)
+						iota(indices.begin() + start + 1, indices.end(), start + 1); // add increasing indices (start + 1, ..., candidatesForImprovement.size() - 1)
+						//#cout << "5. [ bottom -> start , start  -> top    ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 6. ( bottom -> start , top    -> start  ) ; e.g. [5, 0, 1, 2, 3, 4, 11, 10, 9, 8, 7, 6]
+					if (start && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start == 0 and the same as (5.) for start >= candidatesForImprovement.size() - 2
+						iota(indices.begin() + 1, indices.begin() + start + 1, 0); // add increasing indices (0, start - 1)
+						iota(indices.rbegin(), indices.rend() - start - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						//#cout << "6. [ bottom -> start , top    -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 7. ( start  -> bottom, start  -> top    ) ; e.g. [5, 4, 3, 2, 1, 0, 6, 7, 8, 9, 10, 11]
+					if (start > 1 && start + 1 < candidatesForImprovement.size()) { // would be the same as (5.) for start <= 1 and the same as (4.) for start == candidatesForImprovement.size() - 1
+						iota(indices.rbegin() + indices.size() - start - 1, indices.rend() - 1, 0); // add decreasing indices (start - 1, ..., 0)
+						iota(indices.begin() + start + 1, indices.end(), start + 1); // add increasing indices (start + 1, ..., candidatesForImprovement.size() - 1)
+						//#cout << "7. [ start  -> bottom, start  -> top    ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+					// 8. ( start  -> bottom, top    -> start  ) ; e.g. [5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6]
+					if (start > 1 && start + 2 < candidatesForImprovement.size()) { // would be the same as (4.) for start == 0 || start == candidatesForImprovement.size() - 1, the same as (6.) for start == 1, and the same as (7.) for start == candidatesForImprovement.size() - 2
+						iota(indices.rbegin() + indices.size() - start - 1, indices.rend() - 1, 0); // add decreasing indices (start - 1, ..., 0)
+						iota(indices.rbegin(), indices.rend() - start - 1, start + 1); // add decreasing indices (candidatesForImprovement.size() - 1, ..., start + 1)
+						//#cout << "8. [ start  -> bottom, top    -> start  ] ; start = " << start << ", indices: " << FctHelper::vectorString(indices) << endl;
+						registerReplacements(indices);
+						counter++;
+					}
+				}
+				incomplete = false;
+				for (thread& t : threads)
+					t.join();
+				//# TODO
+				cout << "[Part, " << ++num << " / " << shorteningReplacements.size() << "] Applied " << counter << " permutations in " << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms." << endl;
+			}
+			if (replacement.length() > bestResult.length()) {
+				cout << "Replacement improved from length " << replacement.length() << " to " << bestResult.length() << "." << endl;
+				replacement = bestResult;
+			}
+		} else
+			++num;
+	};
+	if (shakeDown)
+		for (vector<pair<string, string>>::iterator it = shorteningReplacements.begin(); it != shorteningReplacements.end(); ++it) // long to short keys
+			procEntry(it);
+	else
+		for (vector<pair<string, string>>::iterator it : reverseShorteningReplacements) // short to long keys
+			procEntry(it);
+	cout << "[NOTE] Lengths after: " << replacementLengths(&sum) << endl;
+	cout << "[NOTE] Summed up lengths after: " << sum << endl;
+
+	// [TMP] Store useful replacements.
+	string replacementsOutputFile = replacementsFile + "_shaken.txt";
+	string content = FctHelper::vectorStringF(shorteningReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, { }, "\n\n", "\n") + FctHelper::vectorStringF(stylingReplacements, [](const pair<string, string>& p) { return p.first + "," + p.second; }, { }, "\n", "\n");
+	FctHelper::writeToFile(replacementsOutputFile, content);
+	if (debug)
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << content.length() << " bytes of condensed detachment proof replacement strings to " << replacementsOutputFile << "." << endl;
+	else
+		cout << "Condensed detachment proof replacement strings saved to " << replacementsOutputFile << "." << endl;
+	//### TODO
+#endif
 
 	// 2. Load mmsolitaire's D-proofs.
 	vector<string> dProofNamesInFile;
