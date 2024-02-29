@@ -7,7 +7,6 @@
 
 #include <cstring>
 #include <ctime>
-#include <regex>
 #ifdef _MSC_VER
 #include <process.h>
 #else
@@ -175,81 +174,8 @@ static const map<Task, string>& cmdInfo() {
 	return _;
 }
 
-void orderLog(const string& path) {
-	string s;
-	if (!FctHelper::readFile(path, s)) {
-		cerr << "Failed to read file at \"" + path + "\"." << endl;
-		return;
-	}
-	vector<string> lines = FctHelper::stringSplit(s, "\n");
-	set<size_t> configLineNumbers;
-	map<size_t, string> configLines;
-	set<size_t> callLineNumbers;
-	map<size_t, string> callLines;
-	set<size_t> startLineNumbers;
-	map<size_t, string> startLines;
-	set<size_t> completeLineNumbers;
-	map<size_t, string> completeLines;
-	for (size_t i = 0; i < lines.size(); i++) {
-		const string& line = lines[i];
-		smatch m;
-		if (regex_search(line, m, regex("\\[Rank [0-9]+[^\\]]+\\] Calling reset.+, silently\\."))) {
-			configLineNumbers.emplace(i);
-			//cout << "#1 Match for: " << line << endl;
-			string::size_type a = line.find("[Rank ") + 6;
-			size_t rank = stoll(line.substr(a, line.find(" ", a) - a + 1));
-			configLines.emplace(rank, line);
-
-		}
-		if (regex_search(line, m, regex("\\[Rank [0-9]+[^\\]]+\\] Calling mpi_"))) {
-			callLineNumbers.emplace(i);
-			//cout << "#2 Match for: " << line << endl;
-			string::size_type a = line.find("[Rank ") + 6;
-			size_t rank = stoll(line.substr(a, line.find(" ", a) - a + 1));
-			callLines.emplace(rank, line);
-		}
-		if (regex_search(line, m, regex("started\\. \\[rank [0-9]+ on"))) {
-			startLineNumbers.emplace(i);
-			//cout << "#3 Match for: " << line << endl;
-			string::size_type a = line.find(". [rank ") + 8;
-			size_t rank = stoll(line.substr(a, line.find(" ", a) - a + 1));
-			startLines.emplace(rank, line);
-		}
-		if (regex_search(line, m, regex("complete\\. \\[rank [0-9]+ on"))) {
-			string::size_type a = line.find(". [rank ") + 8;
-			size_t rank = stoll(line.substr(a, line.find(" ", a) - a + 1));
-			if (rank) {
-				completeLineNumbers.emplace(i);
-				//cout << "#4 Match for: " << line << endl;
-				completeLines.emplace(rank, line);
-			}
-		}
-	}
-	set<size_t> targetLineNumbers = configLineNumbers;
-	targetLineNumbers.insert(callLineNumbers.begin(), callLineNumbers.end());
-	targetLineNumbers.insert(startLineNumbers.begin(), startLineNumbers.end());
-	targetLineNumbers.insert(completeLineNumbers.begin(), completeLineNumbers.end());
-	size_t changeAmount = configLineNumbers.size() + callLineNumbers.size() + startLineNumbers.size() + completeLineNumbers.size();
-	if (targetLineNumbers.size() != changeAmount) {
-		cerr << "Overlappings found! Aborting." << endl;
-		return;
-	}
-	vector<size_t> indices(targetLineNumbers.begin(), targetLineNumbers.end());
-	size_t i = 0;
-	for (const pair<const size_t, string>& p : configLines)
-		lines[indices[i++]] = p.second;
-	for (const pair<const size_t, string>& p : callLines)
-		lines[indices[i++]] = p.second;
-	for (const pair<const size_t, string>& p : startLines)
-		lines[indices[i++]] = p.second;
-	for (const pair<const size_t, string>& p : completeLines)
-		lines[indices[i++]] = p.second;
-	FctHelper::writeToFile(path, FctHelper::stringJoin("\n", lines));
-	cout << "Permuted " << indices.size() << " lines" << endl;
-}
-
-//#include <cmath>
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
+	// Custom tools' code - (v1.2) : https://github.com/xamidi/pmGenerator/commit/018ac7854f3e620406ba04726802a77acbd6d461
 #if 0 //### entropy calculation
 	map<char, size_t> m;
 	uint32_t num = 57;
@@ -274,75 +200,6 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	cout << "Amounts: " << FctHelper::mapStringF(m, [](const pair<char, size_t>& p) { return "'" + (p.first == '\n' ? "\\n" : string { p.first }) + "':" + to_string(p.second); }) << endl;
 	return 0;
 #endif //###
-#if 0 //### string sort performance test (due to long durations of CpCCNqCCNrsCptCCtqCrq / 0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314 generations - formulas with long prefixes)
-	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
-	uint32_t num = 61;
-	vector<string> conclusions;
-	{
-		vector<string> lines;
-		{
-			string s;
-			FctHelper::readFile("data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/dProofs-withConclusions/dProofs" + to_string(num) + ".txt", s);
-			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read " << s.length() << " bytes." << endl;
-			// e.g. 6367.70 ms (6 s 367.70 ms) taken to read 1786902420 bytes.
-			startTime = chrono::steady_clock::now();
-			lines = FctHelper::stringSplit(s, "\n");
-			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to split into " << lines.size() << " lines." << endl;
-			// e.g. 2200.61 ms (2 s 200.61 ms) taken to split into 3652191 lines.
-		}
-		cout << "Starting to extract conclusions." << endl;
-		startTime = chrono::steady_clock::now();
-		conclusions.resize(lines.size());
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to reserve " << lines.size() << " strings." << endl;
-		// e.g. 37.75 ms taken to reserve 3652191 strings.
-		startTime = chrono::steady_clock::now();
-		for (size_t i = 0; i < lines.size(); i++)
-			conclusions[i] = lines[i].substr(num + 1);
-		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to extract " << conclusions.size() << " conclusions." << endl;
-		// e.g. 924.73 ms taken to extract 3652191 conclusions.
-	}
-	cout << "Starting to sort conclusions." << endl;
-	sort(conclusions.begin(), conclusions.end(), cmpStringGrow()); // around "3435.57 ms (3 s 435.57 ms) taken to sort 3652191 strings"
-	//sort(conclusions.begin(), conclusions.end()); // around "3769.33 ms (3 s 769.33 ms) taken to sort 3652191 strings"
-	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to sort " << conclusions.size() << " strings." << endl;
-	return 0;
-#endif //###
-#if 0 //### unification finder
-	for (size_t w = 1; w <= 15; w += 2) {
-		cout << "dProofs" + to_string(w) + ".txt" << endl;
-		string s1 = "CCCC0.0C0.0CCC0.0C0.0CNCC1.1C1.1CCC1.1C1.1CC1.1C1.1CCC0.0C0.0CNCC1.1C1.1CCC1.1C1.1CC1.1C1.1"; //"CCCC0.0C0.0CCC0.0C0.0CNC1.1CC1.1C1.1CCC0.0C0.0CNC1.1CC1.1C1.1"; //"CCCC0.0C0.0CCC0.0C0.0CN1C1.1CCC0.0C0.0CN1C1.1"; //"CCC0.0CC0.0CN1C1.1CC0.0CN1C1.1"; //"CCC0.0C1CN2C2.2C1CN2C2.2";
-		boost::replace_all(s1, "0", "z");
-		boost::replace_all(s1, "1", "y");
-		boost::replace_all(s1, "2", "x");
-		boost::replace_all(s1, "3", "w");
-		boost::replace_all(s1, "4", "v");
-		boost::replace_all(s1, "5", "u");
-		boost::replace_all(s1, "6", "t");
-		boost::replace_all(s1, "7", "s");
-		boost::replace_all(s1, "8", "r");
-		boost::replace_all(s1, "9", "q");
-		shared_ptr<DlFormula> f1;
-		DlCore::fromPolishNotation_noRename(f1, s1);
-		string content;
-		if (!FctHelper::readFile("data/dProofs-withConclusions/dProofs" + to_string(w) + ".txt", content)) {
-			cerr << "Failed to read." << endl;
-			return 0;
-		}
-		vector<string> lines = FctHelper::stringSplit(content, "\n");
-		for (const string& line : lines) {
-			string s2 = line.substr(line.find(':') + 1);
-			shared_ptr<DlFormula> f2;
-			DlCore::fromPolishNotation_noRename(f2, s2);
-			map<string, shared_ptr<DlFormula>> substitutions;
-			if (DlCore::tryUnifyTrees(f1, f2, &substitutions)) {
-				string s1s2 = DlCore::toPolishNotation_numVars(DlCore::substitute(f1, substitutions));
-				cout << "Unification succeeded for " << s2 <<". Result: " << s1s2 << endl;
-			}
-		}
-	}
-	return 0;
-#endif //###
-	//#orderLog("log/custom/tmp.txt"); return 0; // edit multi-node computation logs ; sorts initialization and completion messages with rank numbers for better readability
 	//#cout << "argc = " << argc << ", argv = { " << [&]() { string s; for (int i = 0; i < argc; i++) { if (i) s += ", "; s += string { argv[i] }; } return s; }() << " }" << endl;
 	auto printUsage = [&](const string& error, Task task) {
 		if (!error.empty())
