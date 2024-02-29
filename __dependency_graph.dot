@@ -148,7 +148,6 @@ digraph {
 	main -> "boost/algorithm/string" [color=blue]
 	main -> "(cstring)" [color=blue]
 	main -> "(ctime)" [color=blue]
-	main -> "(regex)" [color=blue]
 	main -> process [color=blue]
 	main -> unistd [color=blue]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator" {
