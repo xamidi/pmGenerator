@@ -73,12 +73,13 @@ Some more – and very special – proof systems are illustrated [further down b
            -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
-      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-f] [-o <output file>] [-d]
+      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-f] [-o <output file>] [-d]
          Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
            -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
            -j: join common subproofs together when they are used at least a given amount of times ; default: 2
            -p: only keep subproofs with primitive lengths not exceeding the given limit ; default: -1
            -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+           -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)
            -t: only transform proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to keep all conclusions ; default: final theorem only
            -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1

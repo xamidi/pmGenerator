@@ -981,7 +981,7 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 	//#if (optOut_requiredIntermediateResults) cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(*optOut_requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom) + "[" + ax.name + "]"; }) << endl;
 }
 
-void DlProofEnumerator::recombineProofSummary(const string& input, bool useInputFile, const string* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, size_t maxLengthToKeepProof, bool normalPolishNotation, const string* filterForTheorems, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, const string* outputFile, bool debug) {
+void DlProofEnumerator::recombineProofSummary(const string& input, bool useInputFile, const string* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, size_t maxLengthToKeepProof, bool normalPolishNotation, bool printInfixUnicode, const string* filterForTheorems, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, const string* outputFile, bool debug) {
 	vector<DRuleParser::AxiomInfo> customAxioms;
 	vector<string> abstractDProof_input;
 	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
@@ -1009,14 +1009,15 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 	const vector<string> abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof_input, conclusions, &customAxioms, filterForTheorems ? *filterForTheorems != "." ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, conclusionsWithHelperProofs ? &conclusionsWithHelperProofs_axInfo : nullptr, minUseAmountToCreateHelperProof, &requiredIntermediateResults, debug, maxLengthToKeepProof, abstractProofStrings, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof);
 
 	auto print = [&](ostream& mout) -> string::size_type {
+		auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
 		string::size_type bytes = 0;
 		for (const DRuleParser::AxiomInfo& ax : customAxioms) {
-			string f = normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
+			string f = printInfixUnicode ? infixUnicode(ax.refinedAxiom) : normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
 			mout << "    " << f << " = " << ax.name << "\n";
 			bytes += 9 + f.length();
 		}
 		for (size_t i = 0; i < abstractDProof.size(); i++) {
-			string f = normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
+			string f = printInfixUnicode ? infixUnicode(conclusions[i]) : normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
 			const string& p = abstractDProof[i];
 			mout << "[" << i << "] " << f << " = " << p << "\n";
 			bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
