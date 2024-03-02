@@ -122,10 +122,12 @@ public:
 	// Strings of lengths of n + c and higher may not encode valid proofs, i.e. may result in unification failures upon parsing.
 	// One may customize what is being iterated by specifying the stack, i.e. { 0 } iterates all formulas, { s } for 0 < s <= n iterates formulas of length s, and
 	// { n + c } iterates all formulas of at least length n + c. Note that this can be combined with 'wordLengthLimit' := n + c to iterate only formulas of length n + c.
-	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<const std::vector<std::string>*>& allRepresentatives, const auto& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	template<typename Func>
+	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<const std::vector<std::string>*>& allRepresentatives, const Func& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		processCondensedDetachmentProofs_dynamic(stack, wordLengthLimit, n, composeToLookupVector(allRepresentatives), fString, necessitationLimit, candidateQueueCapacities, concurrencyCount);
 	}
-	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const auto& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	template<typename Func>
+	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const Func& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		if (n % 2 == 0 && necessitationLimit == 0)
 			throw std::logic_error("Cannot have an even limit.");
 		std::string prefix;
@@ -143,7 +145,8 @@ public:
 
 	// Iterates condensed detachment strings for proofs in D-notation.
 	// Strings of lengths of 3 and higher may not encode valid proofs, i.e. may result in unification failures upon parsing.
-	static void processCondensedDetachmentProofs_naive(std::uint32_t wordLengthLimit, const auto& fString, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	template<typename Func>
+	static void processCondensedDetachmentProofs_naive(std::uint32_t wordLengthLimit, const Func& fString, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		std::string prefix;
 		if (concurrencyCount < 2) // call 'fString' only from this thread
 			_processCondensedDetachmentProofs_naive_seq(prefix, 1, wordLengthLimit, fString);
@@ -169,14 +172,15 @@ private:
 	// after resulting in a parse error. When providing 'wordLengthLimit' := n + 2, this means to only iterate candidates of length n + 2 in an efficient way.
 	// For even n allowed, this similarly works with proofLengthCombinationsD_allLengths(n), e.g. n = 3 => A -> D X1 X2 | D X2 X1 | D X1 X3 | D X3 X1 | D X2 X2 | D X2 X3 | D X3 X2 | D X1 A | D A X1 | D X3 X3 | D X2 A | D A X2 | D X3 A | D A X3 | D A A
 	// [NOTE: Sequential non-generic variants (with explicit grammars given as comments) are available at https://github.com/deontic-logic/proof-tool/blob/29dd7dfab9f373d1dd387fb99c16e82c577ec21f/nortmann/DlProofEnumerator.h?ts=4#L167-L174 and below.]
-	static void _loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, const auto& loader, const auto& process);
-	static void _processCondensedDetachmentProofs_dynamic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const auto& fString, std::uint32_t necessitationLimit);
-	static void _processCondensedDetachmentProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const auto& fString);
+	template<typename FuncA, typename FuncB> static void _loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, const FuncA& loader, const FuncB& process);
+	template<typename Func> static void _processCondensedDetachmentProofs_dynamic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString, std::uint32_t necessitationLimit);
+	template<typename Func> static void _processCondensedDetachmentProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const Func& fString);
 	static void _loadCondensedDetachmentProofs_dynamic_par(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, std::uint32_t necessitationLimit);
 	static void _loadCondensedDetachmentProofs_naive_par(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues);
 };
 
-void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, const auto& loader, const auto& process) {
+template<typename FuncA, typename FuncB>
+void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, const FuncA& loader, const FuncB& process) {
 	if (queues.size() != concurrencyCount)
 		throw std::invalid_argument("|queues| = " + std::to_string(queues.size()) + ", but concurrencyCount = " + std::to_string(concurrencyCount) + ".");
 
@@ -187,7 +191,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 	std::unique_lock<std::mutex> condLock(mtx);
 	std::condition_variable cond;
 	std::vector<std::thread> threads;
-	std::atomic<bool> incomplete = true; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
+	std::atomic<bool> incomplete { true }; // NOTE: Indicates whether balancing may still take place, not whether all all queues are empty.
 	auto worker = [&process, &queues, &cond, &incomplete](unsigned t) {
 		tbb::concurrent_bounded_queue<std::string>& queue = queues[t];
 		// NOTE: It is important to check '!queue.empty()' in loop header _after_ 'incomplete', since 'queue' might
@@ -281,128 +285,132 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 		threads[t].join();
 }
 
-void DlProofEnumerator::_processCondensedDetachmentProofs_dynamic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const auto& fString, std::uint32_t necessitationLimit) {
+namespace {
+template<typename Func>
+void recurse_processCondensedDetachmentProofs_dynamic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString, std::uint32_t necessitationLimit, std::uint32_t c, bool singleStep, const std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>>& combinations, bool ignoreN, std::uint32_t N = 0) {
+	constexpr std::uint32_t S = 0;
+	const std::uint32_t A = knownLimit + c;
+	// NOTE: X1, ..., X<knownLimit> are now simply 1, ..., knownLimit.
+	if (prefix.length() + stack.size() > wordLengthLimit)
+		return;
+	if (stack.empty())
+		fString(prefix);
+	else {
+		auto countLeadingNs = [](const std::string& p) { std::uint32_t counter = 0; for (std::string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
+		auto countTrailingNs = [](const std::string& p) { std::uint32_t counter = 0; for (std::string::const_reverse_iterator it = p.rbegin(); it != p.rend() && *it == 'N'; ++it) counter++; return counter; };
+		auto fittingNs = [&](const std::string& pre, const std::string& post) { return countTrailingNs(pre) + countLeadingNs(post) <= necessitationLimit; };
+		auto processX = [&](const std::vector<std::string>& representatives) {
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::string prefix_copy; //               but the last option, in order to restore the parameters.
+			std::vector<std::string>::const_iterator last = std::prev(representatives.end());
+			for (std::vector<std::string>::const_iterator it = representatives.begin(); it != last; ++it) {
+				stack_copy = stack;
+				prefix_copy = prefix;
+				if (ignoreN) {
+					prefix_copy += *it;
+					recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+				} else if (fittingNs(prefix_copy, *it)) {
+					prefix_copy += *it;
+					recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN, countTrailingNs(prefix_copy));
+				}
+			}
+			if (ignoreN) {
+				prefix += *last;
+				recurse_processCondensedDetachmentProofs_dynamic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+			} else if (fittingNs(prefix, *last)) {
+				prefix += *last;
+				recurse_processCondensedDetachmentProofs_dynamic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN, countTrailingNs(prefix));
+			}
+		};
+		std::uint32_t symbol = stack.back();
+		if (symbol == S) {
+			stack.pop_back(); // pop already for all cases
+			// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::string prefix_copy; //               but the last option, in order to restore the parameters.
+			auto processRepresentatives = [&](const std::vector<std::string>& representatives) {
+				for (const std::string& sequence : representatives) {
+					stack_copy = stack;
+					prefix_copy = prefix;
+					if (ignoreN) {
+						prefix_copy += sequence;
+						recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+					} else if (fittingNs(prefix_copy, sequence)) {
+						prefix_copy += sequence;
+						recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN, countTrailingNs(prefix_copy));
+					}
+				}
+			};
+			processRepresentatives(allRepresentatives[1]);
+			std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
+			for (std::uint32_t s = 1 + c; s <= knownLimit; s += c)
+				if (remainingSpace >= s)
+					processRepresentatives(allRepresentatives[s]);
+
+			// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
+			stack.push_back(A);
+			recurse_processCondensedDetachmentProofs_dynamic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+		} else if (symbol == A) {
+			std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
+			if (remainingSpace < knownLimit + c)
+				return; // cancel already if adding the below sequences would exceed the word length limit
+			stack.pop_back(); // pop already for all cases
+			std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
+			std::string prefix_copy; //               but the last option, in order to restore the parameters.
+			if (N < necessitationLimit || necessitationLimit == UINT32_MAX) { // Δ := 2 (otherwise Δ := 0)
+				// 1/2 : N, A, [X<knownLimit>] ; stack: pop current symbol, push [X<knownLimit>] on top of stack
+				stack_copy = stack;
+				prefix_copy = prefix + "N";
+				stack_copy.push_back(knownLimit);
+				recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN, N + 1);
+				if (!singleStep) {
+					// 2/2 : N, A, [A] ; stack: pop current symbol, push [A] on top of stack
+					stack_copy = stack;
+					prefix_copy = prefix + "N";
+					stack_copy.push_back(A);
+					recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN, N + 1);
+				}
+			}
+			// (1+Δ)/(|combinations|+Δ) : D, A, [X1,X<knownLimit-2+c>] ; stack: pop current symbol, push [X1,X<knownLimit-2+c>] on top of stack
+			// ...
+			// (|combinations|+Δ)/(|combinations|+Δ) : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
+			if (combinations.empty())
+				return;
+			prefix += "D"; // same terminal for all remaining cases, so append to prefix already
+			for (unsigned i = 0; i < combinations.size() - 1; i++) {
+				const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[i];
+				if (remainingSpace < p.second)
+					return; // cancel already if adding the following sequences would exceed the word length limit
+				stack_copy = stack;
+				prefix_copy = prefix;
+				stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
+				recurse_processCondensedDetachmentProofs_dynamic_seq(prefix_copy, stack_copy, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+			}
+			const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
+			if (remainingSpace < p.second)
+				return; // cancel already if adding the final sequence would exceed the word length limit
+			stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
+			recurse_processCondensedDetachmentProofs_dynamic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
+		} else {
+			if (symbol > 1 && prefix.length() + symbol + stack.size() > wordLengthLimit + 1)
+				return; // cancel already if adding the below sequences would exceed the word length limit ; condition already outruled for 'symbol == 1'
+			const std::vector<std::string>& r = allRepresentatives[symbol];
+			if (r.empty())
+				return; // when X<symbol> is empty, throw out all stacks which make use of it
+			stack.pop_back(); // pop already for all cases
+			// 1/1 : {w | w is known representative of length <knownLimit>}, X<symbol>, [] ; stack: pop current symbol, push nothing
+			processX(r);
+		}
+	}
+}
+}
+template<typename Func>
+void DlProofEnumerator::_processCondensedDetachmentProofs_dynamic_seq(std::string& prefix, std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const Func& fString, std::uint32_t necessitationLimit) {
 	const std::uint32_t c = necessitationLimit ? 1 : 2; // proof length step size
 	bool singleStep = wordLengthLimit <= knownLimit + c;
 	const std::vector<std::pair<std::array<std::uint32_t, 2>, unsigned>> combinations = necessitationLimit ? proofLengthCombinationsD_allLengths(knownLimit, singleStep) : proofLengthCombinationsD_oddLengths(knownLimit, singleStep);
 	bool ignoreN = !necessitationLimit || necessitationLimit == UINT32_MAX;
-	auto recurse = [&wordLengthLimit, &knownLimit, &allRepresentatives, &fString, &necessitationLimit, &c, &singleStep, &combinations, &ignoreN](std::string& prefix, std::vector<std::uint32_t>& stack, const auto& me, std::uint32_t N = 0) -> void {
-		constexpr std::uint32_t S = 0;
-		const std::uint32_t A = knownLimit + c;
-		// NOTE: X1, ..., X<knownLimit> are now simply 1, ..., knownLimit.
-		if (prefix.length() + stack.size() > wordLengthLimit)
-			return;
-		if (stack.empty())
-			fString(prefix);
-		else {
-			auto countLeadingNs = [](const std::string& p) { std::uint32_t counter = 0; for (std::string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
-			auto countTrailingNs = [](const std::string& p) { std::uint32_t counter = 0; for (std::string::const_reverse_iterator it = p.rbegin(); it != p.rend() && *it == 'N'; ++it) counter++; return counter; };
-			auto fittingNs = [&](const std::string& pre, const std::string& post) { return countTrailingNs(pre) + countLeadingNs(post) <= necessitationLimit; };
-			auto processX = [&](const std::vector<std::string>& representatives) {
-				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //               but the last option, in order to restore the parameters.
-				std::vector<std::string>::const_iterator last = std::prev(representatives.end());
-				for (std::vector<std::string>::const_iterator it = representatives.begin(); it != last; ++it) {
-					stack_copy = stack;
-					prefix_copy = prefix;
-					if (ignoreN) {
-						prefix_copy += *it;
-						me(prefix_copy, stack_copy, me);
-					} else if (fittingNs(prefix_copy, *it)) {
-						prefix_copy += *it;
-						me(prefix_copy, stack_copy, me, countTrailingNs(prefix_copy));
-					}
-				}
-				if (ignoreN) {
-					prefix += *last;
-					me(prefix, stack, me);
-				} else if (fittingNs(prefix, *last)) {
-					prefix += *last;
-					me(prefix, stack, me, countTrailingNs(prefix));
-				}
-			};
-			std::uint32_t symbol = stack.back();
-			if (symbol == S) {
-				stack.pop_back(); // pop already for all cases
-				// 1/2 : {1,...,allRepresentatives[knownLimit].back()}, S, [] ; stack: pop current symbol, push nothing
-				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //               but the last option, in order to restore the parameters.
-				auto processRepresentatives = [&](const std::vector<std::string>& representatives) {
-					for (const std::string& sequence : representatives) {
-						stack_copy = stack;
-						prefix_copy = prefix;
-						if (ignoreN) {
-							prefix_copy += sequence;
-							me(prefix_copy, stack_copy, me);
-						} else if (fittingNs(prefix_copy, sequence)) {
-							prefix_copy += sequence;
-							me(prefix_copy, stack_copy, me, countTrailingNs(prefix_copy));
-						}
-					}
-				};
-				processRepresentatives(allRepresentatives[1]);
-				std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size()); // NOTE: Considers that stack already popped the current symbol.
-				for (std::uint32_t s = 1 + c; s <= knownLimit; s += c)
-					if (remainingSpace >= s)
-						processRepresentatives(allRepresentatives[s]);
-
-				// 2/2 : ε, S, [A] ; stack: pop current symbol, push [A] on top of stack
-				stack.push_back(A);
-				me(prefix, stack, me);
-			} else if (symbol == A) {
-				std::uint32_t remainingSpace = wordLengthLimit - static_cast<std::uint32_t>(prefix.length() + stack.size() - 1); // NOTE: Considers that stack still has to pop the current symbol.
-				if (remainingSpace < knownLimit + c)
-					return; // cancel already if adding the below sequences would exceed the word length limit
-				stack.pop_back(); // pop already for all cases
-				std::vector<std::uint32_t> stack_copy; // Since there are multiple options, we use copies for all
-				std::string prefix_copy; //               but the last option, in order to restore the parameters.
-				if (N < necessitationLimit || necessitationLimit == UINT32_MAX) { // Δ := 2 (otherwise Δ := 0)
-					// 1/2 : N, A, [X<knownLimit>] ; stack: pop current symbol, push [X<knownLimit>] on top of stack
-					stack_copy = stack;
-					prefix_copy = prefix + "N";
-					stack_copy.push_back(knownLimit);
-					me(prefix_copy, stack_copy, me, N + 1);
-					if (!singleStep) {
-						// 2/2 : N, A, [A] ; stack: pop current symbol, push [A] on top of stack
-						stack_copy = stack;
-						prefix_copy = prefix + "N";
-						stack_copy.push_back(A);
-						me(prefix_copy, stack_copy, me, N + 1);
-					}
-				}
-				// (1+Δ)/(|combinations|+Δ) : D, A, [X1,X<knownLimit-2+c>] ; stack: pop current symbol, push [X1,X<knownLimit-2+c>] on top of stack
-				// ...
-				// (|combinations|+Δ)/(|combinations|+Δ) : D, A, [A,A] ; stack: pop current symbol, push [A,A] on top of stack
-				if (combinations.empty())
-					return;
-				prefix += "D"; // same terminal for all remaining cases, so append to prefix already
-				for (unsigned i = 0; i < combinations.size() - 1; i++) {
-					const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[i];
-					if (remainingSpace < p.second)
-						return; // cancel already if adding the following sequences would exceed the word length limit
-					stack_copy = stack;
-					prefix_copy = prefix;
-					stack_copy.insert(stack_copy.end(), p.first.rbegin(), p.first.rend());
-					me(prefix_copy, stack_copy, me);
-				}
-				const std::pair<std::array<std::uint32_t, 2>, unsigned>& p = combinations[combinations.size() - 1];
-				if (remainingSpace < p.second)
-					return; // cancel already if adding the final sequence would exceed the word length limit
-				stack.insert(stack.end(), p.first.rbegin(), p.first.rend());
-				me(prefix, stack, me);
-			} else {
-				if (symbol > 1 && prefix.length() + symbol + stack.size() > wordLengthLimit + 1)
-					return; // cancel already if adding the below sequences would exceed the word length limit ; condition already outruled for 'symbol == 1'
-				const std::vector<std::string>& r = allRepresentatives[symbol];
-				if (r.empty())
-					return; // when X<symbol> is empty, throw out all stacks which make use of it
-				stack.pop_back(); // pop already for all cases
-				// 1/1 : {w | w is known representative of length <knownLimit>}, X<symbol>, [] ; stack: pop current symbol, push nothing
-				processX(r);
-			}
-		}
-	};
-	recurse(prefix, stack, recurse);
+	recurse_processCondensedDetachmentProofs_dynamic_seq(prefix, stack, wordLengthLimit, knownLimit, allRepresentatives, fString, necessitationLimit, c, singleStep, combinations, ignoreN);
 }
 
 // Grammar in Greibach normal form (GNF) for condensed detachment proofs (using D-notation): [NOTE: Also includes invalid combinations!]
@@ -414,34 +422,32 @@ void DlProofEnumerator::_processCondensedDetachmentProofs_dynamic_seq(std::strin
 //  2, S, ε
 //  3, S, ε
 //  D, S, SS
-void DlProofEnumerator::_processCondensedDetachmentProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const auto& fString) {
-	auto recurse = [&wordLengthLimit, &fString](std::string& prefix, unsigned stackSize, const auto& me) -> void {
-		if (prefix.length() + stackSize > wordLengthLimit)
-			return;
-		if (!stackSize)
-			fString(prefix);
-		else {
-			// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
-			std::string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
-			prefix_copy += "1";
-			me(prefix_copy, stackSize - 1, me);
+template<typename Func>
+void DlProofEnumerator::_processCondensedDetachmentProofs_naive_seq(std::string& prefix, unsigned stackSize, std::uint32_t wordLengthLimit, const Func& fString) {
+	if (prefix.length() + stackSize > wordLengthLimit)
+		return;
+	if (!stackSize)
+		fString(prefix);
+	else {
+		// 1/4 : 1, S, [] ; stack: pop current symbol, push nothing
+		std::string prefix_copy = prefix; // Since there are multiple options, we use copies for all but the last option, in order to restore the parameters.
+		prefix_copy += "1";
+		_processCondensedDetachmentProofs_naive_seq(prefix_copy, stackSize - 1, wordLengthLimit, fString);
 
-			// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "2";
-			me(prefix_copy, stackSize - 1, me);
+		// 2/4 : 2, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "2";
+		_processCondensedDetachmentProofs_naive_seq(prefix_copy, stackSize - 1, wordLengthLimit, fString);
 
-			// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
-			prefix_copy = prefix;
-			prefix_copy += "3";
-			me(prefix_copy, stackSize - 1, me);
+		// 3/4 : 3, S, [] ; stack: pop current symbol, push nothing
+		prefix_copy = prefix;
+		prefix_copy += "3";
+		_processCondensedDetachmentProofs_naive_seq(prefix_copy, stackSize - 1, wordLengthLimit, fString);
 
-			// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
-			prefix += "D";
-			me(prefix, stackSize + 1, me);
-		}
-	};
-	recurse(prefix, stackSize, recurse);
+		// 4/4 : D, S, [S,S] ; stack: pop current symbol, push [S,S] on top of stack
+		prefix += "D";
+		_processCondensedDetachmentProofs_naive_seq(prefix, stackSize + 1, wordLengthLimit, fString);
+	}
 }
 
 }

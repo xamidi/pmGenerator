@@ -19,16 +19,15 @@ digraph {
 		CfgGrammar
 		CfgGrammar
 	}
+	FctHelper -> "boost/filesystem/operations" [color=blue]
 	FctHelper -> "(iostream)" [color=blue]
 	FctHelper -> math [color=blue]
 	FctHelper -> "(algorithm)" [color=red]
 	FctHelper -> "(array)" [color=red]
-	FctHelper -> "(charconv)" [color=red]
 	FctHelper -> "(chrono)" [color=red]
 	FctHelper -> "(cstddef)" [color=red]
 	FctHelper -> "(cstdint)" [color=red]
 	FctHelper -> "(deque)" [color=red]
-	FctHelper -> "(filesystem)" [color=red]
 	FctHelper -> "(fstream)" [color=red]
 	FctHelper -> "(map)" [color=red]
 	FctHelper -> mpi [color=red]
@@ -61,11 +60,9 @@ digraph {
 	ProgressData -> "(vector)" [color=red]
 	Resources -> "(string)" [color=red]
 	Resources -> "(vector)" [color=red]
-	Version -> "(array)" [color=red]
 	Version -> "(cstddef)" [color=red]
 	Version -> "(cstdint)" [color=red]
 	Version -> "(type_traits)" [color=red]
-	Version -> "(utility)" [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\helper" {
 		FctHelper
 		FctHelper
@@ -112,6 +109,7 @@ digraph {
 	DlProofEnumerator -> DlCore [color=blue]
 	DlProofEnumerator -> DlFormula [color=blue]
 	DlProofEnumerator -> "boost/algorithm/string" [color=blue]
+	DlProofEnumerator -> "boost/filesystem/operations" [color=blue]
 	DlProofEnumerator -> concurrent_map [color=blue]
 	DlProofEnumerator -> concurrent_unordered_set [color=blue]
 	DlProofEnumerator -> concurrent_vector [color=blue]
@@ -163,7 +161,6 @@ digraph {
 	DRuleParser -> "(map)" [color=red]
 	DRuleParser -> "(memory)" [color=red]
 	DRuleParser -> "(set)" [color=red]
-	DRuleParser -> "(string_view)" [color=red]
 	DRuleParser -> "(string)" [color=red]
 	DRuleParser -> "(tuple)" [color=red]
 	DRuleParser -> "(unordered_map)" [color=red]

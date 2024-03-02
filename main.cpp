@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	return 0;
 #endif //###
 	//#cout << "argc = " << argc << ", argv = { " << [&]() { string s; for (int i = 0; i < argc; i++) { if (i) s += ", "; s += string { argv[i] }; } return s; }() << " }" << endl;
-	auto printUsage = [&](const string& error = "", Task task = Task::Invalid) {
+	auto printUsage = [&](const string& error, Task task) {
 		if (!error.empty())
 			cerr << error << endl;
 		switch (task) {
@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	}
 #endif
 	if (argc <= 1)
-		return printUsage();
+		return printUsage("", Task::Invalid);
 	struct TaskInfo {
 		Task task;
 		map<string, string> str;
@@ -293,7 +293,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	size_t mpiIgnoreCount = 0;
 	bool extractedEnv = false;
 	for (int i = 1; i < argc; i++) {
-		auto recent = [&](const string& s = "?") {
+		auto recent = [&](const string& s) {
 			if (s == "c")
 				return Task::Customize;
 			else if (s == "g")
@@ -318,14 +318,14 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return tasks.empty() ? Task::Invalid : tasks.back().task;
 		};
 		if (argv[i][0] != '-' || argv[i][1] == '\0' || (argv[i][2] != '\0' && argv[i][1] != '-') || (argv[i][1] == '-' && argv[i][2] == '\0'))
-			return printUsage("Invalid argument \"" + string { argv[i] } + "\".", recent());
+			return printUsage("Invalid argument \"" + string { argv[i] } + "\".", recent("?"));
 		const char c = argv[i][1];
 		switch (c) {
 
 		// Commands
 		case 'c': // -c [-i <file>] [-s <string>] [-n] [-N <limit or -1>] [-l] [-e <id>] [-d]
 			if (!mpiArg.empty())
-				return printUsage("Invalid argument \"-" + string { c } + "\": Cannot configure after \"" + mpiArg + "\".");
+				return printUsage("Invalid argument \"-" + string { c } + "\": Cannot configure after \"" + mpiArg + "\".", Task::Invalid);
 			tasks.emplace_back(Task::Customize, map<string, string> { { "axiomString", "C0C1.0,CC0C1.2CC0.1C0.2,CCN0N1C1.0" }, { "axiomFilePath", "" }, { "extractedSystemId", "" } }, map<string, int64_t> { { "necessitationLimit", 0 } }, map<string, bool> { { "useInputFile", false }, { "normalPolishNotation", false }, { "speedupN", true }, { "extractedSystem", false }, { "defaultSystem", false } });
 			mpiIgnoreCount++;
 			extractedEnv = false;
@@ -353,14 +353,13 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			break;
 		case 'm': // -m <limit> [-s]
 			if (tasks.size() > mpiIgnoreCount)
-				return printUsage("Invalid argument \"-" + string { c } + "\": Can only be combined with preceding configuring commands.");
+				return printUsage("Invalid argument \"-" + string { c } + "\": Can only be combined with preceding configuring commands.", Task::Invalid);
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 			else {
 				string param = string(argv[++i]);
 				unsigned value;
-				from_chars_result result = FctHelper::toUInt(param, value);
-				if (result.ec != errc())
+				if (!FctHelper::toUInt(param, value))
 					return printUsage("Invalid parameter \"" + param + "\" for \"-" + string { c } + "\".", recent(string { c }));
 				tasks.emplace_back(Task::MpiFilter, map<string, string> { }, map<string, int64_t> { { "wordLengthLimit", value } }, map<string, bool> { { "smoothProgress", true } });
 				mpiArg = "-m";
@@ -409,7 +408,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case '#':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ExtractFromProofFiles: // --extract -# <amount up to 35> (initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount [...])
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -428,7 +427,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'b':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ParseAndPrintProofs: // --parse -b (only print conclusions of the given proofs)
 				tasks.back().bln["conclusionsOnly"] = true;
 				if (!tasks.back().bln["whether -j was called"])
@@ -439,7 +438,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'd':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: // -c -d (default system)
 				tasks.back().bln["defaultSystem"] = true;
 				break;
@@ -459,7 +458,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'e':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: // -c -e <id> (specify extracted system with the given identifie)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -476,7 +475,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'f':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ParseAndPrintProofs: //       --parse -f (proofs are given by input file path)
 			case Task::TransformProofSummary: // --transform -f (proof summary is given by input file path)
 			case Task::UnfoldProofSummary: //       --unfold -f (proof summary is given by input file path)
@@ -489,7 +488,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'h':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ExtractFromProofFiles: // --extract -h <string> (similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -501,7 +500,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'i':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: // -c -i <file> (specify axioms by input file path)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -535,7 +534,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'j':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ParseAndPrintProofs: // --parse -j <limit or -1> (join common subproofs together when they are used at least a given amount of times)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -560,7 +559,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'l':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Generate: // -g -l <limit or -1> (limit symbolic length of generated conclusions to at most the given number)
 				if (!extractedEnv)
 					return printUsage("Invalid argument \"-" + string { c } + "\" for \"-g\": Specific filters can only be used in extracted environments. [Hint: '--extract -h .' extracts a system with all axioms unmodified that can be specified with '-c <parent system> -e <id>'.]", recent(string { c }));
@@ -610,7 +609,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'n':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: //                      -c -n (specify formulas in normal Polish notation)
 			case Task::ParseAndPrintProofs: //       --parse -n (print formulas in normal Polish notation)
 			case Task::TransformProofSummary: // --transform -n (specify and print formulas in normal Polish notation)
@@ -623,7 +622,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'N':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: // -c -N <limit or -1> (enable necessitation rule)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -638,7 +637,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'o':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ParseAndPrintProofs: //       --parse -o <output file> (redirect the result's output to the specified file)
 			case Task::TransformProofSummary: // --transform -o <output file> (redirect the result's output to the specified file)
 			case Task::UnfoldProofSummary: //       --unfold -o <output file> (redirect the result's output to the specified file)
@@ -663,7 +662,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'p':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::TransformProofSummary: // --transform -p <limit or -1> (only keep subproofs with primitive lengths not exceeding the given limit)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -681,7 +680,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'q':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Generate: // -g -q <limit> (limit number of proof candidate strings queued per worker thread)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -697,7 +696,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 's':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Customize: // -c -s <string> (specify axioms by comma-separated string)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -744,7 +743,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 't':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::TransformProofSummary: // --transform -t <string> (only transform proofs of specified theorems)
 			case Task::UnfoldProofSummary: //       --unfold -t <string> (obtain proofs of specified theorems)
 				if (i + 1 >= argc)
@@ -770,7 +769,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'u':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::Generate: //                      -g -u (unfiltered)
 			case Task::IterateProofCandidates: // --iterate -u (use unfiltered proof files)
 				tasks.back().bln["redundantSchemaRemoval"] = false;
@@ -786,7 +785,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'w':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ApplyReplacements: //        -a -w (wrap results)
 			case Task::UnfoldProofSummary: // --unfold -w (wrap results)
 				tasks.back().bln["wrap"] = true;
@@ -799,7 +798,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'x':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ConclusionLengthPlot: // --plot -x <limit or -1> (upper horizontal limit)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -814,7 +813,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		case 'y':
 			switch (lastTask()) {
 			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent("?"));
 			case Task::ConclusionLengthPlot: // --plot -y <limit or -1> (upper vertical limit)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -827,14 +826,14 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			}
 			break;
 		default:
-			return printUsage("Invalid argument \"" + string { argv[i] } + "\".", recent());
+			return printUsage("Invalid argument \"" + string { argv[i] } + "\".", recent("?"));
 		}
 	}
 	int mpi_size;
 	int mpi_rank;
 	if (!mpiArg.empty()) {
 		if (tasks.size() > 1 + mpiIgnoreCount)
-			return printUsage("Invalid argument \"" + mpiArg + "\": Can only be combined with preceding configuring commands.");
+			return printUsage("Invalid argument \"" + mpiArg + "\": Can only be combined with preceding configuring commands.", Task::Invalid);
 
 		// Initialize the MPI library.
 		int provided;
@@ -1024,7 +1023,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				else {
 					string path = t.str["mout"];
 					FctHelper::ensureDirExists(path);
-					ofstream fout(filesystem::u8path(path), fstream::out | fstream::binary);
+					ofstream fout(path, fstream::out | fstream::binary);
 					if (!fout.is_open())
 						throw invalid_argument("Cannot write to file \"" + path + "\".");
 					DlProofEnumerator::printConclusionLengthPlotData(t.bln["measureSymbolicLength"], t.bln["table"], t.num["cutX"], t.num["cutY"], t.str["dataLocation"], t.str["inputFilePrefix"], t.bln["includeUnfiltered"], &fout, t.bln["debug"]);
