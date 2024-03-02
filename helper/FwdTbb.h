@@ -1,28 +1,28 @@
 #ifndef XAMIDI_HELPER_FWDTBB_H
 #define XAMIDI_HELPER_FWDTBB_H
 
-//#if __has_include(<tbb/version.h>) // NOTE: Change manually if required. There seems to be no alternative for __has_include in C++11.
+#if __has_include(<tbb/version.h>)
 #include <tbb/version.h>
-//#else
-//#include <tbb/tbb_stddef.h>
-//#endif
+#else
+#include <tbb/tbb_stddef.h>
+#endif
 
 #include <functional>
 #include <utility>
 
 namespace tbb {
 #if TBB_INTERFACE_VERSION >= 12002 // since v2021.1-beta08
-namespace detail { namespace d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; template<typename Key, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_set; } }
+namespace detail::d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; template<typename Key, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_set; }
 using detail::d1::tbb_allocator;
 using detail::d1::cache_aligned_allocator;
 using detail::d1::concurrent_vector;
 using detail::d1::concurrent_unordered_map;
 using detail::d1::concurrent_unordered_set;
 #if TBB_INTERFACE_VERSION >= 12040 // since v2021.4.0
-namespace detail { namespace d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
+namespace detail::d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; }
 using detail::d2::concurrent_map;
 #else
-namespace detail { namespace d1 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; } }
+namespace detail::d1 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; }
 using detail::d1::concurrent_map;
 #endif
 #else

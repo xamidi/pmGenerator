@@ -189,63 +189,6 @@ DRuleParser::AxiomInfo::AxiomInfo(const tuple<shared_ptr<DlFormula>, unsigned, s
 		refinedAxiom(get<0>(refinedData)), primitivesCount(get<1>(refinedData)), name(get<2>(refinedData)) {
 }
 
-void DRuleParser::AxiomInfo::_recurse_substitute_withUniquePrimitivesAndUseBuiltinSymbols(shared_ptr<DlFormula>& destinationNode, const shared_ptr<DlFormula>& formula, const map<string, shared_ptr<DlFormula>>& substitutions) {
-	const string& value = formula->getValue()->value;
-	if (formula->getChildren().empty()) { // Substitutions can only happen in leaves.
-		map<string, shared_ptr<DlFormula>>::const_iterator searchResult = substitutions.find(value);
-		if (searchResult != substitutions.end())
-			destinationNode = searchResult->second; // substitute by using the newly created primitive pointer (so that all occurrences of just one primitive point to the same formula)
-		else if (value == DlCore::terminalStr_top())
-			destinationNode->value() = _top(); // use built-in symbol pointer
-		else if (value == DlCore::terminalStr_bot())
-			destinationNode->value() = _bot(); // use built-in symbol pointer
-		else
-			throw domain_error("DRuleParser::AxiomInfo::refineAxiom(): Unknown operator \"" + value + "\".");
-	} else {
-		for (const shared_ptr<DlFormula>& subformula : formula->getChildren()) {
-			shared_ptr<DlFormula> childNode = make_shared<DlFormula>(make_shared<String>());
-			_recurse_substitute_withUniquePrimitivesAndUseBuiltinSymbols(childNode, subformula, substitutions);
-			destinationNode->addChild(childNode); // NOTE: Must add child after recursive call, since it might be overwritten (in case it is a primitive).
-		}
-		// use built-in symbol pointer
-		if (value == DlCore::terminalStr_and())
-			destinationNode->value() = _and();
-		else if (value == DlCore::terminalStr_or())
-			destinationNode->value() = _or();
-		else if (value == DlCore::terminalStr_nand())
-			destinationNode->value() = _nand();
-		else if (value == DlCore::terminalStr_nor())
-			destinationNode->value() = _nor();
-		else if (value == DlCore::terminalStr_imply())
-			destinationNode->value() = _imply();
-		else if (value == DlCore::terminalStr_implied())
-			destinationNode->value() = _implied();
-		else if (value == DlCore::terminalStr_nimply())
-			destinationNode->value() = _nimply();
-		else if (value == DlCore::terminalStr_nimplied())
-			destinationNode->value() = _nimplied();
-		else if (value == DlCore::terminalStr_equiv())
-			destinationNode->value() = _equiv();
-		else if (value == DlCore::terminalStr_xor())
-			destinationNode->value() = _xor();
-		else if (value == DlCore::terminalStr_com())
-			destinationNode->value() = _com();
-		else if (value == DlCore::terminalStr_app())
-			destinationNode->value() = _app();
-		else if (value == DlCore::terminalStr_not())
-			destinationNode->value() = _not();
-		else if (value == DlCore::terminalStr_nece())
-			destinationNode->value() = _nece();
-		else if (value == DlCore::terminalStr_poss())
-			destinationNode->value() = _poss();
-		else if (value == DlCore::terminalStr_obli())
-			destinationNode->value() = _obli();
-		else if (value == DlCore::terminalStr_perm())
-			destinationNode->value() = _perm();
-		else
-			throw domain_error("DRuleParser::AxiomInfo::refineAxiom(): Unknown operator \"" + value + "\".");
-	}
-}
 tuple<shared_ptr<DlFormula>, unsigned, string> DRuleParser::AxiomInfo::_refineAxiom(const string& name, const shared_ptr<DlFormula>& axiom) {
 	vector<string> primitives = DlCore::primitivesOfFormula_ordered(axiom);
 	map<string, shared_ptr<DlFormula>> substitutions;
@@ -254,45 +197,100 @@ tuple<shared_ptr<DlFormula>, unsigned, string> DRuleParser::AxiomInfo::_refineAx
 		substitutions.emplace(s, make_shared<DlFormula>(make_shared<String>(to_string(primitivesIndex++))));
 	// Basically does what DlCore::substitute() would do, but additionally primitives are assigned to a new unique reference, non-primitives use built-in symbols, and does not copy meanings.
 	auto substitute_withUniquePrimitivesAndUseBuiltinSymbols = [&](const shared_ptr<DlFormula>& formula) {
+		auto recurse = [&](shared_ptr<DlFormula>& destinationNode, const shared_ptr<DlFormula>& formula, const auto& me) -> void {
+			const string& value = formula->getValue()->value;
+			if (formula->getChildren().empty()) { // Substitutions can only happen in leaves.
+				map<string, shared_ptr<DlFormula>>::const_iterator searchResult = substitutions.find(value);
+				if (searchResult != substitutions.end())
+					destinationNode = searchResult->second; // substitute by using the newly created primitive pointer (so that all occurrences of just one primitive point to the same formula)
+				else if (value == DlCore::terminalStr_top())
+					destinationNode->value() = _top(); // use built-in symbol pointer
+				else if (value == DlCore::terminalStr_bot())
+					destinationNode->value() = _bot(); // use built-in symbol pointer
+				else
+					throw domain_error("DRuleParser::AxiomInfo::refineAxiom(): Unknown operator \"" + value + "\".");
+			} else {
+				for (const shared_ptr<DlFormula>& subformula : formula->getChildren()) {
+					shared_ptr<DlFormula> childNode = make_shared<DlFormula>(make_shared<String>());
+					me(childNode, subformula, me);
+					destinationNode->addChild(childNode); // NOTE: Must add child after recursive call, since it might be overwritten (in case it is a primitive).
+				}
+				// use built-in symbol pointer
+				if (value == DlCore::terminalStr_and())
+					destinationNode->value() = _and();
+				else if (value == DlCore::terminalStr_or())
+					destinationNode->value() = _or();
+				else if (value == DlCore::terminalStr_nand())
+					destinationNode->value() = _nand();
+				else if (value == DlCore::terminalStr_nor())
+					destinationNode->value() = _nor();
+				else if (value == DlCore::terminalStr_imply())
+					destinationNode->value() = _imply();
+				else if (value == DlCore::terminalStr_implied())
+					destinationNode->value() = _implied();
+				else if (value == DlCore::terminalStr_nimply())
+					destinationNode->value() = _nimply();
+				else if (value == DlCore::terminalStr_nimplied())
+					destinationNode->value() = _nimplied();
+				else if (value == DlCore::terminalStr_equiv())
+					destinationNode->value() = _equiv();
+				else if (value == DlCore::terminalStr_xor())
+					destinationNode->value() = _xor();
+				else if (value == DlCore::terminalStr_com())
+					destinationNode->value() = _com();
+				else if (value == DlCore::terminalStr_app())
+					destinationNode->value() = _app();
+				else if (value == DlCore::terminalStr_not())
+					destinationNode->value() = _not();
+				else if (value == DlCore::terminalStr_nece())
+					destinationNode->value() = _nece();
+				else if (value == DlCore::terminalStr_poss())
+					destinationNode->value() = _poss();
+				else if (value == DlCore::terminalStr_obli())
+					destinationNode->value() = _obli();
+				else if (value == DlCore::terminalStr_perm())
+					destinationNode->value() = _perm();
+				else
+					throw domain_error("DRuleParser::AxiomInfo::refineAxiom(): Unknown operator \"" + value + "\".");
+			}
+		};
 		shared_ptr<DlFormula> rootNode = make_shared<DlFormula>(make_shared<String>());
-		_recurse_substitute_withUniquePrimitivesAndUseBuiltinSymbols(rootNode, formula, substitutions);
+		recurse(rootNode, formula, recurse);
 		return rootNode;
 	};
 	return tuple<shared_ptr<DlFormula>, unsigned, string>(substitute_withUniquePrimitivesAndUseBuiltinSymbols(axiom), substitutions.size(), name);
 }
 
-namespace {
-shared_ptr<DlFormula> cloneSharedPtr_withRefinedPrimitives(const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, const vector<shared_ptr<DlFormula>>& primitives, unsigned& primitivesIndex) {
-	DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
-	if (searchResult != knownClones.end()) {
-		const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
-		if (knownCloneEntry)
-			return knownCloneEntry; // We can return the known clone itself (by reference).
-	}
-	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
-	const string& value = node->getValue()->value;
-	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
-		for (const shared_ptr<DlFormula>& child : children)
-			clone->addChild(child ? cloneSharedPtr_withRefinedPrimitives(child, knownClones, primitives, primitivesIndex) : nullptr);
-		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
-		return clone;
-	} else { // at a primitive that was not already registered (since 'axioms[·].refinedAxiom' and thereby 'node' does not contain the same primitive value in two different nodes)
-		//#if (primitivesIndex >= primitives.size())
-		//#	throw logic_error("DRuleParser::_ax(): primitivesIndex = " + to_string(primitivesIndex) + " >= |primitives| = " + to_string(primitives.size()) + ". (" + to_string(axiomIndex + 1) + "): " + DlCore::formulaRepresentation_traverse(axioms[axiomIndex].refinedAxiom));
-		const shared_ptr<DlFormula>& primitive = primitives[primitivesIndex++];
-		knownClones[static_cast<const DlFormula*>(node.get())] = primitive; // Remember the shared address of the primitive (for referencing).
-		return primitive;
-	}
-}
-}
 shared_ptr<DlFormula> DRuleParser::_ax(unsigned axiomIndex, const vector<shared_ptr<DlFormula>>& primitives, const vector<AxiomInfo>& axioms) {
 	// Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
 	// NOTE: We want the same primitives for equal strings, which is accomplished by 'axioms[·].refinedAxiom' containing only one formula for each primitive symbol.
 	//       Extremely fast, since primitives are simply addressed by a counting index in 'primitives' (i.e. no string lookup and no extra (hash) map is required).
 	unsigned primitivesIndex = 0;
+	auto cloneSharedPtr_withRefinedPrimitives = [&](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, const auto& me) -> shared_ptr<DlFormula> {
+		DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
+		if (searchResult != knownClones.end()) {
+			const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+			if (knownCloneEntry)
+				return knownCloneEntry; // We can return the known clone itself (by reference).
+		}
+		const vector<shared_ptr<DlFormula>>& children = node->getChildren();
+		const string& value = node->getValue()->value;
+		if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
+			shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
+			for (const shared_ptr<DlFormula>& child : children)
+				clone->addChild(child ? me(child, knownClones, me) : nullptr);
+			knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
+			return clone;
+		} else { // at a primitive that was not already registered (since 'axioms[·].refinedAxiom' and thereby 'node' does not contain the same primitive value in two different nodes)
+			//#if (primitivesIndex >= primitives.size())
+			//#	throw logic_error("DRuleParser::_ax(): primitivesIndex = " + to_string(primitivesIndex) + " >= |primitives| = " + to_string(primitives.size()) + ". (" + to_string(axiomIndex + 1) + "): " + DlCore::formulaRepresentation_traverse(axioms[axiomIndex].refinedAxiom));
+			const shared_ptr<DlFormula>& primitive = primitives[primitivesIndex++];
+			knownClones[static_cast<const DlFormula*>(node.get())] = primitive; // Remember the shared address of the primitive (for referencing).
+			return primitive;
+		}
+	};
 	DlFormula::CloneMap cloneMap;
-	return cloneSharedPtr_withRefinedPrimitives(axioms[axiomIndex].refinedAxiom, cloneMap, primitives, primitivesIndex); // partial cloning
+	return cloneSharedPtr_withRefinedPrimitives(axioms[axiomIndex].refinedAxiom, cloneMap, cloneSharedPtr_withRefinedPrimitives); // partial cloning
 }
 
 shared_ptr<DlFormula> DRuleParser::_ax1(const shared_ptr<DlFormula>& psi, const shared_ptr<DlFormula>& phi) {
@@ -352,68 +350,6 @@ vector<DProofInfo> DRuleParser::parseDProof_raw_permissive(const string& dProof,
 	return parseDProof_raw(dProof, customAxioms, minUseAmountToCreateHelperProof, debug, calculateMeanings, false, reversedAbstractProofStrings);
 }
 
-
-namespace {
-// Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
-// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
-template<typename Func>
-shared_ptr<DlFormula> cloneSharedPtr_withUniquePrimitives(const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const Func& registerFreshPrimitives) {
-	DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
-	if (searchResult != knownClones.end()) {
-		const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
-		if (knownCloneEntry)
-			return knownCloneEntry; // We can return the known clone itself (by reference).
-	}
-	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
-	const string& value = node->getValue()->value;
-	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
-		for (const shared_ptr<DlFormula>& child : children)
-			clone->addChild(child ? cloneSharedPtr_withUniquePrimitives(child, knownClones, primitiveReferences, registerFreshPrimitives) : nullptr);
-		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
-		return clone;
-	} else {
-		unordered_map<string, shared_ptr<DlFormula>>::iterator searchResult = primitiveReferences.find(value);
-		if (searchResult == primitiveReferences.end()) {
-			shared_ptr<DlFormula> primitive = registerFreshPrimitives(1)[0];
-			primitiveReferences[value] = primitive;
-			return primitive;
-		} else
-			return searchResult->second;
-	}
-}
-// Basically does what DlFormula::cloneSharedPtr() would do, except that primitives are not cloned but changed to a unique reference, and meanings are not copied.
-// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
-shared_ptr<DlFormula> cloneSharedPtr_makePrimitivesUnique(const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences) {
-	DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
-	if (searchResult != knownClones.end()) {
-		const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
-		if (knownCloneEntry)
-			return knownCloneEntry; // We can return the known clone itself (by reference).
-	}
-	const vector<shared_ptr<DlFormula>>& children = node->getChildren();
-	const string& value = node->getValue()->value;
-	if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
-		shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
-		for (const shared_ptr<DlFormula>& child : children)
-			clone->addChild(child ? cloneSharedPtr_makePrimitivesUnique(child, knownClones, primitiveReferences) : nullptr);
-		knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
-		return clone;
-	} else
-		return primitiveReferences.at(value);
-}
-void appendNewPrimitivesOfFormula(const shared_ptr<DlFormula>& formula, vector<DlFormula*>& primitivesSequence, unordered_set<DlFormula*>& alreadyProcessedPrimitives, const set<shared_ptr<DlFormula>>& usedPrimitives) {
-	if (primitivesSequence.size() == usedPrimitives.size())
-		return; // All used primitives have been found, so we are done.
-	const string& value = formula->getValue()->value;
-	if (formula->getChildren().empty()) {
-		if (value != DlCore::terminalStr_bot() && value != DlCore::terminalStr_top() && alreadyProcessedPrimitives.emplace(formula.get()).second)
-			primitivesSequence.push_back(formula.get());
-	} else
-		for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
-			appendNewPrimitivesOfFormula(subformula, primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
-}
-}
 vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, const vector<AxiomInfo>* customAxioms, unsigned minUseAmountToCreateHelperProof, map<size_t, set<string>>* optOut_knownDProofsByLength, bool debug, bool calculateMeanings, bool exceptionOnUnificationFailure, bool prepareOnly, bool reversedAbstractProofStrings, vector<size_t>* optOut_indexTranslation, unordered_map<size_t, size_t>* optOut_indexOrigins, map<size_t, size_t>* optOut_duplicates, vector<string>* optOut_otherProofStrings) { // NOTE: Detailed debug code available at https://github.com/deontic-logic/proof-tool/commit/c25e82b6c239fe33fa2b0823fcd17244a62f4a20
 	// 1. Group and order the (in D-notation) given proofs by their length, and create a context lookup table
 	map<size_t, set<string>> knownDProofsByLength; // length -> set of condensed detachment proofs of that length
@@ -805,7 +741,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 		};
 		auto updatePrimitives = [&]() {
 			for (set<shared_ptr<DlFormula>>::iterator it = usedPrimitives.begin(); it != usedPrimitives.end();)
-				if (it->unique()) {
+				if (it->use_count() == 1) {
 					freePrimitives.emplace(*it);
 					it = usedPrimitives.erase(it);
 				} else
@@ -860,9 +796,36 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 					// Insert fresh primitives into formula
 					shared_ptr<DlFormula>& formula = formulas.back();
 
+					// Basically does what DlFormula::cloneSharedPtr() would do, but additionally primitives are assigned to a new unique reference, and does not copy meanings.
+					// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
+					auto cloneSharedPtr_withUniquePrimitives = [&](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
+						DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
+						if (searchResult != knownClones.end()) {
+							const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+							if (knownCloneEntry)
+								return knownCloneEntry; // We can return the known clone itself (by reference).
+						}
+						const vector<shared_ptr<DlFormula>>& children = node->getChildren();
+						const string& value = node->getValue()->value;
+						if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
+							shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
+							for (const shared_ptr<DlFormula>& child : children)
+								clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
+							knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
+							return clone;
+						} else {
+							unordered_map<string, shared_ptr<DlFormula>>::iterator searchResult = primitiveReferences.find(value);
+							if (searchResult == primitiveReferences.end()) {
+								shared_ptr<DlFormula> primitive = registerFreshPrimitives(1)[0];
+								primitiveReferences[value] = primitive;
+								return primitive;
+							} else
+								return searchResult->second;
+						}
+					};
 					DlFormula::CloneMap cloneMap;
 					unordered_map<string, shared_ptr<DlFormula>> primitiveReferences; // to assign primitives by strings
-					formula = cloneSharedPtr_withUniquePrimitives(formula, cloneMap, primitiveReferences, registerFreshPrimitives); // partial cloning
+					formula = cloneSharedPtr_withUniquePrimitives(formula, cloneMap, primitiveReferences, cloneSharedPtr_withUniquePrimitives); // partial cloning
 
 					atRef = false;
 					refIndex = 0;
@@ -1008,6 +971,27 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 								return {};
 						}
 
+						// Basically does what DlFormula::cloneSharedPtr() would do, except that primitives are not cloned but changed to a unique reference, and meanings are not copied.
+						// NOTE: Using DlFormula::cloneSharedPtr(true, &cloneMap) may enrich cloneMap by further primitive entries which we DON'T WANT! We want the same primitives for equal strings.
+						auto cloneSharedPtr_makePrimitivesUnique = [](const shared_ptr<DlFormula>& node, DlFormula::CloneMap& knownClones, unordered_map<string, shared_ptr<DlFormula>>& primitiveReferences, const auto& me) -> shared_ptr<DlFormula> {
+							DlFormula::CloneMap::iterator searchResult = knownClones.find(static_cast<const DlFormula*>(node.get()));
+							if (searchResult != knownClones.end()) {
+								const shared_ptr<DlFormula>& knownCloneEntry = searchResult->second;
+								if (knownCloneEntry)
+									return knownCloneEntry; // We can return the known clone itself (by reference).
+							}
+							const vector<shared_ptr<DlFormula>>& children = node->getChildren();
+							const string& value = node->getValue()->value;
+							if (!children.empty() || value == DlCore::terminalStr_top() || value == DlCore::terminalStr_bot()) {
+								shared_ptr<DlFormula> clone = make_shared<DlFormula>(node->getValue());
+								for (const shared_ptr<DlFormula>& child : children)
+									clone->addChild(child ? me(child, knownClones, primitiveReferences, me) : nullptr);
+								knownClones[static_cast<const DlFormula*>(node.get())] = clone; // Remember the shared address of the clone (for referencing).
+								return clone;
+							} else
+								return primitiveReferences.at(value);
+						};
+
 						// The output of DlCore::tryUnifyTrees() shall be safely used with modifyingSubstitute(), therefore the substitution entries must be cloned unless they are primitives.
 						// NOTE: The cloning part could be removed in case DlCore::tryUnifyTrees()'s behavior would be modified in this way (but a variant that doesn't clone should be kept since it is faster this way).
 						DlFormula::CloneMap baseCloneMap; // to assign non-primitives by pointers ; unordered_map<const DlFormula*, shared_ptr<DlFormula>> of predefined 'clone' assignments
@@ -1018,7 +1002,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 							primitiveReferences.emplace(primitive->getValue()->value, primitive);
 						for (pair<const string, shared_ptr<DlFormula>>& p : substitutions) {
 							DlFormula::CloneMap cloneMap = baseCloneMap;
-							p.second = cloneSharedPtr_makePrimitivesUnique(p.second, cloneMap, primitiveReferences); // partial cloning
+							p.second = cloneSharedPtr_makePrimitivesUnique(p.second, cloneMap, primitiveReferences, cloneSharedPtr_makePrimitivesUnique); // partial cloning
 						}
 
 						// 3. Update all the formulas
@@ -1048,9 +1032,23 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 		vector<DlFormula*> primitivesSequence;
 		if (!formulas.empty()) {
 			unordered_set<DlFormula*> alreadyProcessedPrimitives;
-			appendNewPrimitivesOfFormula(formulas.back(), primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
+			auto appendNewPrimitivesOfFormula = [&](const shared_ptr<DlFormula>& formula) {
+				auto recurse = [&](const shared_ptr<DlFormula>& formula, const auto& me) {
+					if (primitivesSequence.size() == usedPrimitives.size())
+						return; // All used primitives have been found, so we are done.
+					const string& value = formula->getValue()->value;
+					if (formula->getChildren().empty()) {
+						if (value != DlCore::terminalStr_bot() && value != DlCore::terminalStr_top() && alreadyProcessedPrimitives.emplace(formula.get()).second)
+							primitivesSequence.push_back(formula.get());
+					} else
+						for (const shared_ptr<DlFormula>& subformula : formula->getChildren())
+							me(subformula, me);
+				};
+				recurse(formula, recurse);
+			};
+			appendNewPrimitivesOfFormula(formulas.back());
 			for (size_t i = 0; i + 1 < formulas.size(); i++) {
-				appendNewPrimitivesOfFormula(formulas[i], primitivesSequence, alreadyProcessedPrimitives, usedPrimitives);
+				appendNewPrimitivesOfFormula(formulas[i]);
 				if (primitivesSequence.size() == usedPrimitives.size())
 					break; // All used primitives have been found, so we are done.
 			}
@@ -1164,9 +1162,9 @@ shared_ptr<DlFormula> DRuleParser::parseMmConsequent(const string& strConsequent
 	if (topLevelOpening) { // Is there something in the beginning not processed yet?
 		if (strConsequent[topLevelOpening - 1] != ' ')
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid input \"" + strConsequent + "\" has non-enclosed prefix without separation.");
-		string unaryOperatorSequence(consBegin, consBegin + topLevelOpening);
+		string_view unaryOperatorSequence(consBegin, consBegin + topLevelOpening);
 		vector<DlOperator> unaryOperators;
-		string::const_iterator unopsEnd = _obtainUnaryOperatorSequence(unaryOperatorSequence, unaryOperators);
+		string_view::iterator unopsEnd = _obtainUnaryOperatorSequence(unaryOperatorSequence, unaryOperators);
 		if (unopsEnd < unaryOperatorSequence.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid unary operator sequence \"" + string(unaryOperatorSequence) + "\" for input \"" + strConsequent + "\".");
 		shared_ptr<DlFormula> result = topLevelResult.second.second;
@@ -1275,84 +1273,6 @@ string DRuleParser::toDBProof(const string& dProof, const vector<AxiomInfo>* cus
 	return ss.str();
 }
 
-shared_ptr<DlFormula> DRuleParser::_parseAbstractDProof_parse(const string& rule, const size_t i, const size_t extraIndex, const string& extraId, const vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, const vector<AxiomInfo>* customAxioms, vector<shared_ptr<DlFormula>>& helperRulesConclusions, const vector<string>& helperRules, const vector<size_t>* optOut_indexEvalSequence, vector<size_t>& indexEvalSequence, vector<AxiomInfo>& axBase, vector<AxiomInfo>& axBaseN, vector<AxiomInfo>& refBase) {
-	vector<DProofInfo> rawParseData;
-	string::size_type pos = rule.find('[');
-	if (pos == string::npos) // no references => use original axioms
-		rawParseData = parseDProof_raw(rule, customAxioms);
-	else {
-		string::size_type posEnd = rule.find(']', pos + 1);
-		if (posEnd == string::npos)
-			throw invalid_argument("Missing ']' in \"" + rule + "\".");
-		size_t num;
-		try {
-			num = stoll(rule.substr(pos + 1, posEnd - pos - 1));
-		} catch (...) {
-			throw invalid_argument("Bad index number in \"" + rule + "\".");
-		}
-		if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
-			if (posEnd != rule.size() - 1)
-				throw logic_error("First ']' should be final character in \"" + rule + "\".");
-			shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-			if (!f) // still need to parse rule at 'num'?
-				f = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
-			if (optOut_indexEvalSequence)
-				indexEvalSequence.push_back(i);
-			return make_shared<DlFormula>(_nece(), vector<shared_ptr<DlFormula>> { f });
-		} else {
-			bool refLhs = pos == 1;
-			pos = rule.find('[', posEnd + 1);
-			if (pos == string::npos) { // D-rule with one axiom, one reference => use axBase or axBaseN
-				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-				if (!f) // still need to parse rule at 'num'?
-					f = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
-				char axSym = refLhs ? rule[posEnd + 1] : rule[1];
-				if ((axSym < '1' || axSym > '9') && (axSym < 'a' || axSym > 'z'))
-					throw invalid_argument("Invalid axiom name in \"" + rule + "\".");
-				size_t ax = axSym >= '1' && axSym <= '9' ? axSym - '0' : 10 + axSym - 'a';
-				string rule_copy = rule;
-				if (ax < 35) {
-					axBase[extraIndex] = AxiomInfo("", f);
-					boost::replace_all(rule_copy, "[" + to_string(num) + "]", extraId);
-					rawParseData = parseDProof_raw(rule_copy, &axBase);
-				} else {
-					axBaseN[33] = AxiomInfo("", f);
-					boost::replace_all(rule_copy, "[" + to_string(num) + "]", "y");
-					rawParseData = parseDProof_raw(rule_copy, &axBaseN);
-				}
-			} else { // D-rule with no axioms, two references => use refBase
-				string::size_type posEnd = rule.find(']', pos + 1);
-				if (posEnd == string::npos)
-					throw invalid_argument("Missing ']' in \"" + rule + "\".");
-				size_t num2;
-				try {
-					num2 = stoll(rule.substr(pos + 1, posEnd - pos - 1));
-				} catch (...) {
-					throw invalid_argument("Bad index number in \"" + rule + "\".");
-				}
-				if (posEnd != rule.size() - 1)
-					throw logic_error("Second ']' should be final character in \"" + rule + "\".");
-				shared_ptr<DlFormula>& f1 = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-				if (!f1) // still need to parse rule at 'num'?
-					f1 = _parseAbstractDProof_parse(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
-				shared_ptr<DlFormula>& f2 = num2 < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num2] : helperRulesConclusions[num2 - inOut_abstractDProof.size()];
-				if (!f2) // still need to parse rule at 'num2'?
-					f2 = _parseAbstractDProof_parse(num2 < inOut_abstractDProof.size() ? inOut_abstractDProof[num2] : helperRules[num2 - inOut_abstractDProof.size()], num2, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
-				refBase[0] = AxiomInfo("", f1);
-				refBase[1] = AxiomInfo("", f2);
-				string rule_copy = rule;
-				boost::replace_all(rule_copy, "[" + to_string(num) + "]", "1");
-				if (num != num2)
-					boost::replace_all(rule_copy, "[" + to_string(num2) + "]", "2");
-				rawParseData = parseDProof_raw(rule_copy, &refBase);
-				//#cout << "[#2] " << DlCore::toPolishNotation(get<0>(rawParseData.back().second).back()) << " = D<" << DlCore::toPolishNotation(f1) << "><" << DlCore::toPolishNotation(f2) << ">" << endl;
-			}
-		}
-	}
-	if (optOut_indexEvalSequence)
-		indexEvalSequence.push_back(i);
-	return get<0>(rawParseData.back().second).back();
-}
 void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, const vector<AxiomInfo>* customAxioms, vector<string>* optOut_helperRules, vector<shared_ptr<DlFormula>>* optOut_helperRulesConclusions, vector<size_t>* optOut_indexEvalSequence, bool debug) {
 	if (customAxioms && customAxioms->empty())
 		throw invalid_argument("Axiom list given but empty.");
@@ -1552,8 +1472,86 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	out_abstractDProofConclusions = vector<shared_ptr<DlFormula>>(inOut_abstractDProof.size());
 	vector<shared_ptr<DlFormula>> helperRulesConclusions(helperRules.size());
 	vector<size_t> indexEvalSequence;
+	auto parse = [&](const string& rule, size_t i, const auto& me) -> shared_ptr<DlFormula> {
+		vector<DProofInfo> rawParseData;
+		string::size_type pos = rule.find('[');
+		if (pos == string::npos) // no references => use original axioms
+			rawParseData = parseDProof_raw(rule, customAxioms);
+		else {
+			string::size_type posEnd = rule.find(']', pos + 1);
+			if (posEnd == string::npos)
+				throw invalid_argument("Missing ']' in \"" + rule + "\".");
+			size_t num;
+			try {
+				num = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+			} catch (...) {
+				throw invalid_argument("Bad index number in \"" + rule + "\".");
+			}
+			if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
+				if (posEnd != rule.size() - 1)
+					throw logic_error("First ']' should be final character in \"" + rule + "\".");
+				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+				if (!f) // still need to parse rule at 'num'?
+					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
+				if (optOut_indexEvalSequence)
+					indexEvalSequence.push_back(i);
+				return make_shared<DlFormula>(_nece(), vector<shared_ptr<DlFormula>> { f });
+			} else {
+				bool refLhs = pos == 1;
+				pos = rule.find('[', posEnd + 1);
+				if (pos == string::npos) { // D-rule with one axiom, one reference => use axBase or axBaseN
+					shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+					if (!f) // still need to parse rule at 'num'?
+						f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
+					char axSym = refLhs ? rule[posEnd + 1] : rule[1];
+					if ((axSym < '1' || axSym > '9') && (axSym < 'a' || axSym > 'z'))
+						throw invalid_argument("Invalid axiom name in \"" + rule + "\".");
+					size_t ax = axSym >= '1' && axSym <= '9' ? axSym - '0' : 10 + axSym - 'a';
+					string rule_copy = rule;
+					if (ax < 35) {
+						axBase[extraIndex] = AxiomInfo("", f);
+						boost::replace_all(rule_copy, "[" + to_string(num) + "]", extraId);
+						rawParseData = parseDProof_raw(rule_copy, &axBase);
+					} else {
+						axBaseN[33] = AxiomInfo("", f);
+						boost::replace_all(rule_copy, "[" + to_string(num) + "]", "y");
+						rawParseData = parseDProof_raw(rule_copy, &axBaseN);
+					}
+				} else { // D-rule with no axioms, two references => use refBase
+					string::size_type posEnd = rule.find(']', pos + 1);
+					if (posEnd == string::npos)
+						throw invalid_argument("Missing ']' in \"" + rule + "\".");
+					size_t num2;
+					try {
+						num2 = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+					} catch (...) {
+						throw invalid_argument("Bad index number in \"" + rule + "\".");
+					}
+					if (posEnd != rule.size() - 1)
+						throw logic_error("Second ']' should be final character in \"" + rule + "\".");
+					shared_ptr<DlFormula>& f1 = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+					if (!f1) // still need to parse rule at 'num'?
+						f1 = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
+					shared_ptr<DlFormula>& f2 = num2 < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num2] : helperRulesConclusions[num2 - inOut_abstractDProof.size()];
+					if (!f2) // still need to parse rule at 'num2'?
+						f2 = me(num2 < inOut_abstractDProof.size() ? inOut_abstractDProof[num2] : helperRules[num2 - inOut_abstractDProof.size()], num2, me);
+					refBase[0] = AxiomInfo("", f1);
+					refBase[1] = AxiomInfo("", f2);
+					string rule_copy = rule;
+					boost::replace_all(rule_copy, "[" + to_string(num) + "]", "1");
+					if (num != num2)
+						boost::replace_all(rule_copy, "[" + to_string(num2) + "]", "2");
+					rawParseData = parseDProof_raw(rule_copy, &refBase);
+					//#cout << "[#2] " << DlCore::toPolishNotation(get<0>(rawParseData.back().second).back()) << " = D<" << DlCore::toPolishNotation(f1) << "><" << DlCore::toPolishNotation(f2) << ">" << endl;
+				}
+			}
+		}
+		if (optOut_indexEvalSequence)
+			indexEvalSequence.push_back(i);
+		return get<0>(rawParseData.back().second).back();
+	};
 	for (size_t i = 0; i < inOut_abstractDProof.size(); i++)
-		out_abstractDProofConclusions[i] = _parseAbstractDProof_parse(inOut_abstractDProof[i], i, extraIndex, extraId, inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, helperRulesConclusions, helperRules, optOut_indexEvalSequence, indexEvalSequence, axBase, axBaseN, refBase);
+		out_abstractDProofConclusions[i] = parse(inOut_abstractDProof[i], i, parse);
 	if (debug) {
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to morph and parse " << inOut_abstractDProof.size() + helperRules.size() << " abstract proof" << (inOut_abstractDProof.size() + helperRules.size() == 1 ? "" : "s") << "." << endl;
 		startTime = chrono::steady_clock::now();
@@ -1631,55 +1629,57 @@ vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>&
 	return targetIndices;
 }
 
-namespace {
-template<typename FuncA, typename FuncB>
-void switchRefs(char& c, bool& inReference, unsigned& refIndex, const FuncA& inRefAction, const FuncB& outRefAction) {
-	if (inReference)
-		switch (c) {
-		case '0':
-			refIndex = 10 * refIndex;
-			break;
-		case '1':
-			refIndex = 10 * refIndex + 1;
-			break;
-		case '2':
-			refIndex = 10 * refIndex + 2;
-			break;
-		case '3':
-			refIndex = 10 * refIndex + 3;
-			break;
-		case '4':
-			refIndex = 10 * refIndex + 4;
-			break;
-		case '5':
-			refIndex = 10 * refIndex + 5;
-			break;
-		case '6':
-			refIndex = 10 * refIndex + 6;
-			break;
-		case '7':
-			refIndex = 10 * refIndex + 7;
-			break;
-		case '8':
-			refIndex = 10 * refIndex + 8;
-			break;
-		case '9':
-			refIndex = 10 * refIndex + 9;
-			break;
-		case ']':
-			inRefAction();
-			refIndex = 0;
-			inReference = false;
-			break;
-		default:
-			throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
-		}
-	else if (c == '[')
-		inReference = true;
-	else
-		outRefAction();
-}
-size_t measureFundamentalLengthsInAbstractDProof_fundamentalLength(size_t i, vector<size_t>& storedFundamentalLengths, const vector<string>& abstractDProof, const vector<string>& helperRules, bool debug) {
+vector<size_t> DRuleParser::measureFundamentalLengthsInAbstractDProof(const vector<size_t>& targetIndices, const vector<string>& abstractDProof, const vector<shared_ptr<DlFormula>>& abstractDProofConclusions, const vector<string>& helperRules, const vector<shared_ptr<DlFormula>>& helperRulesConclusions, bool debug, size_t limit) {
+	chrono::time_point<chrono::steady_clock> startTime;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
+		if (inReference)
+			switch (c) {
+			case '0':
+				refIndex = 10 * refIndex;
+				break;
+			case '1':
+				refIndex = 10 * refIndex + 1;
+				break;
+			case '2':
+				refIndex = 10 * refIndex + 2;
+				break;
+			case '3':
+				refIndex = 10 * refIndex + 3;
+				break;
+			case '4':
+				refIndex = 10 * refIndex + 4;
+				break;
+			case '5':
+				refIndex = 10 * refIndex + 5;
+				break;
+			case '6':
+				refIndex = 10 * refIndex + 6;
+				break;
+			case '7':
+				refIndex = 10 * refIndex + 7;
+				break;
+			case '8':
+				refIndex = 10 * refIndex + 8;
+				break;
+			case '9':
+				refIndex = 10 * refIndex + 9;
+				break;
+			case ']':
+				inRefAction();
+				refIndex = 0;
+				inReference = false;
+				break;
+			default:
+				throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+			}
+		else if (c == '[')
+			inReference = true;
+		else
+			outRefAction();
+	};
+	vector<size_t> storedFundamentalLengths(abstractDProof.size() + helperRules.size(), SIZE_MAX);
 	auto bounded_add = [&debug](size_t a, size_t b, size_t i) { // fundamental lengths above SIZE_MAX are realistic, so avoid overflows and treat SIZE_MAX as 'SIZE_MAX and above'
 		if (b > SIZE_MAX - a) {
 			if (debug)
@@ -1688,33 +1688,28 @@ size_t measureFundamentalLengthsInAbstractDProof_fundamentalLength(size_t i, vec
 		}
 		return a + b;
 	};
-	if (storedFundamentalLengths[i] != SIZE_MAX)
-		return storedFundamentalLengths[i];
-	const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
-	bool inReference = false;
-	size_t counter = 0;
-	unsigned refIndex = 0;
-	for (char c : dProof)
-		switchRefs(c, inReference, refIndex, [&]() {
-			counter = bounded_add(counter, measureFundamentalLengthsInAbstractDProof_fundamentalLength(refIndex, storedFundamentalLengths, abstractDProof, helperRules, debug), i);
-		}, [&]() { counter = bounded_add(counter, 1, i); });
-	if (inReference)
-		throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Missing character ']' after '['.");
-	//#if (storedFundamentalLengths[i] != SIZE_MAX)
-	//#	throw logic_error("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Redundant computation of fundamental length for index " + to_string(i) + ".");
-	storedFundamentalLengths[i] = counter;
-	return counter;
-}
-}
-vector<size_t> DRuleParser::measureFundamentalLengthsInAbstractDProof(const vector<size_t>& targetIndices, const vector<string>& abstractDProof, const vector<shared_ptr<DlFormula>>& abstractDProofConclusions, const vector<string>& helperRules, const vector<shared_ptr<DlFormula>>& helperRulesConclusions, bool debug, size_t limit) {
-	chrono::time_point<chrono::steady_clock> startTime;
-	if (debug)
-		startTime = chrono::steady_clock::now();
-	vector<size_t> storedFundamentalLengths(abstractDProof.size() + helperRules.size(), SIZE_MAX);
+	auto fundamentalLength = [&](size_t i, const auto& me) -> size_t {
+		if (storedFundamentalLengths[i] != SIZE_MAX)
+			return storedFundamentalLengths[i];
+		const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
+		bool inReference = false;
+		size_t counter = 0;
+		unsigned refIndex = 0;
+		for (char c : dProof)
+			switchRefs(c, inReference, refIndex, [&]() {
+				counter = bounded_add(counter, me(refIndex, me), i);
+			}, [&]() { counter = bounded_add(counter, 1, i); });
+		if (inReference)
+			throw invalid_argument("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Missing character ']' after '['.");
+		//#if (storedFundamentalLengths[i] != SIZE_MAX)
+		//#	throw logic_error("DRuleParser::measureFundamentalLengthsInAbstractDProof(): Redundant computation of fundamental length for index " + to_string(i) + ".");
+		storedFundamentalLengths[i] = counter;
+		return counter;
+	};
 	size_t sumFundamentalLength = 0;
 	vector<pair<size_t, size_t>> fundamentalLengths;
 	for (size_t i : targetIndices) {
-		size_t l = measureFundamentalLengthsInAbstractDProof_fundamentalLength(i, storedFundamentalLengths, abstractDProof, helperRules, debug);
+		size_t l = fundamentalLength(i, fundamentalLength);
 		sumFundamentalLength += l;
 		fundamentalLengths.emplace_back(i, l);
 	}
@@ -1733,40 +1728,56 @@ vector<size_t> DRuleParser::measureFundamentalLengthsInAbstractDProof(const vect
 	return storedFundamentalLengths;
 }
 
-namespace {
-string unfoldRulesInAbstractDProof_unfoldedProof(size_t i, const map<size_t, size_t>& indexTranslation, vector<string>& targetUnfoldedProofs, vector<string>& storedUnfoldedProofs, const vector<string>& abstractDProof, const vector<string>& helperRules, vector<size_t>* storedFundamentalLengths, const size_t storeIntermediateUnfoldingLimit) {
-	map<size_t, size_t>::const_iterator it_targetIndex = indexTranslation.find(i);
-	if (it_targetIndex != indexTranslation.end()) {
-		if (!targetUnfoldedProofs[it_targetIndex->second].empty())
-			return targetUnfoldedProofs[it_targetIndex->second];
-	} else if (!storedUnfoldedProofs[i].empty())
-		return storedUnfoldedProofs[i];
-	const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
-	bool inReference = false;
-	string result;
-	unsigned refIndex = 0;
-	for (char c : dProof)
-		switchRefs(c, inReference, refIndex, [&]() {
-			result += unfoldRulesInAbstractDProof_unfoldedProof(refIndex, indexTranslation, targetUnfoldedProofs, storedUnfoldedProofs, abstractDProof, helperRules, storedFundamentalLengths, storeIntermediateUnfoldingLimit);
-		}, [&]() { result += string { c }; });
-	if (inReference)
-		throw invalid_argument("DRuleParser::unfoldRulesInAbstractDProof(): Missing character ']' after '['.");
-	//#if (it_targetIndex != indexTranslation.end()) {
-	//#	if (!targetUnfoldedProofs[it_targetIndex->second].empty())
-	//#		throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
-	//#} else if (!storedUnfoldedProofs[i].empty())
-	//#	throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
-	if (it_targetIndex != indexTranslation.end())
-		targetUnfoldedProofs[it_targetIndex->second] = result;
-	else if (!storedFundamentalLengths || (*storedFundamentalLengths)[i] <= storeIntermediateUnfoldingLimit)
-		storedUnfoldedProofs[i] = result;
-	return result;
-}
-}
 vector<string> DRuleParser::unfoldRulesInAbstractDProof(const vector<size_t>& targetIndices, const vector<string>& abstractDProof, const vector<string>& helperRules, bool debug, vector<size_t>* storedFundamentalLengths, size_t storeIntermediateUnfoldingLimit) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
 		startTime = chrono::steady_clock::now();
+	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
+		if (inReference)
+			switch (c) {
+			case '0':
+				refIndex = 10 * refIndex;
+				break;
+			case '1':
+				refIndex = 10 * refIndex + 1;
+				break;
+			case '2':
+				refIndex = 10 * refIndex + 2;
+				break;
+			case '3':
+				refIndex = 10 * refIndex + 3;
+				break;
+			case '4':
+				refIndex = 10 * refIndex + 4;
+				break;
+			case '5':
+				refIndex = 10 * refIndex + 5;
+				break;
+			case '6':
+				refIndex = 10 * refIndex + 6;
+				break;
+			case '7':
+				refIndex = 10 * refIndex + 7;
+				break;
+			case '8':
+				refIndex = 10 * refIndex + 8;
+				break;
+			case '9':
+				refIndex = 10 * refIndex + 9;
+				break;
+			case ']':
+				inRefAction();
+				refIndex = 0;
+				inReference = false;
+				break;
+			default:
+				throw invalid_argument("DRuleParser::unfoldRulesInAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+			}
+		else if (c == '[')
+			inReference = true;
+		else
+			outRefAction();
+	};
 	set<size_t> targetIndices_lookup(targetIndices.begin(), targetIndices.end());
 	// NOTE: In order to save memory, concrete D-proofs are only stored for target indices, or in case they are no longer than 'storeIntermediateUnfoldingLimit' steps.
 	vector<string> targetUnfoldedProofs(targetIndices.size());
@@ -1776,8 +1787,36 @@ vector<string> DRuleParser::unfoldRulesInAbstractDProof(const vector<size_t>& ta
 		size_t targetIndex = targetIndices[i];
 		indexTranslation.emplace(targetIndex, i);
 	}
+	auto unfoldedProof = [&](size_t i, const auto& me) -> string {
+		map<size_t, size_t>::const_iterator it_targetIndex = indexTranslation.find(i);
+		if (it_targetIndex != indexTranslation.end()) {
+			if (!targetUnfoldedProofs[it_targetIndex->second].empty())
+				return targetUnfoldedProofs[it_targetIndex->second];
+		} else if (!storedUnfoldedProofs[i].empty())
+			return storedUnfoldedProofs[i];
+		const string& dProof = i < abstractDProof.size() ? abstractDProof[i] : helperRules[i - abstractDProof.size()];
+		bool inReference = false;
+		string result;
+		unsigned refIndex = 0;
+		for (char c : dProof)
+			switchRefs(c, inReference, refIndex, [&]() {
+				result += me(refIndex, me);
+			}, [&]() { result += string { c }; });
+		if (inReference)
+			throw invalid_argument("DRuleParser::unfoldRulesInAbstractDProof(): Missing character ']' after '['.");
+		//#if (it_targetIndex != indexTranslation.end()) {
+		//#	if (!targetUnfoldedProofs[it_targetIndex->second].empty())
+		//#		throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
+		//#} else if (!storedUnfoldedProofs[i].empty())
+		//#	throw logic_error("DRuleParser::unfoldRulesInAbstractDProof(): Redundant computation of unfolded proof for index " + to_string(i) + ".");
+		if (it_targetIndex != indexTranslation.end())
+			targetUnfoldedProofs[it_targetIndex->second] = result;
+		else if (!storedFundamentalLengths || (*storedFundamentalLengths)[i] <= storeIntermediateUnfoldingLimit)
+			storedUnfoldedProofs[i] = result;
+		return result;
+	};
 	for (size_t i : targetIndices)
-		unfoldRulesInAbstractDProof_unfoldedProof(i, indexTranslation, targetUnfoldedProofs, storedUnfoldedProofs, abstractDProof, helperRules, storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+		unfoldedProof(i, unfoldedProof);
 	if (debug)
 		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to unfold " << targetUnfoldedProofs.size() << " proof" << (targetUnfoldedProofs.size() == 1 ? "" : "s") << " of fundamental length" << (targetUnfoldedProofs.size() == 1 ? " " : "s ") << FctHelper::vectorStringF(targetUnfoldedProofs, [](const string& s) { return to_string(s.length()); }, { }, { }, ",") << "." << endl;
 	return targetUnfoldedProofs;
@@ -1799,50 +1838,6 @@ vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractD
 	return unfoldRulesInAbstractDProof(targetIndices, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 }
 
-namespace {
-void recombineAbstractDProof_collectRefIndices(size_t i, const vector<string>& retractedDProof, const vector<string>& helperRules, set<size_t>& referencedIndices) {
-	if (referencedIndices.count(i))
-		return;
-	const string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
-	bool inReference = false;
-	unsigned refIndex = 0;
-	for (char c : dProof)
-		switchRefs(c, inReference, refIndex, [&]() {
-			recombineAbstractDProof_collectRefIndices(refIndex, retractedDProof, helperRules, referencedIndices);
-		}, [&]() { });
-	if (inReference)
-		throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
-	//#if (referencedIndices.count(i))
-	//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant collection of index " + to_string(i) + ".");
-	referencedIndices.emplace(i);
-}
-const string& recombineAbstractDProof_extendAndTranslateProof(size_t i, vector<string>& retractedDProof, vector<string>& helperRules, const set<size_t>& dedicatedIndices, map<size_t, size_t>& indexTranslation, set<size_t>& extendedIndices, size_t& sumCharLength, const size_t limit) {
-	string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
-	if (extendedIndices.count(i))
-		return dProof;
-	bool inReference = false;
-	string result;
-	unsigned refIndex = 0;
-	for (char c : dProof)
-		switchRefs(c, inReference, refIndex, [&]() {
-			if (dedicatedIndices.count(refIndex))
-				result += "[" + to_string(indexTranslation[refIndex]) + "]";
-			else
-				result += recombineAbstractDProof_extendAndTranslateProof(refIndex, retractedDProof, helperRules, dedicatedIndices, indexTranslation, extendedIndices, sumCharLength, limit);
-		}, [&]() { result += string { c }; });
-	if (inReference)
-		throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
-	//#if (extendedIndices.count(i))
-	//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant computation of extended proof for index " + to_string(i) + ".");
-	if (dedicatedIndices.count(i))
-		sumCharLength += result.length();
-	if (sumCharLength > limit)
-		throw domain_error("Limit (" + to_string(limit) + ") exceed with at least " + to_string(sumCharLength) + " byte" + (sumCharLength == 1 ? "" : "s") + " in abstract proofs.");
-	extendedIndices.emplace(i);
-	dProof = result;
-	return dProof;
-}
-}
 vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
@@ -1861,6 +1856,52 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 
 	// 2. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.
 	set<size_t> dedicatedIndices;
+	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
+		if (inReference)
+			switch (c) {
+			case '0':
+				refIndex = 10 * refIndex;
+				break;
+			case '1':
+				refIndex = 10 * refIndex + 1;
+				break;
+			case '2':
+				refIndex = 10 * refIndex + 2;
+				break;
+			case '3':
+				refIndex = 10 * refIndex + 3;
+				break;
+			case '4':
+				refIndex = 10 * refIndex + 4;
+				break;
+			case '5':
+				refIndex = 10 * refIndex + 5;
+				break;
+			case '6':
+				refIndex = 10 * refIndex + 6;
+				break;
+			case '7':
+				refIndex = 10 * refIndex + 7;
+				break;
+			case '8':
+				refIndex = 10 * refIndex + 8;
+				break;
+			case '9':
+				refIndex = 10 * refIndex + 9;
+				break;
+			case ']':
+				inRefAction();
+				refIndex = 0;
+				inReference = false;
+				break;
+			default:
+				throw invalid_argument("DRuleParser::recombineAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+			}
+		else if (c == '[')
+			inReference = true;
+		else
+			outRefAction();
+	};
 	{
 		// 2.1 Remove proofs with fundamental lengths above 'maxLengthToKeepProof' (if requested).
 		if (maxLengthToKeepProof < SIZE_MAX) {
@@ -1885,8 +1926,24 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		if (debug)
 			startTime = chrono::steady_clock::now();
 		set<size_t> referencedIndices;
+		auto collectRefIndices = [&](size_t i, const auto& me) {
+			if (referencedIndices.count(i))
+				return;
+			const string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+			bool inReference = false;
+			unsigned refIndex = 0;
+			for (char c : dProof)
+				switchRefs(c, inReference, refIndex, [&]() {
+					me(refIndex, me);
+				}, [&]() { });
+			if (inReference)
+				throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
+			//#if (referencedIndices.count(i))
+			//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant collection of index " + to_string(i) + ".");
+			referencedIndices.emplace(i);
+		};
 		for (size_t i : targetIndices)
-			recombineAbstractDProof_collectRefIndices(i, retractedDProof, helperRules, referencedIndices);
+			collectRefIndices(i, collectRefIndices);
 		if (debug) {
 			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to obtain " << referencedIndices.size() << " referenced " << (referencedIndices.size() == 1 ? "index" : "indices") << "." << endl;
 			startTime = chrono::steady_clock::now();
@@ -1949,8 +2006,34 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		// 3.1 Extend rules for referenced indices that are not dedicated, and translate referenced indices that are dedicated.
 		set<size_t> extendedIndices;
 		size_t sumCharLength = 0;
+		auto extendAndTranslateProof = [&](size_t i, const auto& me) -> const string& {
+			string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+			if (extendedIndices.count(i))
+				return dProof;
+			bool inReference = false;
+			string result;
+			unsigned refIndex = 0;
+			for (char c : dProof)
+				switchRefs(c, inReference, refIndex, [&]() {
+					if (dedicatedIndices.count(refIndex))
+						result += "[" + to_string(indexTranslation[refIndex]) + "]";
+					else
+						result += me(refIndex, me);
+				}, [&]() { result += string { c }; });
+			if (inReference)
+				throw invalid_argument("DRuleParser::recombineAbstractDProof(): Missing character ']' after '['.");
+			//#if (extendedIndices.count(i))
+			//#	throw logic_error("DRuleParser::recombineAbstractDProof(): Redundant computation of extended proof for index " + to_string(i) + ".");
+			if (dedicatedIndices.count(i))
+				sumCharLength += result.length();
+			if (sumCharLength > limit)
+				throw domain_error("Limit (" + to_string(limit) + ") exceed with at least " + to_string(sumCharLength) + " byte" + (sumCharLength == 1 ? "" : "s") + " in abstract proofs.");
+			extendedIndices.emplace(i);
+			dProof = result;
+			return dProof;
+		};
 		for (size_t i : dedicatedIndices)
-			recombineAbstractDProof_extendAndTranslateProof(i, retractedDProof, helperRules, dedicatedIndices, indexTranslation, extendedIndices, sumCharLength, limit);
+			extendAndTranslateProof(i, extendAndTranslateProof);
 
 		// 3.2 Add transformed rules to new proof.
 		for (size_t i : indicesForNewProof) {
@@ -2021,11 +2104,11 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmFormula(const string& strCons
 	shared_ptr<DlFormula> lhs;
 	shared_ptr<DlFormula> rhs;
 	string binOp;
-	auto obtainBinaryOperator = [&](const string& source, string::size_type opBeginOffset) -> string::size_type {
-		string::size_type opEndOffset = source.find(' ', opBeginOffset);
-		if (opEndOffset == string::npos)
+	auto obtainBinaryOperator = [&](const string_view& source, string_view::size_type opBeginOffset) -> string_view::size_type {
+		string_view::size_type opEndOffset = source.find(' ', opBeginOffset);
+		if (opEndOffset == string_view::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". There should be a binary operator ending with ' '.");
-		binOp = source.substr(opBeginOffset, opEndOffset - opBeginOffset);
+		binOp = string(source.data() + opBeginOffset, opEndOffset - opBeginOffset);
 		return opEndOffset;
 	};
 	auto applyUnaryOperators = [&](shared_ptr<DlFormula>& target, const vector<DlOperator>& unaryOperators) -> void {
@@ -2053,32 +2136,32 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmFormula(const string& strCons
 		target = make_shared<DlFormula>(make_shared<String>(var));
 		applyUnaryOperators(target, unaryOperators);
 	};
-	auto readAndAssignIntermediateVariableTerm = [&](const string& source, shared_ptr<DlFormula>& target) -> string::size_type {
+	auto readAndAssignIntermediateVariableTerm = [&](const string_view& source, shared_ptr<DlFormula>& target) -> string_view::size_type {
 		vector<DlOperator> unaryOperators;
-		string::const_iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string_view::iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (varBegin >= source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain more symbols after the unary operator sequence.");
-		string::size_type varBeginOffset = varBegin - source.begin();
-		string::size_type varEndOffset = source.find(' ', varBeginOffset);
-		if (varEndOffset == string::npos)
+		string_view::size_type varBeginOffset = varBegin - source.begin();
+		string_view::size_type varEndOffset = source.find(' ', varBeginOffset);
+		if (varEndOffset == string_view::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain a variable ending with ' '.");
-		assignVariableTerm(target, source.substr(varBeginOffset, varEndOffset - varBeginOffset), unaryOperators);
+		assignVariableTerm(target, string(&*varBegin, varEndOffset - varBeginOffset), unaryOperators);
 		return varEndOffset;
 	};
-	auto readAndAssignEndingVariableTerm = [&](const string& source, shared_ptr<DlFormula>& target) -> void {
+	auto readAndAssignEndingVariableTerm = [&](const string_view& source, shared_ptr<DlFormula>& target) -> void {
 		vector<DlOperator> unaryOperators;
-		string::const_iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string_view::iterator varBegin = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (varBegin >= source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should contain more symbols after the unary operator sequence.");
-		string::size_type varBeginOffset = varBegin - source.begin();
-		string::size_type varEndOffset = source.find(' ', varBeginOffset);
-		if (varEndOffset != string::npos)
+		string_view::size_type varBeginOffset = varBegin - source.begin();
+		string_view::size_type varEndOffset = source.find(' ', varBeginOffset);
+		if (varEndOffset != string_view::npos)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should end with a single variable after the unary operator sequence (and contain no further ' ').");
-		assignVariableTerm(target, source.substr(varBeginOffset), unaryOperators);
+		assignVariableTerm(target, string(varBegin, source.end()), unaryOperators);
 	};
-	auto readAndApplySubformula = [&](const string& source, shared_ptr<DlFormula>& target, const shared_ptr<DlFormula>& subformula) -> void {
+	auto readAndApplySubformula = [&](const string_view& source, shared_ptr<DlFormula>& target, const shared_ptr<DlFormula>& subformula) -> void {
 		vector<DlOperator> unaryOperators;
-		string::const_iterator unopsEnd = _obtainUnaryOperatorSequence(source, unaryOperators);
+		string_view::iterator unopsEnd = _obtainUnaryOperatorSequence(source, unaryOperators);
 		if (unopsEnd < source.end())
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Source should end with a unary operator sequence.");
 		target = subformula;
@@ -2088,37 +2171,37 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmFormula(const string& strCons
 	string::const_iterator formulaBegin = consBegin + formulaOffset;
 	switch (foundSubformulaBounds.size()) {
 	case 0: { // e.g. "~ P -> ~ ~ Q" => binary operator is first symbol in prefix
-		string prefix(myFormula);
-		string::size_type varEndOffsetLhs = readAndAssignIntermediateVariableTerm(prefix, lhs);
-		string::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffsetLhs + 1);
+		string_view prefix(myFormula);
+		string_view::size_type varEndOffsetLhs = readAndAssignIntermediateVariableTerm(prefix, lhs);
+		string_view::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffsetLhs + 1);
 		readAndAssignEndingVariableTerm(prefix.substr(opEndOffset + 1), rhs);
 		break;
 	}
 	case 1: {
-		string prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
-		string postfix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + myLast); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst)
+		string_view prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
+		string_view postfix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + myLast); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst)
 		if (postfix.empty()) { // e.g. "~ P -> ~ <#1>" => binary operator is first symbol after the first symbol that is not a unary operator in prefix
-			string::size_type varEndOffset = readAndAssignIntermediateVariableTerm(prefix, lhs);
-			string::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffset + 1);
+			string_view::size_type varEndOffset = readAndAssignIntermediateVariableTerm(prefix, lhs);
+			string_view::size_type opEndOffset = obtainBinaryOperator(prefix, varEndOffset + 1);
 			readAndApplySubformula(prefix.substr(opEndOffset + 1), rhs, firstSubformula);
 		} else { // e.g. "~ <#1> -> ~ Q" => binary operator is first symbol in postfix
 			readAndApplySubformula(prefix, lhs, firstSubformula);
 			if (postfix[0] != ' ')
 				throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Given a single left argument, postfix should begin with ' '.");
-			string::size_type opEndOffset = obtainBinaryOperator(postfix, 1);
+			string_view::size_type opEndOffset = obtainBinaryOperator(postfix, 1);
 			readAndAssignEndingVariableTerm(postfix.substr(opEndOffset + 1), rhs);
 		}
 		break;
 	}
 	case 2: { // e.g. "~ <#1> -> ~ <#2>" => binary operator is first symbol in infix
-		string prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
-		string infix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + foundSubformulaBounds[1].first); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst, foundSubformulaBounds[1].first - foundSubformulaBounds[0].second - 1)
+		string_view prefix(formulaBegin, consBegin + foundSubformulaBounds[0].first); // i.e. myFormula.substr(0, foundSubformulaBounds[0].first - formulaOffset)
+		string_view infix(consBeginPlusOne + foundSubformulaBounds[0].second, consBegin + foundSubformulaBounds[1].first); // i.e. myFormula.substr(foundSubformulaBounds[0].second - myFirst, foundSubformulaBounds[1].first - foundSubformulaBounds[0].second - 1)
 		if (foundSubformulaBounds[1].second + 1 != myLast)
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\" has non-enclosed postfix.");
 		readAndApplySubformula(prefix, lhs, firstSubformula);
 		if (infix[0] != ' ')
 			throw invalid_argument("DRuleParser::parseConsequent(): Invalid formula \"" + myFormula + "\". Given both arguments, infix should begin with ' '.");
-		string::size_type opEndOffset = obtainBinaryOperator(infix, 1);
+		string_view::size_type opEndOffset = obtainBinaryOperator(infix, 1);
 		readAndApplySubformula(infix.substr(opEndOffset + 1), rhs, secondSubformula);
 		break;
 	}
@@ -2159,10 +2242,10 @@ shared_ptr<DlFormula> DRuleParser::_parseEnclosedMmFormula(const string& strCons
 	return result;
 }
 
-string::const_iterator DRuleParser::_obtainUnaryOperatorSequence(const string& unaryOperatorSequence, vector<DlOperator>& unaryOperators) {
-	string::size_type begin = 0;
-	string::size_type end = string::npos;
-	for (string::size_type i = 0; i < unaryOperatorSequence.length(); i++)
+string_view::iterator DRuleParser::_obtainUnaryOperatorSequence(const string_view& unaryOperatorSequence, vector<DlOperator>& unaryOperators) {
+	string_view::size_type begin = 0;
+	string_view::size_type end = string_view::npos;
+	for (string_view::size_type i = 0; i < unaryOperatorSequence.length(); i++)
 		if (unaryOperatorSequence[i] == ' ') {
 			end = i;
 			string op(unaryOperatorSequence.substr(begin, end - begin));
@@ -2174,10 +2257,10 @@ string::const_iterator DRuleParser::_obtainUnaryOperatorSequence(const string& u
 			else if (op == "◇")
 				unaryOperators.push_back(DlOperator::Poss);
 			else
-				return next(unaryOperatorSequence.begin(), begin); // return current pos when reaching a symbol that is not a unary operator
+				return unaryOperatorSequence.begin() + begin; // return current pos when reaching a symbol that is not a unary operator
 		} else if (end + 1 == i)
 			begin = i;
-	return end == string::npos ? unaryOperatorSequence.begin() : next(unaryOperatorSequence.begin(), end + 1);
+	return end == string_view::npos ? unaryOperatorSequence.begin() : unaryOperatorSequence.begin() + end + 1;
 };
 
 }

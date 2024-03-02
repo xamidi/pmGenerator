@@ -1,9 +1,11 @@
 #ifndef XAMIDI_HELPER_VERSION_H
 #define XAMIDI_HELPER_VERSION_H
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 #define TOOL_NAME "pmGenerator"
 #define TOOL_REPOSITORY "https://github.com/xamidi/pmGenerator"
@@ -11,7 +13,7 @@
 #define TOOL_VERSION_MINOR 2
 #define TOOL_VERSION_PATCH 0
 #define TOOL_VERSION_SPEC "1.2.0"
-#define TOOL_VERSION_BRANCH "c++11"
+#define TOOL_VERSION_BRANCH "master"
 
 #define BUILD_YEAR \
 	( \
@@ -73,139 +75,64 @@ static_assert(BUILD_SECOND != UINT32_MAX, "indeterminate build second");
 
 namespace xamidi {
 namespace helper {
-// NOTE: More features available at https://github.com/xamidi/pmGenerator/blob/dd29163745c38c3e8d6dd871be6e3929f4dcaa45/helper/Version.h?ts=4#L79-L252
-//       The following approach is rather sophisticated (and a proof of concept) for being able to assign concatenated strings to 'constexpr const char*' variables in C++11.
-//       To only assign concatenated strings to, for example, variables of type 'constexpr std::array<char, [...]>', would be much simpler (example: https://stackoverflow.com/q/28708497),
-//       but std::array<[...]>::data() is not constexpr in C++11.
-
-// Parameter pack helpers (similar to C++14)
-template<std::size_t ...> struct _index_sequence { using type = _index_sequence; };
-template<std::size_t N, std::size_t ... S> struct gen_pack_sequence: gen_pack_sequence<N - 1, N - 1, S...> {};
-template<std::size_t ... S> struct gen_pack_sequence<0, S...> : _index_sequence<S...> {};
-template<std::size_t N> using _make_index_sequence = typename gen_pack_sequence<N>::type;
-
-namespace typelist { // To be able to concatenate constexpr strings despite C++11 restrictions, define a list of types that may contain chars. ; Concept: https://stackoverflow.com/a/275295
-
-template<typename T, T V> struct Value { typedef T type; enum { value = V }; };
-template<char V> struct Char : Value<char, V> {};
-template<typename ...> struct TypeList;
-template<typename T, typename ... TT> struct TypeList<T, TT...> {
-	typedef T type;
-	typedef TypeList<TT...> tail;
-};
-template<> struct TypeList<> {};
-template<typename List> struct GetSize;
-template<typename ... Items> struct GetSize<TypeList<Items...>> { enum { value = sizeof...(Items) }; };
-template<typename ... T> struct ConcatList;
-template<typename ... First, typename ... Second, typename ... Tail> struct ConcatList<TypeList<First...>, TypeList<Second...>, Tail...> {
-	typedef typename ConcatList<TypeList<First..., Second...>, Tail...>::type type;
-};
-template<typename T> struct ConcatList<T> { typedef T type; };
-template<typename NewItem, typename List> struct PrependItem;
-template<typename NewItem, typename ... Items> struct PrependItem<NewItem, TypeList<Items...>> { typedef TypeList<NewItem, Items...> type; };
-template<typename List> struct PopFront;
-template<typename OldItem, typename ... Items> struct PopFront<TypeList<OldItem, Items...>> { typedef TypeList<Items...> type; };
-template<typename List, std::size_t N, typename = void> struct GetItem {
-	static_assert(GetSize<List>::value > 0, "index out of bounds");
-	typedef typename GetItem<typename List::tail, N - 1>::type type;
-};
-template<typename List> struct GetItem<List, 0> { static_assert(GetSize<List>::value > 0, "index out of bounds"); typedef typename List::type type; };
-template<typename List, std::size_t I, typename NewItem> struct ReplaceItem {
-	static_assert(GetSize<List>::value > 0, "index out of bounds");
-	typedef typename PrependItem<typename List::type, typename ReplaceItem<typename List::tail, I - 1, NewItem>::type>::type type;
-};
-template<typename NewItem, typename Type, typename ... T> struct ReplaceItem<TypeList<Type, T...>, 0, NewItem> { typedef TypeList<NewItem, T...> type; };
-template<typename ... T> struct ConcatStringList;
-template<typename S, typename ... First, typename ... Second, typename ... Tail> struct ConcatStringList<TypeList<First...>, TypeList<S, Second...>, Tail...> {
-	typedef typename ReplaceItem<TypeList<First...>, GetSize<TypeList<First...>>::value - 1, S>::type first;
-	typedef typename PopFront<TypeList<S, Second...>>::type second;
-	typedef typename ConcatList<first, second>::type concat;
-	typedef typename ConcatStringList<concat, Tail...>::type type;
-};
-template<typename T> struct ConcatStringList<T> { typedef T type; };
-
-} // END namespace typelist
 
 // Functional programming with templates to obtain constexpr char arrays
-template<char ... Chars> struct to_list { typedef typelist::TypeList<typelist::Char<Chars>...> type; };
-template<char ... Chars> struct char_sequence {
-	static constexpr char value[] = { Chars... };
-	typedef typename to_list<Chars...>::type list;
-	template<template<char...> class Template> using param_pack = Template<Chars...>;
-};
-template<char ... Chars> constexpr char char_sequence<Chars...>::value[];
-template<char ... Chars> struct char_string: char_sequence<Chars..., '\0'> {};
-template<std::uint8_t ... Digits> struct num_array_string {
-	typedef char_string<('0' + Digits)...> type;
-};
-
-template<std::size_t Add, std::uint8_t ... Digits> struct add_leading_zeros {
-	typedef typename add_leading_zeros<Add - 1, 0, Digits...>::type type;
-};
-template<std::uint8_t ... Digits> struct add_leading_zeros<0, Digits...> {
-	typedef typename num_array_string<Digits...>::type type;
-};
-template<typename UInt, UInt Num, std::size_t Len = 1, typename TCheck = void, std::uint8_t ... Digits> struct num_to_string;
-template<typename UInt, UInt Num, std::size_t Len, std::uint8_t ... Digits> struct num_to_string<UInt, Num, Len, typename std::enable_if<Num == 0>::type, Digits...> {
-	typedef typename add_leading_zeros<sizeof...(Digits) < Len ? Len - sizeof...(Digits) : 0, Digits...>::type type;
-};
-template<typename UInt, UInt Num, std::size_t Len, std::uint8_t ... Digits> struct num_to_string<UInt, Num, Len, typename std::enable_if<Num != 0>::type, Digits...> {
-	typedef typename num_to_string<UInt, Num / 10, Len, void, Num % 10, Digits...>::type type;
-};
-
-template<typename CharList, typename = _make_index_sequence<typelist::GetSize<CharList>::value>> struct list_to_string;
-template<typename CharList, std::size_t ... Indices> struct list_to_string<CharList, _index_sequence<Indices...>> {
-	static_assert(sizeof...(Indices) > 0 && typelist::GetItem<CharList, sizeof...(Indices) - 1>::type::value == 0, "missing null-termination");
-	typedef char_sequence<typelist::GetItem<CharList, Indices>::type::value...> type;
-};
-
-constexpr std::size_t _strlen(char const* s, std::size_t count = 0) {
-	return (*s == '\0') ? count : _strlen(s + 1, count + 1);
+template<std::uint8_t ... Digits> constexpr std::array<char, sizeof...(Digits) + 1> num_array_string = { ('0' + Digits)..., 0 };
+template<std::size_t Add, std::uint8_t ... Digits> constexpr std::enable_if_t<Add == 0, std::array<char, sizeof...(Digits) + Add + 1>> add_leading_zeros() {
+	return num_array_string<Digits...>;
+}
+template<std::size_t Add, std::uint8_t ... Digits> constexpr std::enable_if_t<Add != 0, std::array<char, sizeof...(Digits) + Add + 1>> add_leading_zeros() {
+	return add_leading_zeros<Add - 1, 0, Digits...>();
+}
+template<typename UInt, UInt Num, std::size_t Len = 1, std::uint8_t ... Digits> constexpr std::enable_if_t<Num == 0, std::array<char, Len + 1>> num_to_string() {
+	return add_leading_zeros<sizeof...(Digits) < Len ? Len - sizeof...(Digits) : 0, Digits...>();
+}
+template<typename UInt, UInt Num, std::size_t Len = 1, std::uint8_t ... Digits> constexpr std::enable_if_t<Num != 0, std::array<char, Len + 1>> num_to_string() {
+	return num_to_string<UInt, Num / 10, Len, Num % 10, Digits...>();
 }
 
-// Compile-time string literals ; Concept: https://ideone.com/QvXuYf
-template<typename S, typename T> struct _struct_to_string;
-template<typename S, std::size_t ... Indices> struct _struct_to_string<S, _index_sequence<Indices...>> { typedef char_string<S::get()[Indices] ...> type; };
-template<typename S> struct struct_to_string { typedef _make_index_sequence<_strlen(S::get())> indices; typedef typename _struct_to_string<S, indices>::type type; };
-#define CONSTEXPR_STRING(name, s) \
-	struct name ## __struct { constexpr static const char* get() { return s; } }; \
-	typedef struct_to_string<name ## __struct>::type name
+template<std::size_t N, std::size_t ... Indices> constexpr std::array<char, N> to_string(const char (&s)[N], std::index_sequence<Indices...>) {
+	return { {s[Indices]...}};
+}
+template<std::size_t N> constexpr std::array<char, N> to_string(const char (&s)[N]) {
+	return to_string(s, std::make_index_sequence<N>());
+}
+template<std::size_t N> constexpr std::array<char, N> to_string(std::array<char, N> s) {
+	return s;
+}
 
-template<typename ... Strings> struct concatenate {
-	template<typename String> using list = typename String::list;
-	typedef typename list_to_string<typename typelist::ConcatStringList<list<Strings>...>::type>::type type;
-};
+template<typename T, std::size_t ... Lengths> constexpr auto _concatenate(const std::array<T, Lengths>& ... strings) { // for null-terminated strings
+	std::array<T, ((Lengths - 1) + ...) + 1> result;
+	std::size_t index = 0;
+	((std::copy_n(strings.begin(), Lengths, result.begin() + index), index += (Lengths - 1)), ...);
+	return result;
+}
+template<typename ... Strings> constexpr auto concatenate(const Strings& ... strings) {
+	return _concatenate(to_string(strings)...);
+}
 
-typedef num_to_string<std::uint32_t, BUILD_YEAR, 4>::type __buildYear;
-typedef num_to_string<std::uint32_t, BUILD_MONTH, 2>::type __buildMonth;
-typedef num_to_string<std::uint32_t, BUILD_DAY, 2>::type __buildDay;
-typedef num_to_string<std::uint32_t, BUILD_HOUR, 2>::type __buildHour;
-typedef num_to_string<std::uint32_t, BUILD_MINUTE, 2>::type __buildMinute;
-typedef num_to_string<std::uint32_t, BUILD_SECOND, 2>::type __buildSecond;
-CONSTEXPR_STRING(__dot, ".");
-CONSTEXPR_STRING(__colon, ":");
-CONSTEXPR_STRING(__space, " ");
-CONSTEXPR_STRING(__openBranch, " ('");
-CONSTEXPR_STRING(__closeBranch, "' branch)");
-typedef concatenate<__buildYear, __dot, __buildMonth, __dot, __buildDay>::type __buildDate;
-typedef concatenate<__buildHour, __colon, __buildMinute, __colon, __buildSecond>::type __buildTime;
-typedef concatenate<__buildDate, __dot, __buildHour, __buildMinute>::type __buildIdentifier;
-CONSTEXPR_STRING(__name, TOOL_NAME);
-CONSTEXPR_STRING(__version_spec, TOOL_VERSION_SPEC);
-CONSTEXPR_STRING(__version_branch, TOOL_VERSION_BRANCH);
-typedef concatenate<__name, __space, __version_spec, __space, __buildIdentifier, __openBranch, __version_branch, __closeBranch>::type __version;
-CONSTEXPR_STRING(__repository, TOOL_REPOSITORY);
+constexpr std::array<char, 5> __buildYear = num_to_string<std::uint32_t, BUILD_YEAR, 4>();
+constexpr std::array<char, 3> __buildMonth = num_to_string<std::uint32_t, BUILD_MONTH, 2>();
+constexpr std::array<char, 3> __buildDay = num_to_string<std::uint32_t, BUILD_DAY, 2>();
+constexpr std::array<char, 3> __buildHour = num_to_string<std::uint32_t, BUILD_HOUR, 2>();
+constexpr std::array<char, 3> __buildMinute = num_to_string<std::uint32_t, BUILD_MINUTE, 2>();
+constexpr std::array<char, 3> __buildSecond = num_to_string<std::uint32_t, BUILD_SECOND, 2>();
+constexpr std::array<char, 11> __buildDate = concatenate(__buildYear, ".", __buildMonth, ".", __buildDay);
+constexpr std::array<char, 9> __buildTime = concatenate(__buildHour, ":", __buildMinute, ":", __buildSecond);
+constexpr std::array<char, 16> __buildIdentifier = concatenate(__buildDate, ".", __buildHour, __buildMinute);
+constexpr auto __version = concatenate(TOOL_NAME, " ", TOOL_VERSION_SPEC, " ", __buildIdentifier, " ('", TOOL_VERSION_BRANCH, "' branch)");
+constexpr auto __repository = to_string(TOOL_REPOSITORY);
 
 } // END namespace helper
 
-constexpr const char* buildYear = helper::__buildYear::value;
-constexpr const char* buildMonth = helper::__buildMonth::value;
-constexpr const char* buildDay = helper::__buildDay::value;
-constexpr const char* buildDate = helper::__buildDate::value;
-constexpr const char* buildTime = helper::__buildTime::value;
-constexpr const char* buildIdentifier = helper::__buildIdentifier::value;
-constexpr const char* version = helper::__version::value;
-constexpr const char* repository = helper::__repository::value;
+constexpr const char* buildYear = helper::__buildYear.data();
+constexpr const char* buildMonth = helper::__buildMonth.data();
+constexpr const char* buildDay = helper::__buildDay.data();
+constexpr const char* buildDate = helper::__buildDate.data();
+constexpr const char* buildTime = helper::__buildTime.data();
+constexpr const char* buildIdentifier = helper::__buildIdentifier.data();
+constexpr const char* version = helper::__version.data();
+constexpr const char* repository = helper::__repository.data();
 
 }
 

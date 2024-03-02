@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -55,7 +56,6 @@ public:
 		AxiomInfo& operator=(const AxiomInfo& other);
 	private:
 		AxiomInfo(const std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string>& refinedData);
-		static void _recurse_substitute_withUniquePrimitivesAndUseBuiltinSymbols(std::shared_ptr<logic::DlFormula>& destinationNode, const std::shared_ptr<logic::DlFormula>& formula, const std::map<std::string, std::shared_ptr<logic::DlFormula>>& substitutions);
 		static std::tuple<std::shared_ptr<logic::DlFormula>, unsigned, std::string> _refineAxiom(const std::string& name, const std::shared_ptr<logic::DlFormula>& axiom);
 	};
 
@@ -93,15 +93,13 @@ public:
 	static std::vector<std::string> unfoldAbstractDProof(const std::vector<std::string>& abstractDProof, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::vector<AxiomInfo>* filterForTheorems = nullptr, std::vector<AxiomInfo>* requiredIntermediateResults = nullptr, bool debug = false, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX, std::size_t limit = SIZE_MAX);
 	static std::vector<std::string> recombineAbstractDProof(const std::vector<std::string>& abstractDProof, std::vector<std::shared_ptr<logic::DlFormula>>& out_conclusions, const std::vector<AxiomInfo>* customAxioms = nullptr, const std::vector<AxiomInfo>* filterForTheorems = nullptr, const std::vector<AxiomInfo>* conclusionsWithHelperProofs = nullptr, unsigned minUseAmountToCreateHelperProof = 2, std::vector<AxiomInfo>* requiredIntermediateResults = nullptr, bool debug = false, std::size_t maxLengthToKeepProof = SIZE_MAX, bool abstractProofStrings = true, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX, std::size_t limit = SIZE_MAX);
 private:
-	static std::shared_ptr<logic::DlFormula> _parseAbstractDProof_parse(const std::string& rule, const std::size_t i, const std::size_t extraIndex, const std::string& extraId, const std::vector<std::string>& inOut_abstractDProof, std::vector<std::shared_ptr<logic::DlFormula>>& out_abstractDProofConclusions, const std::vector<AxiomInfo>* customAxioms, std::vector<std::shared_ptr<logic::DlFormula>>& helperRulesConclusions, const std::vector<std::string>& helperRules, const std::vector<std::size_t>* optOut_indexEvalSequence, std::vector<std::size_t>& indexEvalSequence, std::vector<AxiomInfo>& axBase, std::vector<AxiomInfo>& axBaseN, std::vector<AxiomInfo>& refBase);
-
 #define PARSEMMPL_STORED // NOTE: For Metamath's pmproofs.txt, using storage slightly slows parsing but speeds up meaning calculation, so that stored mode is faster overall. However, those overall durations are close to two milliseconds, so it barely matters.
 #ifdef PARSEMMPL_STORED
 	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmFormula(std::unordered_map<std::string, std::shared_ptr<logic::DlFormula>>& formulaBackups, const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
 #else
 	static std::shared_ptr<logic::DlFormula> _parseEnclosedMmFormula(const std::string& strConsequent, std::string::size_type myFirst, std::string::size_type myLast, const std::map<std::string::size_type, std::pair<std::string::size_type, std::shared_ptr<logic::DlFormula>>>& potentialSubformulas, const std::string::const_iterator& consBegin);
 #endif
-	static std::string::const_iterator _obtainUnaryOperatorSequence(const std::string& unaryOperatorSequence, std::vector<logic::DlOperator>& unaryOperators);
+	static std::string_view::iterator _obtainUnaryOperatorSequence(const std::string_view& unaryOperatorSequence, std::vector<logic::DlOperator>& unaryOperators);
 };
 
 }
