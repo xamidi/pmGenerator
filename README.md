@@ -1,6 +1,7 @@
 <img align="left" src="icon/icon-readme.png">
 
 # @xamidi/pmGenerator
+[![DOI](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360)
 
 This tool can collect exhaustive sets of [condensed detachment](https://en.wikipedia.org/wiki/Condensed_detachment) proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's [“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") collection.  
 The D-rule combines unification with [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens) (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all syntactic consequences based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
