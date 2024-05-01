@@ -134,14 +134,14 @@ Sat May  6 02:36:39 2023: Removed ≈98% of redundant conclusions. [2706478 of a
 [Rank 0] Workload transfer approved. Starting to work on 4:[10986111, 10992143].
 [Rank 3] Workload transfer approved. Starting to work on 4:[10992144, 10994154].
 [Rank 5] Workload transfer approved. Starting to work on 4:[10994155, 10995159].
+158481944.49 ms (1 d 20 h 1 min 21 s 944.49 ms) taken to detect 2782763 conclusions for which there are more general variants proven in lower or equal amounts of steps.
+Found 10411430 representative and 2782763 redundant condensed detachment proof strings.
+[Copy] Removal count: { 31, 2782763 }
 Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 1 on "ncm0306.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 2 on "ncm0307.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 3 on "ncm0315.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 4 on "ncm0320.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May  6 03:54:10 2023: MPI-based D-proof representative filter complete. [rank 5 on "ncm0321.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
-158481944.49 ms (1 d 20 h 1 min 21 s 944.49 ms) taken to detect 2782763 conclusions for which there are more general variants proven in lower or equal amounts of steps.
-Found 10411430 representative and 2782763 redundant condensed detachment proof strings.
-[Copy] Removal count: { 31, 2782763 }
 2964.96 ms (2 s 964.96 ms) taken to filter and order new representative proofs.
 Sat May  6 03:54:13 2023: Starting to write 10411430 entries to data/dProofs-withConclusions/dProofs31.txt.
 4745.40 ms (4 s 745.40 ms) taken to print and save 1741338664 bytes of representative condensed detachment proof strings to data/dProofs-withConclusions/dProofs31.txt.

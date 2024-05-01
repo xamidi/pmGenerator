@@ -132,14 +132,14 @@ Sat May 20 23:12:45 2023: Removed 98% of redundant conclusions. [907494 of 92601
 [Rank 2] Workload transfer approved. Starting to work on 0:[726211, 728210].
 [Rank 2] Workload transfer approved. Starting to work on 3:[2913844, 2915843].
 [Rank 1] Workload transfer approved. Starting to work on 0:[728211, 729210].
+15940452.67 ms (4 h 25 min 40 s 452.67 ms) taken to detect 926015 conclusions for which there are more general variants proven in lower or equal amounts of steps.
+Found 3449251 representative and 926015 redundant condensed detachment proof strings.
+[Copy] Removal count: { 29, 926015 }
 Sat May 20 23:18:41 2023: MPI-based D-proof representative filter complete. [rank 1 on "ncm0520.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May 20 23:18:41 2023: MPI-based D-proof representative filter complete. [rank 2 on "ncm0521.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May 20 23:18:41 2023: MPI-based D-proof representative filter complete. [rank 3 on "ncm0522.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May 20 23:18:41 2023: MPI-based D-proof representative filter complete. [rank 4 on "ncm0525.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
 Sat May 20 23:18:41 2023: MPI-based D-proof representative filter complete. [rank 5 on "ncm0526.hpc.itc.rwth-aachen.de" ; 6 processes ; 48 local hardware thread contexts]
-15940452.67 ms (4 h 25 min 40 s 452.67 ms) taken to detect 926015 conclusions for which there are more general variants proven in lower or equal amounts of steps.
-Found 3449251 representative and 926015 redundant condensed detachment proof strings.
-[Copy] Removal count: { 29, 926015 }
 945.01 ms taken to filter and order new representative proofs.
 Sat May 20 23:24:25 2023: Starting to write 3449251 entries to data/dProofs-withConclusions/dProofs29.txt.
 1459.06 ms (1 s 459.06 ms) taken to print and save 516720692 bytes of representative condensed detachment proof strings to data/dProofs-withConclusions/dProofs29.txt.
