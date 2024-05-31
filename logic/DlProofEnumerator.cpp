@@ -3315,7 +3315,6 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength, bool table, int64_t cutX, int64_t cutY, const string& dataLocation, const string& inputFilePrefix, bool includeUnfiltered, ostream* mout, bool debug, const uint32_t* proofLenStepSize) {
 	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
 	ostream& _mout = mout ? *mout : cout;
-	chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 	string fullInputFilePrefix = concatenateDataPath(dataLocation, inputFilePrefix);
 	string filePostfix = ".txt";
 	string filePostfix_unf;
@@ -3341,9 +3340,6 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 
 	mutex mtx_cout;
 	atomic<bool> run = true;
-	atomic<size_t> counter = 0;
-	if (debug)
-		startTime = chrono::steady_clock::now();
 
 	tbb::concurrent_map<uint32_t, string> mouts;
 	tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
@@ -3434,13 +3430,14 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 				// Plot data: 1 10.67 3 14.50 5 17.42 7 19.76 9 26.11 11 31.58 13 36.63 15 44.23 17 51.76 19 59.96 21 69.83 23 80.27 25 91.84 27 104.78 29 118.81
 				// Polynomial regression result: 0.001137x³ + 0.056x² + 1.188x + 9.707
 
-				size_t amountEvenConclusionLen = 0;
-				for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end(); ++it)
-					if (it->first % 2 == 0)
-						amountEvenConclusionLen += it->second;
-				size_t amountOddConclusionLen = conclusionsAmount - amountEvenConclusionLen;
-				if (conclusionsAmount)
+				if (conclusionsAmount) {
+					size_t amountEvenConclusionLen = 0;
+					for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end(); ++it)
+						if (it->first % 2 == 0)
+							amountEvenConclusionLen += it->second;
+					size_t amountOddConclusionLen = conclusionsAmount - amountEvenConclusionLen;
 					ss << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  There " << (amountEvenConclusionLen == 1 ? "is " : "are ") << amountEvenConclusionLen << " minimal D-proof" << (amountEvenConclusionLen == 1 ? "" : "s") << " with " << (amountEvenConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountEvenConclusionLen == 1 ? "" : "s") << " of even " << (measureSymbolicLength ? "symbolic " : "") << "length, and there " << (amountOddConclusionLen == 1 ? "is " : "are ") << amountOddConclusionLen << " minimal D-proof" << (amountOddConclusionLen == 1 ? "" : "s") << " with " << (amountOddConclusionLen == 1 ? "a " : "") << "conclusion" << (measureSymbolicLength ? "" : " representation") << (amountOddConclusionLen == 1 ? "" : "s") << " of odd " << (measureSymbolicLength ? "symbolic " : "") << "length. [" << amountEvenConclusionLen << "/" << conclusionsAmount << " ≈ " << FctHelper::round(static_cast<long double>(amountEvenConclusionLen * 100) / static_cast<long double>(conclusionsAmount), 2) << "% even]\n";
+				}
 				// 'measureSymbolicLength' true:
 				//  1:     0/      3 ≈ 0.00% even
 				//  3:     0/      6 ≈ 0.00% even
@@ -3476,29 +3473,32 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 				// 29: 1430031/3449251 ≈  41.46% even
 				// Plot data: 1, 1, 3, 0.5, 5, 0.5833, 7, 0.5, 9, 0.4382, 11, 0.4454, 13, 0.4256, 15, 0.4035, 17, 0.4082, 19, 0.4089, 21, 0.4084, 23, 0.4115, 25, 0.4118, 27, 0.4130, 29, 0.4146
 
-				size_t maxLen = conclusionsAmount ? prev(allAmounts.end())->first : 0;
-				if (cutX >= 0) {
-					maxLen = min(maxLen, static_cast<size_t>(cutX));
-					for (size_t i = 1; i <= maxLen; i++)
-						allAmounts[i];
-					if (cutX > 0)
-						allAmounts.erase(next(allAmounts.find(maxLen)), allAmounts.end());
-					else
-						allAmounts.clear();
-				} else
-					for (size_t i = 1; i <= maxLen; i++)
-						allAmounts[i];
-				if (cutY >= 0)
-					for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end();) {
-						if (it->second > static_cast<size_t>(cutY))
-							it = allAmounts.erase(it);
+				if (conclusionsAmount) {
+					size_t maxLen = prev(allAmounts.end())->first;
+					if (cutX >= 0) {
+						maxLen = min(maxLen, static_cast<size_t>(cutX));
+						for (size_t i = 1; i <= maxLen; i++)
+							allAmounts[i];
+						if (cutX > 0)
+							allAmounts.erase(next(allAmounts.find(maxLen)), allAmounts.end());
 						else
-							++it;
-					}
-				if (table)
-					ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + "\t" + to_string(p.second); }, { }, "\n", "\n") << "\n";
-				else
-					ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + " " + to_string(p.second); }, { }, "\n", " ") << "\n";
+							allAmounts.clear();
+					} else
+						for (size_t i = 1; i <= maxLen; i++)
+							allAmounts[i];
+					if (cutY >= 0)
+						for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end();) {
+							if (it->second > static_cast<size_t>(cutY))
+								it = allAmounts.erase(it);
+							else
+								++it;
+						}
+					if (table)
+						ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + "\t" + to_string(p.second); }, { }, "\n", "\n") << "\n";
+					else
+						ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + " " + to_string(p.second); }, { }, "\n", " ") << "\n";
+				} else
+					ss << "\n";
 				// formula representation lengths: ([1,1000] data) [x <= 500] https://www.desmos.com/calculator/b9qvvkinal, https://i.imgur.com/IMFY84S.png ; [x,y <= 1000] https://www.desmos.com/calculator/tjej0cpyju, https://i.imgur.com/1Z4WjJa.png ; [x <= 1000, y <= 100] https://www.desmos.com/calculator/zpe5zw41cm, https://i.imgur.com/6aCR6iq.png
 				// formula symbolic lengths:       ([1,1000] data) [x <= 500] https://www.desmos.com/calculator/ghdmsv1x0j, https://i.imgur.com/OoYz14L.png ; [x,y <= 1000] https://www.desmos.com/calculator/0fra8us8af, https://i.imgur.com/VBtlRJR.png ; [x <= 1000, y <= 100] https://www.desmos.com/calculator/fdlj86pp3f, https://i.imgur.com/GMnPub1.png
 				// Plot data [1,500] (e.g. for https://www.rapidtables.com/tools/scatter-plot.html):
