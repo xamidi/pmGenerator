@@ -3391,8 +3391,27 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 				ss << wordLengthLimit << ": Average " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "length is ";
 				if (!conclusionsAmount)
 					ss << "undefined (since there are no D-proofs of length " << wordLengthLimit << ").\n";
-				else
-					ss << totalLen << "/" << conclusionsAmount << " ≈ " << FctHelper::round(static_cast<long double>(totalLen) / static_cast<long double>(conclusionsAmount), 2) << ".\n";
+				else {
+					auto median = [&]() -> string {
+						bool evenAmount = conclusionsAmount % 2 == 0;
+						size_t firstIndex = evenAmount ? conclusionsAmount / 2 - 1 : conclusionsAmount / 2;
+						size_t sum = 0;
+						map<size_t, size_t>::const_iterator itLenAmount = allAmounts.begin();
+						while (itLenAmount != allAmounts.end()) {
+							sum += itLenAmount->second;
+							if (sum > firstIndex)
+								break;
+							++itLenAmount;
+						}
+						size_t firstLen = itLenAmount->first;
+						if (evenAmount && sum == firstIndex + 1) {
+							size_t secondLen = next(itLenAmount)->first;
+							return FctHelper::round(static_cast<long double>(firstLen + secondLen) / 2, 2);
+						} else
+							return to_string(firstLen);
+					};
+					ss << totalLen << "/" << conclusionsAmount << " ≈ " << FctHelper::round(static_cast<long double>(totalLen) / static_cast<long double>(conclusionsAmount), 2) << ". (Median: " << median() << ")\n";
+				}
 				//  1: Average symbolic conclusion length is        27/      3 ≈   9.00.
 				//  3: Average symbolic conclusion length is        74/      6 ≈  12.33.
 				//  5: Average symbolic conclusion length is       180/     12 ≈  15.00.
