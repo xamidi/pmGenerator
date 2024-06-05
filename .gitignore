@@ -94,8 +94,8 @@ data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/*
 log/**/*.*
 !log/**/jobsRSS.txt
 !log/**/*.log
-svg/*
-!svg/*.svg
+svg/**/*.*
+!svg/**/*.svg
 Debug*/
 Release*/
 

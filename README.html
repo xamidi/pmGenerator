@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <title>README</title>
 <!-- Generated from README.md with https://xamidi.github.io/md-to-html/, but
-     with CSS style from https://github.com/KrauseFx/markdown-to-html-github-style (and additional modifications).
+     with CSS style from https://github.com/KrauseFx/markdown-to-html-github-style (and additional modifications). [NOTE: To correctly update data tables, surrounding <details></details> have to be removed before conversion.]
      Update instructions:
      1. Manually replace <body>[...]</body> with that of the updated version
      2. RegEx replace-all: [FIND]class\=\"markdown-content\"[/FIND], [REPLACE]id\=\"readme\"[/REPLACE] (1 occurence)
-     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (258 occurences)
+     3. RegEx replace-all: [FIND] class\=\" *\b(?!\bmarkdown-container ltr\b)[^\"]*\b *\"[/FIND], [REPLACE][/REPLACE] (295 occurences)
      4. RegEx replace-all: [FIND]<p><img src\=\"icon\/icon-readme\.png\" align\=\"left\"><\/p>[/FIND], [REPLACE]<article class\=\"container-lg\"><img src\=\"icon\/icon-readme\.png\" alt\=\"icon\" style=\"float: left; padding-right: 20px; margin-top: -24px;\">[/REPLACE] (1 occurence)
      5. RegEx replace-all: [FIND]<\/div><\/div><\/body>[/FIND], [REPLACE]<\/article><\/div><\/div><\/body>[/REPLACE] (1 occurence)
      6. RegEx replace-all: [FIND]id\=\"-xamidi-pmgenerator\"[/FIND], [REPLACE]id\=\"xamidipmgenerator\"[/REPLACE] (1 occurence)
-     7. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (508 occurences)
+     7. RegEx replace-all: [FIND]<(/|)span>[/FIND], [REPLACE][/REPLACE] (582 occurences)
      8. RegEx replace-all: [FIND] \⇒ [/FIND], [REPLACE] ⇒ [/REPLACE] (2 occurences)
      9. RegEx replace-all: [FIND]&nbsp; Size of Files   <br>\[B\]         &nbsp;[/FIND], [REPLACE]&nbsp; Size of Files   <br>\[B\]         &nbsp;[/REPLACE] (9 occurence)
      10.RegEx replace-all: [FIND]\]   \&nbsp;[/FIND], [REPLACE]\]   &nbsp;[/REPLACE] (18 occurences)
@@ -25,8 +25,10 @@
      17.RegEx replace-all: [FIND]id\=\"walsh-s-5th-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      18.RegEx replace-all: [FIND]id\=\"walsh-s-6th-axiom-1-basis[^"]+"[/FIND], [REPLACE]id\=\"walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info"[/REPLACE] (1 occurence)
      19.RegEx replace-all: [FIND]id\=\"s5[^"]+"[/FIND], [REPLACE]id\=\"s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-db-sample-info"[/REPLACE] (1 occurence)
-     20.RegEx replace-all: [FIND](<sup>)<sub>[/FIND], [REPLACE]<small>[/REPLACE] (88 occurences)
-     21.RegEx replace-all: [FIND](</sub>)</sup>[/FIND], [REPLACE]</small>[/REPLACE] (88 occurences)
+     20.RegEx replace-all: [FIND](<sup>)<sub>[/FIND], [REPLACE]<small>[/REPLACE] (97 occurences)
+     21.RegEx replace-all: [FIND](</sub>)</sup>[/FIND], [REPLACE]</small>[/REPLACE] (97 occurences)
+     22.RegEx replace-all: [FIND]open\=\"\"[/FIND], [REPLACE]open[/REPLACE] (18 occurences)
+     23.Manually reinsert correct data tables from previous version, if required. (Alternatively, remove tags before and reinsert them back after conversion.)
      (NOTE: Use RegEx replacements to not invalidate these instructions. Further content may require more bugfixes as by steps 4 onward.)
      -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -269,6 +271,10 @@ b, strong {
 <p>This tool can collect exhaustive sets of <a href="https://en.wikipedia.org/wiki/Condensed_detachment">condensed detachment</a> proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”</a> collection.<br>The D-rule combines unification with <a href="https://en.wikipedia.org/wiki/Modus_ponens">modus ponens</a> (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus <em>pmGenerator</em> covers all <a href="https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence">syntactic consequences</a> within <a href="https://en.wikipedia.org/wiki/Hilbert_system">Hilbert systems</a> based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.<br>There is a <a href="https://github.com/xamidi/pmGenerator/discussions">discussion forum</a> for questions, ideas, challenges, and related information.</p>
 <p>Eligible for high-performance computing. If you have access to a powerful computer, you may use <em>pmGenerator</em> to further contribute to our knowledge regarding the <a href="https://en.wikipedia.org/wiki/Proof_complexity">complexity of proof systems</a>. The following table exemplary shows progress that has already been made.</p>
 <h6 id="freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info">Frege's calculus simplified by Łukasiewicz (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>) &nbsp;<small>[<a href="data/top1000SmallestConclusions_1to39Steps.txt">top1000</a>] [<a href="data/cardinalities.txt">cardinalities</a>] [<a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">db</a>] [<a href="data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def">customization info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/default-bgraph.svg"><img src="svg/plot/default-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -401,6 +407,9 @@ b, strong {
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <p>Measured RAM requirements correspond to the maximum resident set size according to <a href="https://slurm.schedmd.com/documentation.html">Slurm</a>, i.e. <code>MaxRSS</code> of <a href="https://slurm.schedmd.com/sacct.html">sacct</a>.<br>Required resources vary based on implementation and environment; numbers are to illustrate orders of magnitude.<br>Some more – and very special – proof systems are illustrated <a href="#custom-proof-systems">further down below</a>.</p>
 <h4 id="usage">Usage</h4>
 <pre><code>pmGenerator ( &lt;configuring command&gt; | &lt;composable command&gt; )+ | &lt;configuring command&gt;* &lt;standalone command&gt;
@@ -561,6 +570,10 @@ srun -n 6 ./pmGenerator -m 31
 Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>pmGenerator -c -n -s CCCpqCCrNsCtNtCCtpCrp -g -1</code> produces only 9 more representatives (1.<code>D11:CCpCNpqCrCNpq</code>, 2.<code>D1D11:CCNppCqp</code>, 3.<code>D1D1D11:CCpNCpNpCqNCpNp</code>, 4.<code>DD11D11:CpCNCqCNqrCNqr</code>, 5.<code>DD11D1D11:CpCNCNqqq</code>, 6.<code>DDD11D111:CNCpCNpqCNpq</code>, 7.<code>DD11D1D1D11:CpCNCqNCqNqNCqNq</code>, 8.<code>DDD11D1D111:CNCNppp</code>, 9.<code>DDD11D1D1D111:CNCpNCpNpNCpNp</code>).<br>Therefore, these systems are implied to be the only minimal 1-bases for C-N propositional calculus.</p>
 <p>Target files are distinguished using a hexadecimal SHA-512/224 digest as a folder name for each proof system.<br>For user identification of hash folders, I recommend to use custom icons, such as illustrated below.<br>&nbsp;&nbsp;<sub><img src="png/customIconPreview.png" alt="Icon-Preview" title="Hash folders with icons under Windows 7"></sub><br>For this purpose, a favicon database (<code>ico.dll</code>) is included in the release files, as well as an archive (<code>ico.7z</code>) with all the <code>.ico</code> files for usability with non-Windows operating systems.</p>
 <h6 id="merediths-axiom-1-basis-cccccpqcnrnsrtcctpcsp-top1000-cardinalities-sample-info">Meredith's Axiom; 1-basis (<a href="svg/meredith.svg">CCCCCpqCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt">top1000</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt">cardinalities</a>] [<a href="data/m.txt">sample</a>] [<a href="data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/m-bgraph.svg"><img src="svg/plot/m-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -647,7 +660,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-1st-axiom-1-basis-ccpccnpqrcsccntcrtcpt-top1000-cardinalities-sample-info">Walsh's 1st Axiom; 1-basis (<a href="svg/walsh1st.svg">CCpCCNpqrCsCCNtCrtCpt</a>) &nbsp;<small>[<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt">top1000</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt">cardinalities</a>] [<a href="data/w1.txt">sample</a>] [<a href="data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w1-bgraph.svg"><img src="svg/plot/w1-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -766,7 +786,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-2nd-axiom-1-basis-cpccqcprccnrccnstqcsr-top1000-cardinalities-sample-info">Walsh's 2nd Axiom; 1-basis (<a href="svg/walsh2nd.svg">CpCCqCprCCNrCCNstqCsr</a>) &nbsp;<small>[<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt">top1000</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt">cardinalities</a>] [<a href="data/w2.txt">sample</a>] [<a href="data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w2-bgraph.svg"><img src="svg/plot/w2-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -821,7 +848,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-3rd-axiom-1-basis-cpccnqccnrscptcctqcrq-top1000-cardinalities-sample-info">Walsh's 3rd Axiom; 1-basis (<a href="svg/walsh3rd.svg">CpCCNqCCNrsCptCCtqCrq</a>) &nbsp;<small>[<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt">top1000</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt">cardinalities</a>] [<a href="data/w3.txt">sample</a>] [<a href="data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w3-bgraph.svg"><img src="svg/plot/w3-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -892,7 +926,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-4th-axiom-1-basis-cpccnqccnrsctqccrtcrq-top1000-cardinalities-sample-info">Walsh's 4th Axiom; 1-basis (<a href="svg/walsh4th.svg">CpCCNqCCNrsCtqCCrtCrq</a>) &nbsp;<small>[<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt">top1000</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt">cardinalities</a>] [<a href="data/w4.txt">sample</a>] [<a href="data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w4-bgraph.svg"><img src="svg/plot/w4-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -995,7 +1036,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info">Walsh's 5th Axiom; 1-basis (<a href="svg/walsh5th.svg">CCpqCCCrCstCqCNsNpCps</a>) &nbsp;<small>[<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt">top1000</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt">cardinalities</a>] [<a href="data/w5.txt">sample</a>] [<a href="data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w5-bgraph.svg"><img src="svg/plot/w5-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -1042,7 +1090,14 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <h6 id="walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info">Walsh's 6th Axiom; 1-basis (<a href="svg/walsh6th.svg">CCCpqCCCNrNsrtCCtpCsp</a>) &nbsp;<small>[<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt">top1000</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt">cardinalities</a>] [<a href="data/w6.txt">sample</a>] [<a href="data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/w6-bgraph.svg"><img src="svg/plot/w6-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -1129,9 +1184,16 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <p>The above systems show remarkable differences in complexity, despite similarities. For example, the syntax trees of Walsh's 3rd and 4th axiom differ only in four leaf nodes.</p>
 <p>Only systems with an odd-ary rule such as necessitation can have condensed detachment proofs of even lengths.<br>The system of modal logic illustrated below extends <a href="#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info">Frege's calculus simplified by Łukasiewicz</a>. It can be covered by enabling the N-rule without limiting the number of its consecutive applications via <code>-c -N -1</code>.</p>
 <h6 id="s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-db-sample-info">S5 (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>,<a href="svg/truth-4.svg">CLpp</a>,<a href="svg/kripke-5.svg">CLCpqCLpLq</a>,<a href="svg/lewis-6.svg">CNLNpLNLNp</a>) &nbsp;<small>[<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt">top1000</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt">cardinalities</a>] [<a href="data/s5proofs.txt">db</a>] [<a href="data/s5.txt">sample</a>] [<a href="data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def">info</a>]</small></h6>
+<details open><summary>Behavioral Graph &nbsp;<small>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>]</small></summary>
+<a href="https://xamidi.github.io/pmGenerator/svg/plot/S5-bgraph.svg"><img src="svg/plot/S5-bgraph.svg" width="700"></a></details>
+<details open><summary>Data</summary>
+
 <table>
 <thead>
 <tr>
@@ -1210,5 +1272,8 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 </tr>
 </tbody>
 </table>
+
+</details>
+
 <p><sup>✻</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project <a href="pdf/rwth1392_extension_2024.pdf" title="View rwth1392_extension_2024.pdf">rwth1392</a>.</sub></p>
 </article></div></div></body></html>
