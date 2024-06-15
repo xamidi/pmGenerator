@@ -8,6 +8,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>
+#include <numeric>
 
 using namespace std;
 using namespace xamidi::helper;
@@ -1570,7 +1571,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 		*optOut_indexEvalSequence = indexEvalSequence;
 }
 
-vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, vector<string>& out_helperRules, vector<shared_ptr<DlFormula>>& out_helperRulesConclusions, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, vector<size_t>* optOut_indexEvalSequence, bool debug) {
+vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, vector<string>& out_helperRules, vector<shared_ptr<DlFormula>>& out_helperRulesConclusions, const vector<AxiomInfo>* customAxioms, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, vector<size_t>* optOut_indexEvalSequence, bool debug) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	map<size_t, set<size_t>> targetIndices_orderedByTheorems;
 	parseAbstractDProof(inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, &out_helperRules, &out_helperRulesConclusions, optOut_indexEvalSequence, debug);
@@ -1582,8 +1583,21 @@ vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>&
 		for (size_t i = 0; i < inOut_abstractDProof.size(); i++)
 			if (*out_abstractDProofConclusions[i] != *(*requiredIntermediateResults)[i].refinedAxiom) {
 				if (DlCore::isSchemaOf(out_abstractDProofConclusions[i], (*requiredIntermediateResults)[i].refinedAxiom)) {
+					string properSchemaStr = DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]);
 					if (debug)
-						cout << "[NOTE] Index " << i << ": Resulted in proper schema " << DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) << ", requested " << (*requiredIntermediateResults)[i].name << "." << endl;
+						cout << "[NOTE] Index " << i << ": Resulted in proper schema " << properSchemaStr << ", requested " << (*requiredIntermediateResults)[i].name << "." << endl;
+					if (filterForTheorems) { // update 'filterForTheorems' if it contains (*requiredIntermediateResults)[i]
+						size_t targetIndex = SIZE_MAX;
+						for (size_t j = 0; j < filterForTheorems->size(); j++)
+							if (*(*filterForTheorems)[j].refinedAxiom == *(*requiredIntermediateResults)[i].refinedAxiom) {
+								targetIndex = j;
+								break;
+							}
+						if (targetIndex < SIZE_MAX) {
+							cout << "[NOTE] Requested target theorem " << (*requiredIntermediateResults)[i].name << " updated to its proper schema " << properSchemaStr << "." << endl;
+							(*filterForTheorems)[targetIndex] = AxiomInfo(properSchemaStr, out_abstractDProofConclusions[i]);
+						}
+					}
 				} else
 					throw invalid_argument("Validation failed for index " + to_string(i) + ": Resulted in " + DlCore::toPolishNotation_noRename(out_abstractDProofConclusions[i]) + ", but requested " + (*requiredIntermediateResults)[i].name + ".");
 			}
@@ -1822,7 +1836,7 @@ vector<string> DRuleParser::unfoldRulesInAbstractDProof(const vector<size_t>& ta
 	return targetUnfoldedProofs;
 }
 
-vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractDProof, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t storeIntermediateUnfoldingLimit, size_t limit) {
+vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractDProof, const vector<AxiomInfo>* customAxioms, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t storeIntermediateUnfoldingLimit, size_t limit) {
 
 	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
 	vector<string> retractedDProof = abstractDProof;
@@ -1838,7 +1852,385 @@ vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractD
 	return unfoldRulesInAbstractDProof(targetIndices, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 }
 
-vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, const vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit) {
+void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, const vector<AxiomInfo>* customAxioms) {
+	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
+		if (inReference)
+			switch (c) {
+			case '0':
+				refIndex = 10 * refIndex;
+				break;
+			case '1':
+				refIndex = 10 * refIndex + 1;
+				break;
+			case '2':
+				refIndex = 10 * refIndex + 2;
+				break;
+			case '3':
+				refIndex = 10 * refIndex + 3;
+				break;
+			case '4':
+				refIndex = 10 * refIndex + 4;
+				break;
+			case '5':
+				refIndex = 10 * refIndex + 5;
+				break;
+			case '6':
+				refIndex = 10 * refIndex + 6;
+				break;
+			case '7':
+				refIndex = 10 * refIndex + 7;
+				break;
+			case '8':
+				refIndex = 10 * refIndex + 8;
+				break;
+			case '9':
+				refIndex = 10 * refIndex + 9;
+				break;
+			case ']':
+				inRefAction();
+				refIndex = 0;
+				inReference = false;
+				break;
+			default:
+				throw invalid_argument("DRuleParser::recombineAbstractDProof(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+			}
+		else if (c == '[')
+			inReference = true;
+		else
+			outRefAction();
+	};
+
+	// 1. Parse and store axioms and elementary proof steps.
+	struct ProofElement {
+		char rule; // e.g. 'D' or 'N', but also 'A' for axiom number (which also have to be checked as potential replacements)
+		shared_ptr<DlFormula> result;
+		array<int64_t, 2> refs; // negative: axiom number, non-negative: reference index ; uninitialized elements
+		ProofElement(char c, const shared_ptr<DlFormula>& f) {
+			this->rule = c;
+			this->result = f;
+		}
+	};
+	vector<ProofElement> proofElements;
+	size_t numRules = retractedDProof.size() + helperRules.size();
+	for (size_t i = 0; i < numRules; i++) { // store proof steps such that their positions in 'proofElements' correspond to the parsed proof
+		bool isMainStep = i < retractedDProof.size();
+		const string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+		ProofElement& e = proofElements.emplace_back(dProof[0], isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]);
+		array<int64_t, 2>& refs = e.refs;
+		int64_t i_refs = 0;
+		bool inReference = false;
+		unsigned refIndex = 0;
+		for (char c : dProof)
+			switchRefs(c, inReference, refIndex, [&]() {
+				refs[i_refs++] = refIndex;
+			}, [&]() {
+				switch (c) { // NOTE: Rule symbols are ignored here; refs[1] is irrelevant for unary rules.
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+					if ((!customAxioms && c > '3') || (customAxioms && static_cast<unsigned>(c) - '0' > customAxioms->size()))
+						throw invalid_argument("DRuleParser::compressAbstractDProof(): Invalid character '" + string { c } + "': Not a proof step.");
+					refs[i_refs++] = '0' - c;
+					break;
+				case 'a':
+				case 'b':
+				case 'c':
+				case 'd':
+				case 'e':
+				case 'f':
+				case 'g':
+				case 'h':
+				case 'i':
+				case 'j':
+				case 'k':
+				case 'l':
+				case 'm':
+				case 'n':
+				case 'o':
+				case 'p':
+				case 'q':
+				case 'r':
+				case 's':
+				case 't':
+				case 'u':
+				case 'v':
+				case 'w':
+				case 'x':
+				case 'y':
+				case 'z':
+					if (!customAxioms || 10u + c - 'a' > customAxioms->size())
+						throw invalid_argument("DRuleParser::compressAbstractDProof(): Invalid character '" + string { c } + "': Not a proof step.");
+					refs[i_refs++] = 'a' - c - 10;
+					break;
+				}
+			});
+		if (inReference)
+			throw invalid_argument("DRuleParser::compressAbstractDProof(): Missing character ']' after '['.");
+	}
+	static const vector<AxiomInfo> defaultAxioms = []() { shared_ptr<DlFormula> v0 = make_shared<DlFormula>(make_shared<String>("0")); shared_ptr<DlFormula> v1 = make_shared<DlFormula>(make_shared<String>("1")); shared_ptr<DlFormula> v2 = make_shared<DlFormula>(make_shared<String>("2")); return vector<AxiomInfo> { AxiomInfo("1", _ax1(v0, v1)), AxiomInfo("2", _ax2(v0, v1, v2)), AxiomInfo("3", _ax3(v0, v1)) }; }();
+	const vector<AxiomInfo>& axioms = customAxioms ? *customAxioms : defaultAxioms;
+	for (size_t i = 0; i < axioms.size(); i++) { // store axioms behind proof steps
+		ProofElement& e = proofElements.emplace_back('A', axioms[i].refinedAxiom);
+		e.refs[0] = -static_cast<int64_t>(i + 1);
+	}
+	for (size_t i = 0; i < proofElements.size(); i++) { // let conclusions have pairwise different variables (for unification)
+		ProofElement& e = proofElements[i];
+		shared_ptr<DlFormula>& f = e.result;
+		vector<string> vars = DlCore::primitivesOfFormula_ordered(f);
+		map<string, shared_ptr<DlFormula>> substitutions;
+		for (const string& v : vars)
+			substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
+		f = DlCore::substitute(f, substitutions);
+	}
+
+	bool modified = false;
+	size_t compressionRound = 1;
+	size_t newImprovements = 0;
+	do {
+		newImprovements = 0;
+
+		// 2. Collect fundamental lengths.
+		vector<size_t> allIndices(numRules);
+		iota(allIndices.begin(), allIndices.end(), 0);
+		vector<size_t> fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions);
+		//#cout << "fundamentalLengths = " << FctHelper::vectorString(fundamentalLengths) << endl;
+		cout << "[Proof compression (rule search), round " << compressionRound << "] Started. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << endl;
+
+		// 3. Group elements based on fundamental lengths.
+		map<size_t, vector<size_t>> indicesByLen;
+		for (size_t i = 0; i < fundamentalLengths.size(); i++)
+			indicesByLen[fundamentalLengths[i]].push_back(i);
+		for (size_t i = 0; i < axioms.size(); i++)
+			indicesByLen[1].push_back(fundamentalLengths.size() + i);
+		//#auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
+		//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + "):" + infixUnicode(e.result); }); }, { }, { }, "\n") << endl; // DlCore::formulaRepresentation_traverse(e.result); // DlCore::toPolishNotation(e.result);
+		//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + ")"; }); }, { }, { }, "\n") << endl;
+
+		auto iToId = [&](size_t i) { if (i < numRules) return static_cast<int64_t>(i); else return -static_cast<int64_t>(i + 1 - numRules); };
+		auto printIndex = [&](size_t i) {
+			auto printAxiom = [](int64_t n) { if (n <= 9) return string { static_cast<char>('0' + n) }; else return string { static_cast<char>('a' + n - 10) }; };
+			auto printStep = [](size_t i) { return "[" + to_string(i) + "]"; };
+			int64_t id = iToId(i);
+			return id < 0 ? printAxiom(-id) : printStep(i);
+		};
+		auto idToLen = [&](int64_t id) { if (id < 0) return 1uLL; else return fundamentalLengths[id]; };
+
+		// 4. Detect and apply improving replacements of elements within this proof summary.
+		//     Only looks for rules, cannot eliminate rules that are axioms. These are reported in the next step, but should be handled by the user.
+		size_t fundamentalLength;
+		for (map<size_t, vector<size_t>>::reverse_iterator itRev = indicesByLen.rbegin(); (fundamentalLength = itRev->first) > 1; ++itRev) { // iterate longest to shortest rules (exclude axioms, which cannot be modified)
+			const vector<size_t>& indices = itRev->second;
+			for (size_t i : indices) {
+				ProofElement& e = proofElements[i];
+				array<int64_t, 2>& refs = e.refs;
+				bool found = false;
+				bool dRule = e.rule == 'D';
+				bool nonMinimalD = dRule && (refs[0] >= 0 || refs[1] >= 0);
+				bool nonMinimalN = !dRule && refs[0] >= 0;
+
+				// 4.1 Look for N-rules as replacements (if applicable).
+				if (e.result->getChildren().size() == 1 && e.result->getValue()->value == DlCore::terminalStr_nece() && (dRule || nonMinimalN)) {
+					const shared_ptr<DlFormula>& e_child = e.result->getChildren()[0];
+					for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
+						size_t candidateAFundamentalLength = itFwdA->first;
+						if (candidateAFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
+							break;
+						for (size_t iA : itFwdA->second) {
+							ProofElement& eA = proofElements[iA];
+							const shared_ptr<DlFormula>& input = eA.result;
+							if (DlCore::isSchemaOf(input, e_child)) {
+								bool isMainStep = i < retractedDProof.size();
+								if (!DlCore::isSchemaOf(e_child, input)) { // 'e.result' needs to be modified
+									shared_ptr<DlFormula> consequent;
+									DlCore::fromPolishNotation_noRename(consequent, "L" + DlCore::toPolishNotation_numVars(input));
+									(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
+									vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
+									map<string, shared_ptr<DlFormula>> substitutions;
+									for (const string& v : vars)
+										substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
+									consequent = DlCore::substitute(consequent, substitutions);
+									cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
+									e.result = consequent;
+								}
+								string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+								string newDProof = "N" + printIndex(iA);
+								if (dRule) {
+									cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+									e.rule = 'N';
+								} else
+									cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+								e.refs[0] = iToId(iA);
+								dProof = newDProof; // update 'retractedDProof' or 'helperRules'
+								fundamentalLengths[i] = candidateAFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
+								modified = true;
+								newImprovements++;
+								found = true;
+								break;
+							}
+						}
+						if (found)
+							break;
+					}
+					if (found)
+						continue;
+				}
+
+				// 4.2 Look for D-rules as replacements.
+				if (nonMinimalD || nonMinimalN) // NOTE: Even an axiom should be replaced when the other input is a rule no shorter than two alternative inputs combined).
+					for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
+						size_t candidateAFundamentalLength = itFwdA->first;
+						if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
+							break;
+						for (map<size_t, vector<size_t>>::iterator itFwdB = indicesByLen.begin(); itFwdB != indicesByLen.end(); ++itFwdB) {
+							size_t candidateBFundamentalLength = itFwdB->first;
+							if (candidateAFundamentalLength + candidateBFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
+								break;
+							for (size_t iA : itFwdA->second) {
+								for (size_t iB : itFwdB->second) {
+									ProofElement& eB = proofElements[iB];
+									const shared_ptr<DlFormula>& conditional = eB.result;
+									const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
+									if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
+										continue;
+									ProofElement& eA = proofElements[iA];
+									const shared_ptr<DlFormula>& antecedent = eA.result;
+									map<string, shared_ptr<DlFormula>> substitutions;
+									if (DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
+										shared_ptr<DlFormula> consequent = DlCore::substitute(conditional_children[1], substitutions);
+										if (DlCore::isSchemaOf(consequent, e.result)) {
+											bool isMainStep = i < retractedDProof.size();
+											if (!DlCore::isSchemaOf(e.result, consequent)) { // 'e.result' needs to be modified
+												DlCore::fromPolishNotation_noRename(consequent, DlCore::toPolishNotation_numVars(consequent));
+												(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
+												vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
+												map<string, shared_ptr<DlFormula>> substitutions;
+												for (const string& v : vars)
+													substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
+												consequent = DlCore::substitute(consequent, substitutions);
+												cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
+												e.result = consequent;
+											}
+											string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+											string newDProof = "D" + printIndex(iB) + printIndex(iA);
+											if (dRule)
+												cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+											else {
+												cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+												e.rule = 'D';
+											}
+											e.refs[0] = iToId(iB);
+											e.refs[1] = iToId(iA);
+											dProof = newDProof; // update 'retractedDProof' or 'helperRules'
+											fundamentalLengths[i] = candidateAFundamentalLength + candidateBFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
+											modified = true;
+											newImprovements++;
+											found = true;
+											break;
+										}
+									}
+								}
+								if (found)
+									break;
+							}
+							if (found)
+								break;
+						}
+						if (found)
+							break;
+					}
+			}
+		}
+
+		// 5. Detect and report trivial rules.
+		for (size_t i = 0; i < numRules; i++) {
+			ProofElement& rule = proofElements[i];
+			for (size_t a = 0; a < axioms.size(); a++) {
+				ProofElement& axiom = proofElements[numRules + a];
+				if (DlCore::isSchemaOf(axiom.result, rule.result))
+					cout << "[Proof compression (axiom search), round " << compressionRound << "] NOTE: [" << i << "]:" << DlCore::toPolishNotation(rule.result) << " is an instance of axiom number " << a << ". [" << DlCore::toPolishNotation(axiom.result) << "]" << endl;
+			}
+		}
+
+		cout << "[Proof compression (rule search), round " << compressionRound << "] Complete. Applied " << newImprovements << " shortening replacement" << (newImprovements == 1 ? "" : "s") << "." << endl;
+		compressionRound++;
+	} while (newImprovements);
+
+	// 6. Rebuild 'indexEvalSequence' (if some rules changed).
+	if (modified) {
+		vector<size_t> newIndexEvalSequence;
+		set<size_t> explored;
+		auto explore = [&](const string& rule, size_t i, const auto& me) -> void { // similar to 'auto parse' in DRuleParser::parseAbstractDProof(), but everything is parsed already
+			vector<DProofInfo> rawParseData;
+			string::size_type pos = rule.find('[');
+			if (pos != string::npos) {
+				string::size_type posEnd = rule.find(']', pos + 1);
+				if (posEnd == string::npos)
+					throw invalid_argument("Missing ']' in \"" + rule + "\".");
+				size_t num;
+				try {
+					num = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+				} catch (...) {
+					throw invalid_argument("Bad index number in \"" + rule + "\".");
+				}
+				if (rule[0] == 'N') { // N-rule with no axioms, one reference
+					if (posEnd != rule.size() - 1)
+						throw logic_error("First ']' should be final character in \"" + rule + "\".");
+					if (!explored.count(num)) { // still need to explore rule at 'num'?
+						me(num < retractedDProof.size() ? retractedDProof[num] : helperRules[num - retractedDProof.size()], num, me);
+						explored.emplace(num);
+					}
+					newIndexEvalSequence.push_back(i);
+					return;
+				} else {
+					bool refLhs = pos == 1;
+					pos = rule.find('[', posEnd + 1);
+					if (pos == string::npos) { // D-rule with one axiom, one reference
+						if (!explored.count(num)) { // still need to explore rule at 'num'?
+							me(num < retractedDProof.size() ? retractedDProof[num] : helperRules[num - retractedDProof.size()], num, me);
+							explored.emplace(num);
+						}
+						char axSym = refLhs ? rule[posEnd + 1] : rule[1];
+						if ((axSym < '1' || axSym > '9') && (axSym < 'a' || axSym > 'z'))
+							throw invalid_argument("Invalid axiom name in \"" + rule + "\".");
+					} else { // D-rule with no axioms, two references
+						string::size_type posEnd = rule.find(']', pos + 1);
+						if (posEnd == string::npos)
+							throw invalid_argument("Missing ']' in \"" + rule + "\".");
+						size_t num2;
+						try {
+							num2 = stoll(rule.substr(pos + 1, posEnd - pos - 1));
+						} catch (...) {
+							throw invalid_argument("Bad index number in \"" + rule + "\".");
+						}
+						if (posEnd != rule.size() - 1)
+							throw logic_error("Second ']' should be final character in \"" + rule + "\".");
+						if (!explored.count(num)) { // still need to explore rule at 'num'?
+							me(num < retractedDProof.size() ? retractedDProof[num] : helperRules[num - retractedDProof.size()], num, me);
+							explored.emplace(num);
+						}
+						if (!explored.count(num2)) { // still need to explore rule at 'num2'?
+							me(num2 < retractedDProof.size() ? retractedDProof[num2] : helperRules[num2 - retractedDProof.size()], num2, me);
+							explored.emplace(num2);
+						}
+					}
+				}
+			}
+			newIndexEvalSequence.push_back(i);
+			return;
+		};
+		for (size_t i = 0; i < retractedDProof.size(); i++)
+			explore(retractedDProof[i], i, explore);
+		indexEvalSequence = newIndexEvalSequence;
+	}
+}
+
+vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool compress) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
@@ -1854,7 +2246,31 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		targetIndices = vector<size_t>(targetIndices_noDuplicates.begin(), targetIndices_noDuplicates.end());
 	}
 
-	// 2. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.
+#if 0 //###
+	{
+		size_t index = 0;
+		cout << "\nretractedDProof:\n" << FctHelper::vectorStringF(retractedDProof, [&](const string& s) { return "[" + to_string(index++) + "] " + s; }, { }, { }, "\n") << endl;
+		cout << "\nhelperRules:\n" << FctHelper::vectorStringF(helperRules, [&](const string& s) { return "[" + to_string(index++) + "] " + s; }, { }, { }, "\n") << endl;
+		index = 0;
+		cout << "\nabstractDProofConclusions:\n" << FctHelper::vectorStringF(abstractDProofConclusions, [&](const shared_ptr<DlFormula>& f) { return "[" + to_string(index++) + "] " + (f ? DlCore::toPolishNotation(f) : "null"); }, { }, { }, "\n") << endl;
+		cout << "\nhelperRulesConclusions:\n" << FctHelper::vectorStringF(helperRulesConclusions, [&](const shared_ptr<DlFormula>& f) { return "[" + to_string(index++) + "] " + (f ? DlCore::toPolishNotation(f) : "null"); }, { }, { }, "\n") << endl;
+		cout << "indexEvalSequence = " << FctHelper::vectorString(indexEvalSequence) << endl;
+		cout << "targetIndices = " << FctHelper::vectorString(targetIndices) << endl;
+	}
+#endif //###
+
+	// 2. Compress proof summary (if requested).
+	if (compress) {
+		// NOTE: At this point, the variables 'retractedDProof', 'helperRules', 'abstractDProofConclusions', 'helperRulesConclusions', and 'indexEvalSequence' encode a fully detailed
+		//       proof summary (as if '-j 1'), where ('retractedDProof', 'abstractDProofConclusions') contain rules and conclusions of the proof summary provided by the user,
+		//       ('helperRules', 'helperRulesConclusions') contain rules and conclusions that have been extracted from steps with more than one rule,
+		//       and 'indexEvalSequence' provides a rule evaluation sequence respecting dependencies between the rules.
+		//       For proof compression, we can now operate over this fully detailed proof summary in order to remove the kind of internal redundancy where other parts
+		//       of the summary provide a shorter alternative subproof at any position.
+		compressAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, customAxioms);
+	}
+
+	// 3. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.
 	set<size_t> dedicatedIndices;
 	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
 		if (inReference)
@@ -1903,7 +2319,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 			outRefAction();
 	};
 	{
-		// 2.1 Remove proofs with fundamental lengths above 'maxLengthToKeepProof' (if requested).
+		// 3.1 Remove proofs with fundamental lengths above 'maxLengthToKeepProof' (if requested).
 		if (maxLengthToKeepProof < SIZE_MAX) {
 			vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(targetIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug);
 			set<size_t> toRemove;
@@ -1922,7 +2338,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 			}
 		}
 
-		// 2.2 Collect indices that are referenced by relevant indices.
+		// 3.2 Collect indices that are referenced by relevant indices.
 		if (debug)
 			startTime = chrono::steady_clock::now();
 		set<size_t> referencedIndices;
@@ -1949,10 +2365,10 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 			startTime = chrono::steady_clock::now();
 		}
 
-		// 2.3 Determine which referenced indices should obtain their own lines according to targetIndices', 'minUseAmountToCreateHelperProof' and 'conclusionsWithHelperProofs'.
+		// 3.3 Determine which referenced indices should obtain their own lines according to targetIndices', 'minUseAmountToCreateHelperProof' and 'conclusionsWithHelperProofs'.
 		if (minUseAmountToCreateHelperProof > 1) {
 
-			// 2.3.1 Add 'targetIndices' (i.e. according to 'filterForTheorems' if requested, final conclusion otherwise) and indices according to 'conclusionsWithHelperProofs' (if requested).
+			// 3.3.1 Add 'targetIndices' (i.e. according to 'filterForTheorems' if requested, final conclusion otherwise) and indices according to 'conclusionsWithHelperProofs' (if requested).
 			dedicatedIndices = set<size_t>(targetIndices.begin(), targetIndices.end());
 			if (conclusionsWithHelperProofs) {
 				for (size_t i : referencedIndices) {
@@ -1965,7 +2381,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 				}
 			}
 
-			// 2.3.2 Add indices which are referenced at least 'minUseAmountToCreateHelperProof' times.
+			// 3.3.2 Add indices which are referenced at least 'minUseAmountToCreateHelperProof' times.
 			if (minUseAmountToCreateHelperProof != UINT_MAX) {
 				map<size_t, unsigned> referenceAmounts; // index of proof -> amount of references to proof
 				auto findReferences = [&](const string& dProof) {
@@ -1990,7 +2406,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		}
 	}
 
-	// 3. Build new abstract proof
+	// 4. Build new abstract proof
 	vector<size_t> indicesForNewProof;
 	map<size_t, size_t> indexTranslation;
 	for (size_t i : indexEvalSequence)
@@ -2003,7 +2419,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		out_conclusions.clear();
 	if (abstractProofStrings && indicesForNewProof.size() > 1) {
 
-		// 3.1 Extend rules for referenced indices that are not dedicated, and translate referenced indices that are dedicated.
+		// 4.1 Extend rules for referenced indices that are not dedicated, and translate referenced indices that are dedicated.
 		set<size_t> extendedIndices;
 		size_t sumCharLength = 0;
 		auto extendAndTranslateProof = [&](size_t i, const auto& me) -> const string& {
@@ -2035,7 +2451,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		for (size_t i : dedicatedIndices)
 			extendAndTranslateProof(i, extendAndTranslateProof);
 
-		// 3.2 Add transformed rules to new proof.
+		// 4.2 Add transformed rules to new proof.
 		for (size_t i : indicesForNewProof) {
 			string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
 			newAbstractDProof.push_back(dProof);
@@ -2045,7 +2461,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		}
 	} else {
 
-		// 3.3 Obtain unfolded proof.
+		// 4.3 Obtain unfolded proof.
 		vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(indicesForNewProof, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug, limit);
 		newAbstractDProof = unfoldRulesInAbstractDProof(indicesForNewProof, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 		for (size_t i : indicesForNewProof) {
