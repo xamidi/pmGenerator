@@ -7,8 +7,8 @@
 % Full summary: pmGenerator --transform data/w5.txt -f -n -t . -j 1
 % Step counting: pmGenerator --transform data/w5.txt -f -n -t . -p -2 -d
 %                pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
-% Compact (568 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCCpCqrCCCsqtCNqNsCsq
-% Concrete (712 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
+% Compact (564 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCCpCqrCCCsqtCNqNsCsq
+% Concrete (708 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
 
     CCpqCCCrCstCqCNsNpCps = 1
 [0] CCCpCqrCCCCsCtuCvCNtNwCwtCNqNCwvCCwvq = D11
@@ -37,8 +37,8 @@
 % Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 95 steps
 [13] CCNpNqCqp = D[8]D1D1[10]
 
-% Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 107 steps
-[14] CCNppp = D[6]D[0]D1D[0]D1DD[0]D1D1D[0]D1D1D[0]D1D[0]D1DD1[8][0][0]
+% Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 103 steps
+[14] CCNppp = D[6]D[0]D1D[0]D1DD1D[0]D1D1D[0]D1D[0]D1DD1[8][0][1]
 
 % Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 157 steps
 [15] CCpCqrCCpqCpr = D[3]DD1D[0]D1DD[0]D1[9]D[0]D1DD1D1D[0]D1D[0]D1D[1][0][1]D1D[0]D1D1D[0]D1D[0]D1D[1][6]

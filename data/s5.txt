@@ -6,8 +6,8 @@
 % Full summary: pmGenerator --transform data/s5.txt -f -n -t . -j 1
 % Step counting: pmGenerator --transform data/s5.txt -f -n -t . -p -2 -d
 %                pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -p -2 -d
-% Compact (568 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -s CNNpCqp,CNNpp,CCpqCNqNp,CNLNLpLp,CpCNLqLNLq
-% Concrete (1730 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -e
+% Compact (544 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -s CNNpCqp,CNNpp,CCpqCNqNp,CNLNLpLp
+% Concrete (1360 bytes): pmGenerator --transform data/s5.txt -f -n -t CpLNLNp,CLpLLp,CLpNLNp,CpNLNp,CNLNNLpNLp,CNLpLNLp -j -1 -e
 
 % Axiom 1 by Frege (CpCqp), i.e. 0→(1→0)
     CpCqp = 1
@@ -54,10 +54,8 @@
 % Axiom 4 by Lewis (CLpLLp), i.e. □0→□□0 ; 302 steps
 [15] CLpLLp = DD2D1D5N[14][11]
 
-[16] CpCNLqLNLq = D[0]D[0]DD[1]D[1]D[13][14][5]
+% Alternative to axiom 5 (CNLpLNLp), i.e. ¬□0→□¬□0 ; 373 steps
+[16] CNLpLNLp = DD[0]D[0]DD[1]D[1]D[13][14][5]1
 
 % Alternative to axiom 4 (CMMpMp, i.e. CNLNNLNpNLNp of CNLNNLpNLp), i.e. ¬□¬¬□0→¬□0, schema of ¬□¬¬□¬0→¬□¬0, alias ◇◇0→◇0 ; 401 steps
 [17] CNLNNLpNLp = D[13]DDDD2D1D2[1]1[15][7]
-
-% Alternative to axiom 5 (CNLpLNLp), i.e. ¬□0→□¬□0 ; 743 steps
-[18] CNLpLNLp = D[16][16]
