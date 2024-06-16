@@ -2164,8 +2164,12 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 	// 6. Rebuild 'indexEvalSequence' (if some rules changed).
 	if (modified) {
 		vector<size_t> newIndexEvalSequence;
+		set<size_t> registered;
 		set<size_t> explored;
-		auto explore = [&](const string& rule, size_t i, const auto& me) -> void { // similar to 'auto parse' in DRuleParser::parseAbstractDProof(), but everything is parsed already
+
+		// Similar to 'auto parse' in DRuleParser::parseAbstractDProof(), but everything is parsed already.
+		// Additionally, need to avoid duplicate registration of evaluation indices, which here could occur due to non-orderliness of the input.
+		auto explore = [&](const string& rule, size_t i, const auto& me) -> void {
 			vector<DProofInfo> rawParseData;
 			string::size_type pos = rule.find('[');
 			if (pos != string::npos) {
@@ -2185,7 +2189,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						me(num < retractedDProof.size() ? retractedDProof[num] : helperRules[num - retractedDProof.size()], num, me);
 						explored.emplace(num);
 					}
-					newIndexEvalSequence.push_back(i);
+					if (!registered.count(i)) {
+						newIndexEvalSequence.push_back(i);
+						registered.emplace(i);
+					}
 					return;
 				} else {
 					bool refLhs = pos == 1;
@@ -2221,8 +2228,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 				}
 			}
-			newIndexEvalSequence.push_back(i);
-			return;
+			if (!registered.count(i)) {
+				newIndexEvalSequence.push_back(i);
+				registered.emplace(i);
+			}
 		};
 		for (size_t i = 0; i < retractedDProof.size(); i++)
 			explore(retractedDProof[i], i, explore);
