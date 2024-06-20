@@ -51,12 +51,14 @@ Some more – and very special – proof systems are illustrated [further down b
            -d: default system ; ignore all other arguments except '-e'
 
     Composable:
-      -g <limit or -1> [-u] [-q <limit>] [-s] [-l <limit or -1>]
+      -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-b] [-v] [-s]
          Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/
            -u: unfiltered (significantly faster, but generates redundant proofs)
            -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
-           -s: proof files without conclusions, requires additional parsing
            -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory
+           -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified
+           -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)
+           -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified
       -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]
          Replacements file creation based on proof files
            -l: customize data location path ; default: "data"

@@ -426,12 +426,14 @@ Configuring:
        -d: default system ; ignore all other arguments except '-e'
 
 Composable:
-  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-s] [-l &lt;limit or -1&gt;]
+  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-l &lt;limit or -1&gt;] [-b] [-v] [-s]
      Generate proof files ; at ./data/[&lt;hash&gt;/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[&lt;hash&gt;/]/dProofs-withoutConclusions/
        -u: unfiltered (significantly faster, but generates redundant proofs)
        -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
-       -s: proof files without conclusions, requires additional parsing
        -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory
+       -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified
+       -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)
+       -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified
   -r &lt;D-proof database&gt; &lt;output file&gt; [-l &lt;path&gt;] [-i &lt;prefix&gt;] [-s] [-d]
      Replacements file creation based on proof files
        -l: customize data location path ; default: "data"
