@@ -2019,7 +2019,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			int64_t id = iToId(i);
 			return id < 0 ? printAxiom(-id) : printStep(i);
 		};
-		auto idToLen = [&](int64_t id) { if (id < 0) return 1uLL; else return fundamentalLengths[id]; };
+		auto idToLen = [&](int64_t id) -> size_t { if (id < 0) return 1; else return fundamentalLengths[id]; };
 
 		// 4. Detect and apply improving replacements of elements within this proof summary.
 		//     Only looks for rules, cannot eliminate rules that are axioms. These are reported in the next step, but should be handled by the user.
@@ -2099,7 +2099,17 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
 										continue;
 									ProofElement& eA = proofElements[iA];
-									const shared_ptr<DlFormula>& antecedent = eA.result;
+									// For special case: When itFwdA == itFwdB and iA == iB, a formula is unified with itself, thus there needs to be an extra separation of variables.
+									shared_ptr<DlFormula> _distinguishedFormula;
+									auto distinguishVariables = [&](const shared_ptr<DlFormula>& f) -> const shared_ptr<DlFormula>& {
+										vector<string> vars = DlCore::primitivesOfFormula_ordered(f);
+										map<string, shared_ptr<DlFormula>> substitutions;
+										for (const string& v : vars)
+											substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(v + "_")));
+										_distinguishedFormula = DlCore::substitute(f, substitutions);
+										return _distinguishedFormula;
+									};
+									const shared_ptr<DlFormula>& antecedent = itFwdA == itFwdB && iA == iB ? distinguishVariables(eA.result) : eA.result;
 									map<string, shared_ptr<DlFormula>> substitutions;
 									if (DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
 										shared_ptr<DlFormula> consequent = DlCore::substitute(conditional_children[1], substitutions);
