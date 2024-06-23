@@ -108,7 +108,7 @@ public:
 
 	// Helper functions
 private:
-	static void _collectProvenFormulas(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, std::uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_map<std::string, std::string>::iterator>* lookup_speedupN, std::atomic<std::uint64_t>* misses_speedupN, std::uint64_t* optOut_counter, std::uint64_t* optOut_conclusionCounter, std::uint64_t* optOut_redundantCounter, std::uint64_t* optOut_invalidCounter, const std::vector<std::uint32_t>* genIn_stack = nullptr, const std::uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr, const std::vector<std::vector<std::string>>* genIn_allConclusionsLookup = nullptr, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* genInOut_allParsedConclusions = nullptr, std::size_t* candidateQueueCapacities = nullptr, std::size_t maxSymbolicConclusionLength = SIZE_MAX);
+	static void _collectProvenFormulas(tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, std::uint32_t wordLengthLimit, DlProofEnumeratorMode mode, helper::ProgressData* const progressData, tbb::concurrent_unordered_map<std::string, tbb::concurrent_unordered_map<std::string, std::string>::iterator>* lookup_speedupN, std::atomic<std::uint64_t>* misses_speedupN, std::uint64_t* optOut_counter, std::uint64_t* optOut_conclusionCounter, std::uint64_t* optOut_redundantCounter, std::uint64_t* optOut_invalidCounter, const std::vector<std::uint32_t>* genIn_stack = nullptr, const std::uint32_t* genIn_n = nullptr, const std::vector<std::vector<std::string>>* genIn_allRepresentativesLookup = nullptr, const std::vector<std::vector<std::string>>* genIn_allConclusionsLookup = nullptr, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* genInOut_allParsedConclusions = nullptr, std::vector<std::vector<std::atomic<bool>>>* genInOut_allParsedConclusions_init = nullptr, std::size_t* candidateQueueCapacities = nullptr, std::size_t maxSymbolicConclusionLength = SIZE_MAX);
 	static void _removeRedundantConclusionsForProofsOfMaxLength(const std::uint32_t maxLength, tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, helper::ProgressData* const progressData, std::uint64_t& conclusionCounter, std::uint64_t& redundantCounter);
 	static tbb_concurrent_unordered_set<std::uint64_t> _mpi_removeRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const std::uint32_t maxLength, tbb::concurrent_unordered_map<std::string, std::string>& representativeProofs, const std::vector<std::string>& recentConclusionSequence, helper::ProgressData* const progressData, bool smoothProgress);
 
@@ -123,13 +123,13 @@ public:
 	// One may customize what is being iterated by specifying the stack, i.e. { 0 } iterates all formulas, { s } for 0 < s <= n iterates formulas of length s, and
 	// { n + c } iterates all formulas of at least length n + c. Note that this can be combined with 'wordLengthLimit' := n + c to iterate only formulas of length n + c.
 	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<const std::vector<std::string>*>& allRepresentatives, const auto& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
-		processCondensedDetachmentProofs_dynamic(stack, wordLengthLimit, n, composeToLookupVector(allRepresentatives), fString, necessitationLimit, candidateQueueCapacities, concurrencyCount);
+		processCondensedDetachmentProofs_dynamic(stack, wordLengthLimit, n, composeToLookupVector(allRepresentatives), fString, necessitationLimit, candidateQueueCapacities, nullptr, nullptr, nullptr, concurrencyCount);
 	}
 	// default: parse full D-proofs
 	// 'allConclusionsLookup' != nullptr => use (stored) conclusion strings to parse final rules
 	// 'allConclusionsLookup' != nullptr && 'allParsedConclusions' != nullptr => use (stored) conclusion strings to parse and store unknown conclusion trees, and use those to parse final rules
 	// 'stack' and 'wordLengthLimit' are only used for default variant ; 'fString' must be defined accordingly (see _loadCondensedDetachmentProofs_useConclusions() for non-default variants)
-	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const auto& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, const std::vector<std::vector<std::string>>* allConclusionsLookup = nullptr, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* allParsedConclusions = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
+	static void processCondensedDetachmentProofs_dynamic(const std::vector<std::uint32_t>& stack, std::uint32_t wordLengthLimit, std::uint32_t n, const std::vector<std::vector<std::string>>& allRepresentativesLookup, const auto& fString, std::uint32_t necessitationLimit, std::size_t* candidateQueueCapacities = nullptr, const std::vector<std::vector<std::string>>* allConclusionsLookup = nullptr, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* allParsedConclusions = nullptr, std::vector<std::vector<std::atomic<bool>>>* allParsedConclusions_init = nullptr, unsigned concurrencyCount = std::thread::hardware_concurrency()) {
 		if (n % 2 == 0 && necessitationLimit == 0)
 			throw std::logic_error("Cannot have an even limit.");
 		if (!allConclusionsLookup) {
@@ -149,7 +149,7 @@ public:
 			if (candidateQueueCapacities)
 				for (tbb::concurrent_bounded_queue<std::string>& queue : queues)
 					queue.set_capacity(*candidateQueueCapacities);
-			_loadAndProcessQueuesConcurrently(concurrencyCount, queues, [&]() { _loadCondensedDetachmentProofs_useConclusions(n, allRepresentativesLookup, *allConclusionsLookup, queues, necessitationLimit, allParsedConclusions); }, fString);
+			_loadAndProcessQueuesConcurrently(concurrencyCount, queues, [&]() { _loadCondensedDetachmentProofs_useConclusions(n, allRepresentativesLookup, *allConclusionsLookup, queues, necessitationLimit, allParsedConclusions, allParsedConclusions_init); }, fString);
 		}
 	}
 
@@ -192,7 +192,7 @@ private:
 	// Registers strings like "D:<length of 1st input>,<length of 2nd input>:<index of 1st input>,<index of 2nd input>" or "N:<length of input>:<index of input>",
 	// such that allConclusions[<length of (|1st |2nd )input>][<index of (|1st |2nd ) input>] address conclusion strings to be used.
 	// When 'allParsedConclusions' is given, conclusions used by D-rules are additionally parsed and inserted into 'allParsedConclusions' at equal positions as in 'allConclusions'.
-	static void _loadCondensedDetachmentProofs_useConclusions(std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, std::uint32_t necessitationLimit, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* allParsedConclusions);
+	static void _loadCondensedDetachmentProofs_useConclusions(std::uint32_t knownLimit, const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, std::uint32_t necessitationLimit, std::vector<std::vector<std::shared_ptr<logic::DlFormula>>>* allParsedConclusions, std::vector<std::vector<std::atomic<bool>>>* allParsedConclusions_init);
 };
 
 void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCount, std::vector<tbb::concurrent_bounded_queue<std::string>>& queues, const auto& loader, const auto& process) {
@@ -232,6 +232,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 
 	// 2. Line up the working queues.
 	loader();
+	//#std::cout << "Loader complete." << std::endl;
 
 	// 3. Balance the queues while they are being worked on.
 	//#std::size_t balanceCounter = 0;
@@ -289,7 +290,7 @@ void DlProofEnumerator::_loadAndProcessQueuesConcurrently(unsigned concurrencyCo
 				sharingCandidates.erase(itLargest);
 			}
 		}
-		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; std::size_t size = queues[t].unsafe_size(); ss << t << ": " << size; } return ss.str(); };
+		//#auto queueSizesStr = [&]() -> std::string { std::stringstream ss; for (unsigned t = 0; t < queues.size(); t++) { if (t) ss << ", "; std::size_t size = queues[t].size(); ss << t << ": " << size; } return ss.str(); }; // requires '#include <sstream>'
 		//#std::cout << queueSizesStr() << std::endl; // print sizes of queues when a balancing attempt just took place
 	}
 	//#std::cout << "Balanced " << balanceCounter << " times." << std::endl;

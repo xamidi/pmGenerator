@@ -1484,6 +1484,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	vector<vector<string>> allRepresentatives;
 	vector<vector<string>> allConclusions;
 	vector<vector<shared_ptr<DlFormula>>> allParsedConclusions; // used when 'useConclusionTrees' is enabled
+	vector<vector<atomic<bool>>> allParsedConclusions_init;
 	uint64_t allRepresentativesCount;
 	uint32_t start;
 	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix))
@@ -1701,7 +1702,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		const vector<uint32_t> stack = { wordLengthLimit }; // do not generate all words up to a certain length, but only of length 'wordLengthLimit' ; NOTE: Uses nonterminal 'A' as lower limit 'wordLengthLimit' in combination with upper limit 'wordLengthLimit'.
 		const unsigned knownLimit = wordLengthLimit - c;
 		startTime = chrono::steady_clock::now();
-		_collectProvenFormulas(representativeProofs, wordLengthLimit, useConclusionTrees ? DlProofEnumeratorMode::FromConclusionTrees : useConclusionStrings ? DlProofEnumeratorMode::FromConclusionStrings : DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives, useConclusionStrings || useConclusionTrees ? &allConclusions : nullptr, useConclusionTrees ? &allParsedConclusions : nullptr, candidateQueueCapacities, maxSymbolicConclusionLength);
+		_collectProvenFormulas(representativeProofs, wordLengthLimit, useConclusionTrees ? DlProofEnumeratorMode::FromConclusionTrees : useConclusionStrings ? DlProofEnumeratorMode::FromConclusionStrings : DlProofEnumeratorMode::Dynamic, showProgress ? &collectProgress : nullptr, _speedupN ? &lookup_speedupN : nullptr, _speedupN ? nullptr : &misses_speedupN, &counter, &representativeCounter, &redundantCounter, &invalidCounter, &stack, &knownLimit, &allRepresentatives, useConclusionStrings || useConclusionTrees ? &allConclusions : nullptr, useConclusionTrees ? &allParsedConclusions : nullptr, useConclusionTrees ? &allParsedConclusions_init : nullptr, candidateQueueCapacities, maxSymbolicConclusionLength);
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to collect " << representativeCounter << " D-proof" << (representativeCounter == 1 ? "" : "s") << " of length " << wordLengthLimit << ". [iterated " << counter << " condensed detachment proof strings]" << (misses_speedupN ? " (Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / counter, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results.)" : "") << endl;
 		// e.g. 17:    1631.72 ms (        1 s 631.72 ms) taken to collect    6649 [...]
 		//      19:    5586.94 ms (        5 s 586.94 ms) taken to collect   19416 [...] ;    5586.94 /   1631.72 ≈ 3.42396
@@ -3557,7 +3558,7 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			_mout << it->second << flush;
 }
 
-void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, const vector<vector<string>>* genIn_allConclusionsLookup, vector<vector<shared_ptr<DlFormula>>>* genInOut_allParsedConclusions, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) {
+void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, const vector<vector<string>>* genIn_allConclusionsLookup, vector<vector<shared_ptr<DlFormula>>>* genInOut_allParsedConclusions, vector<vector<atomic<bool>>>* genInOut_allParsedConclusions_init, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) {
 	atomic<uint64_t> counter = 0;
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
@@ -3791,7 +3792,7 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 				if (progressData->nextState(percentage, progress, etc))
 					cout << myTime() << ": Iterated " << percentage << "% of D-proof candidates. [" << progress << "] (" << etc << ")" << endl;
 			}
-		}, _necessitationLimit, candidateQueueCapacities, genIn_allConclusionsLookup, genInOut_allParsedConclusions);
+		}, _necessitationLimit, candidateQueueCapacities, genIn_allConclusionsLookup, genInOut_allParsedConclusions, genInOut_allParsedConclusions_init);
 		break;
 	case DlProofEnumeratorMode::Naive:
 		if (progressData)
@@ -4251,14 +4252,30 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_removeRedundantC
 	return toErase_mainProc;
 }
 
-void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, vector<tbb::concurrent_bounded_queue<string>>& queues, uint32_t necessitationLimit, vector<vector<shared_ptr<DlFormula>>>* allParsedConclusions) {
+void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t knownLimit, const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, vector<tbb::concurrent_bounded_queue<string>>& queues, uint32_t necessitationLimit, vector<vector<shared_ptr<DlFormula>>>* allParsedConclusions, vector<vector<atomic<bool>>>* allParsedConclusions_init) {
 	vector<vector<shared_ptr<DlFormula>>> __allParsedConclusions;
+	vector<vector<atomic<bool>>> __allParsedConclusions_init;
 	vector<vector<shared_ptr<DlFormula>>>& _allParsedConclusions = allParsedConclusions ? *allParsedConclusions : __allParsedConclusions;
+	vector<vector<atomic<bool>>>& _allParsedConclusions_init = allParsedConclusions ? *allParsedConclusions_init : __allParsedConclusions_init;
 	if (allParsedConclusions) {
-		if (_allParsedConclusions.size() < allRepresentatives.size())
-			_allParsedConclusions.resize(allRepresentatives.size());
-		for (size_t i = 0; i < allRepresentatives.size(); i++)
-			_allParsedConclusions[i].resize(allRepresentatives[i].size());
+		if (!allParsedConclusions_init)
+			throw logic_error("allParsedConclusions && !allParsedConclusions_init");
+		if (_allParsedConclusions.size() < allRepresentatives.size()) {
+			size_t newSize = allRepresentatives.size();
+			_allParsedConclusions.resize(newSize);
+			_allParsedConclusions_init.resize(newSize);
+		}
+		for (size_t i = 0; i < allRepresentatives.size(); i++) {
+			size_t newSize = allRepresentatives[i].size();
+			_allParsedConclusions[i].resize(newSize);
+			vector<atomic<bool>>& initVec = _allParsedConclusions_init[i];
+			if (initVec.size() != newSize) {
+				if (initVec.empty())
+					initVec = vector<atomic<bool>>(newSize);
+				else
+					throw logic_error("initVec.size() != allRepresentatives[" + to_string(i) + "].size() && !initVec.empty()");
+			}
+		}
 	}
 	const vector<pair<array<uint32_t, 2>, unsigned>> combinations = necessitationLimit ? proofLengthCombinationsD_allLengths(knownLimit, true) : proofLengthCombinationsD_oddLengths(knownLimit, true);
 	auto registerD = [&queues](size_t lenA, size_t lenB, size_t iA, size_t iB) {
@@ -4311,24 +4328,38 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 			const vector<string>& conclusionsB = allConclusions[lenB];
 			vector<shared_ptr<DlFormula>>& conclusionTreesA = _allParsedConclusions[lenA];
 			vector<shared_ptr<DlFormula>>& conclusionTreesB = _allParsedConclusions[lenB];
-			for (size_t iA = 0; iA < conclusionsA.size(); iA++)
+			vector<atomic<bool>>& conclusionTreesA_init = _allParsedConclusions_init[lenA];
+			vector<atomic<bool>>& conclusionTreesB_init = _allParsedConclusions_init[lenB];
+			mutex mtx;
+			tbb::parallel_for(size_t(0), conclusionsA.size(), [&](size_t iA) {
 				for (size_t iB = 0; iB < conclusionsB.size(); iB++) {
 					shared_ptr<DlFormula>& tA = conclusionTreesA[iA];
 					shared_ptr<DlFormula>& tB = conclusionTreesB[iB];
-					if (!tA) { // parse fA, store in tA
+					atomic<bool>& tA_init = conclusionTreesA_init[iA];
+					atomic<bool>& tB_init = conclusionTreesB_init[iB];
+					if (!tA_init) {
 						const string& fA = conclusionsA[iA];
-						if(!DlCore::fromPolishNotation_noRename(tA, fA))
-							throw domain_error("Could not parse \"" + fA + "\" as a formula in dotted Polish notation.");
-						distinguishVariables(tA, lenA, iA);
+						lock_guard<mutex> lock(mtx);
+						if (!tA_init) { // parse fA, store in tA
+							if(!DlCore::fromPolishNotation_noRename(tA, fA))
+								throw domain_error("Could not parse \"" + fA + "\" as a formula in dotted Polish notation.");
+							distinguishVariables(tA, lenA, iA);
+							tA_init = true;
+						}
 					}
-					if (!tB) { // parse fB, store in tB
+					if (!tB_init) {
 						const string& fB = conclusionsB[iB];
-						if(!DlCore::fromPolishNotation_noRename(tB, fB))
-							throw domain_error("Could not parse \"" + fB + "\" as a formula in dotted Polish notation.");
-						distinguishVariables(tB, lenB, iB);
+						lock_guard<mutex> lock(mtx);
+						if (!tB_init) { // parse fB, store in tB
+							if(!DlCore::fromPolishNotation_noRename(tB, fB))
+								throw domain_error("Could not parse \"" + fB + "\" as a formula in dotted Polish notation.");
+							distinguishVariables(tB, lenB, iB);
+							tB_init = true;
+						}
 					}
 					registerD(lenA, lenB, iA, iB);
 				}
+			});
 		}
 	} else { // NOTE: Sequences are processed at 'auto process_useConclusionStrings'.
 		for (const pair<array<uint32_t, 2>, unsigned>& p : combinations) {
@@ -4336,23 +4367,24 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 			size_t lenB = p.first[1];
 			const vector<string>& conclusionsA = allConclusions[lenA];
 			const vector<string>& conclusionsB = allConclusions[lenB];
-			for (size_t iA = 0; iA < conclusionsA.size(); iA++)
+			tbb::parallel_for(size_t(0), conclusionsA.size(), [&](size_t iA) {
 				for (size_t iB = 0; iB < conclusionsB.size(); iB++)
 					registerD(lenA, lenB, iA, iB);
+			});
 		}
 	}
 
 	// 2. Build & register N-rules (if applicable).
 	if (necessitationLimit) {
 		const vector<string>& conclusions = allConclusions[knownLimit];
-		for (size_t i = 0; i < conclusions.size(); i++) {
+		tbb::parallel_for(size_t(0), conclusions.size(), [&](size_t i) {
 			if (necessitationLimit < UINT32_MAX) {
 				auto countLeadingNs = [](const string& p) { uint32_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
 				if (countLeadingNs(conclusions[i]) < necessitationLimit)
 					registerN(knownLimit, i);
 			} else
 				registerN(knownLimit, i);
-		}
+		});
 	}
 }
 
