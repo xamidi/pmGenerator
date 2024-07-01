@@ -126,7 +126,7 @@ bool DlProofEnumerator::resetRepresentativesFor(const vector<string>* customAxio
 		// 1.2 Filter out redundant axioms to obtain representatives
 		uint64_t representativeCounter = customAxioms->size();
 		uint64_t redundantCounter = 0;
-		tbb::concurrent_unordered_map<string, string> representativeProofs;
+		tbb::concurrent_hash_map<string, string> representativeProofs;
 		for (size_t i = 0; i < customAxiomFormulas.size(); i++)
 			representativeProofs.emplace(customAxiomFormulas[i], customAxiomNames[i]);
 		_removeRedundantConclusionsForProofsOfMaxLength(1, representativeProofs, nullptr, representativeCounter, redundantCounter);
@@ -140,11 +140,11 @@ bool DlProofEnumerator::resetRepresentativesFor(const vector<string>* customAxio
 					*errOut << "Warning: There " << (numDuplicates == 1 ? "is " : "are ") << numDuplicates << " axiom" << (numDuplicates == 1 ? " which is a duplicate." : "s which are duplicates.") << endl;
 			vector<pair<string, string>> redundancies;
 			for (size_t i = 0; i < customAxiomFormulas.size(); i++) {
-				tbb::concurrent_unordered_map<string, string>::const_iterator searchResult = representativeProofs.find(customAxiomFormulas[i]);
-				if (searchResult != representativeProofs.end()) {
-					_customRepresentatives1.push_back(searchResult->second);
-					_customConclusions1.push_back(searchResult->first);
-					representativeProofs.unsafe_erase(searchResult);
+				tbb::concurrent_hash_map<string, string>::const_accessor rAcc;
+				if (representativeProofs.find(rAcc, customAxiomFormulas[i])) {
+					_customRepresentatives1.push_back(rAcc->second);
+					_customConclusions1.push_back(rAcc->first);
+					representativeProofs.erase(rAcc);
 				} else
 					redundancies.push_back(make_pair(customAxiomNames[i], customAxiomFormulas[i]));
 			}
@@ -1165,7 +1165,31 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	return true;
 }
 
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<string>& representatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_unordered_map<string, string>* target_speedupN, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN) {
+tbb::concurrent_hash_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<string>& representatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_hash_map<string, string>* target_speedupN, tbb::concurrent_unordered_map<string, string>* lookup_speedupN) {
+	tbb::concurrent_hash_map<string, string> _representativeProofs;
+	tbb::concurrent_hash_map<string, string>& representativeProofs = target_speedupN ? *target_speedupN : _representativeProofs;
+	tbb::concurrent_unordered_map<string, string> _lookup_speedupN;
+	if (!lookup_speedupN && _speedupN)
+		lookup_speedupN = &_lookup_speedupN;
+	if (progressData)
+		progressData->setStartTime();
+	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(representatives.begin(), representatives.end()), [&progressData, &misses_speedupN, &lookup_speedupN, &representativeProofs](tbb::blocked_range<vector<string>::const_iterator>& range) {
+		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+			parseAndInsertDProof_speedupN(nullptr, nullptr, *it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
+
+			// Show progress if requested
+			if (progressData && progressData->nextStep()) {
+				string percentage;
+				string progress;
+				string etc;
+				if (progressData->nextState(percentage, progress, etc))
+					cout << myTime() << ": Parsed " << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+			}
+		}
+	});
+	return representativeProofs;
+}
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives_um(const vector<string>& representatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_unordered_map<string, string>* target_speedupN, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN) {
 	tbb::concurrent_unordered_map<string, string> _representativeProofs;
 	tbb::concurrent_unordered_map<string, string>& representativeProofs = target_speedupN ? *target_speedupN : _representativeProofs;
 	tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator> _lookup_speedupN;
@@ -1175,7 +1199,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 		progressData->setStartTime();
 	tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(representatives.begin(), representatives.end()), [&progressData, &misses_speedupN, &lookup_speedupN, &representativeProofs](tbb::blocked_range<vector<string>::const_iterator>& range) {
 		for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
-			parseAndInsertDProof_speedupN(*it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Definitely stores, since that is how the input files were constructed.
+			parseAndInsertDProof_speedupN_um(*it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
 
 			// Show progress if requested
 			if (progressData && progressData->nextStep()) {
@@ -1190,7 +1214,34 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	return representativeProofs;
 }
 
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, const uint32_t* proofLenStepSize) {
+tbb::concurrent_hash_map<string, string> DlProofEnumerator::parseDProofRepresentatives(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_unordered_map<string, string>* lookup_speedupN, const uint32_t* proofLenStepSize) {
+	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
+	tbb::concurrent_hash_map<string, string> representativeProofs;
+	tbb::concurrent_unordered_map<string, string> _lookup_speedupN;
+	if (!lookup_speedupN && _speedupN)
+		lookup_speedupN = &_lookup_speedupN;
+	if (progressData)
+		progressData->setStartTime();
+	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += c) { // FASTEST: Parse each string individually and without translation to DlProof objects.
+		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
+		tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end()), [&progressData, &misses_speedupN, &lookup_speedupN, &representativeProofs](tbb::blocked_range<vector<string>::const_iterator>& range) {
+			for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+				parseAndInsertDProof_speedupN(nullptr, nullptr, *it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
+
+				// Show progress if requested
+				if (progressData && progressData->nextStep()) {
+					string percentage;
+					string progress;
+					string etc;
+					if (progressData->nextState(percentage, progress, etc))
+						cout << myTime() << ": Parsed " << percentage << "% of D-proofs. [" << progress << "] (" << etc << ")" << endl;
+				}
+			}
+		});
+	}
+	return representativeProofs;
+}
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepresentatives_um(const vector<vector<string>>& allRepresentatives, ProgressData* const progressData, atomic<uint64_t>* misses_speedupN, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, const uint32_t* proofLenStepSize) {
 	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator> _lookup_speedupN;
@@ -1202,7 +1253,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
 		tbb::parallel_for(tbb::blocked_range<vector<string>::const_iterator>(representativesOfWordLengthLimit.begin(), representativesOfWordLengthLimit.end()), [&progressData, &misses_speedupN, &lookup_speedupN, &representativeProofs](tbb::blocked_range<vector<string>::const_iterator>& range) {
 			for (vector<string>::const_iterator it = range.begin(); it != range.end(); ++it) {
-				parseAndInsertDProof_speedupN(*it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Definitely stores, since that is how the input files were constructed.
+				parseAndInsertDProof_speedupN_um(*it, representativeProofs, lookup_speedupN, false, misses_speedupN); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
 
 				// Show progress if requested
 				if (progressData && progressData->nextStep()) {
@@ -1218,7 +1269,34 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::parseDProofRepr
 	return representativeProofs;
 }
 
-tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofConclusions(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData, const uint32_t* proofLenStepSize) {
+tbb::concurrent_hash_map<string, string> DlProofEnumerator::connectDProofConclusions(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData, const uint32_t* proofLenStepSize) {
+	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
+	tbb::concurrent_hash_map<string, string> representativeProofs;
+	if (progressData)
+		progressData->setStartTime();
+	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += c) {
+		const vector<string>& representativesOfWordLengthLimit = allRepresentatives[wordLengthLimit];
+		if (representativesOfWordLengthLimit.empty())
+			continue;
+		const vector<string>& conclusionsOfWordLengthLimit = allConclusions[wordLengthLimit];
+		if (representativesOfWordLengthLimit.size() != conclusionsOfWordLengthLimit.size())
+			throw invalid_argument("allRepresentatives[" + to_string(wordLengthLimit) + "].size() = " + to_string(representativesOfWordLengthLimit.size()) + " != " + to_string(conclusionsOfWordLengthLimit.size()) + " = allConclusions[" + to_string(wordLengthLimit) + "].size()");
+		tbb::parallel_for(size_t(0), representativesOfWordLengthLimit.size(), [&progressData, &representativeProofs, &representativesOfWordLengthLimit, &conclusionsOfWordLengthLimit](size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
+			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
+
+			// Show progress if requested
+			if (progressData && progressData->nextStep()) {
+				string percentage;
+				string progress;
+				string etc;
+				if (progressData->nextState(percentage, progress, etc))
+					cout << myTime() << ": Inserted " << percentage << "% of D-proof conclusions. [" << progress << "] (" << etc << ")" << endl;
+			}
+		});
+	}
+	return representativeProofs;
+}
+tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofConclusions_um(const vector<vector<string>>& allRepresentatives, const vector<vector<string>>& allConclusions, ProgressData* const progressData, const uint32_t* proofLenStepSize) {
 	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
 	tbb::concurrent_unordered_map<string, string> representativeProofs;
 	if (progressData)
@@ -1231,7 +1309,7 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 		if (representativesOfWordLengthLimit.size() != conclusionsOfWordLengthLimit.size())
 			throw invalid_argument("allRepresentatives[" + to_string(wordLengthLimit) + "].size() = " + to_string(representativesOfWordLengthLimit.size()) + " != " + to_string(conclusionsOfWordLengthLimit.size()) + " = allConclusions[" + to_string(wordLengthLimit) + "].size()");
 		tbb::parallel_for(size_t(0), representativesOfWordLengthLimit.size(), [&progressData, &representativeProofs, &representativesOfWordLengthLimit, &conclusionsOfWordLengthLimit](size_t i) { // NOTE: Counts from i = start := 0 until i < end := representativesOfWordLengthLimit.size().
-			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]); // NOTE: Definitely stores, since that is how the input files were constructed.
+			representativeProofs.emplace(conclusionsOfWordLengthLimit[i], representativesOfWordLengthLimit[i]); // NOTE: Guaranteed to store only if the input files do not contain redundancies with equal conclusions.
 
 			// Show progress if requested
 			if (progressData && progressData->nextStep()) {
@@ -1249,7 +1327,61 @@ tbb::concurrent_unordered_map<string, string> DlProofEnumerator::connectDProofCo
 // A D-N-proof Nα has conclusion Lβ iff α has conclusion β (according to Łukasiewicz notation). If we know (α,β), there is no need to parse Nα.
 // But this also requires a (proofs -> conclusions) lookup table, so it is more memory intensive. Do it when chosen by the user (i.e. when 'lookup_speedupN' is not null).
 // Note that the caller is still responsible to ensure proofs with leading N's are parsed last. Which is entailed when building up proofs incrementally by their length.
-pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnumerator::parseAndInsertDProof_speedupN(const string& dProof, tbb::concurrent_unordered_map<string, string>& results, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, bool permissive, atomic<uint64_t>* misses_speedupN, size_t maxSymbolicConclusionLength) {
+bool DlProofEnumerator::parseAndInsertDProof_speedupN(tbb::concurrent_hash_map<string, string>::accessor* wAcc, bool* isNew, const string& dProof, tbb::concurrent_hash_map<string, string>& results, tbb::concurrent_unordered_map<string, string>* lookup_speedupN, bool permissive, atomic<uint64_t>* misses_speedupN, size_t maxSymbolicConclusionLength) {
+	if (lookup_speedupN) { // NOTE: There shall never be N-rules without them being enabled, i.e. this should imply _necessitationLimit > 0.
+		auto countLeadingNs = [](const string& p) { size_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
+		size_t leadingNs = countLeadingNs(dProof);
+		if (leadingNs) {
+			tbb::concurrent_unordered_map<string, string>::iterator searchResult = lookup_speedupN->find(dProof.substr(leadingNs));
+			if (searchResult != lookup_speedupN->end()) {
+				bool written;
+				if (wAcc)
+					written = results.emplace(*wAcc, string(leadingNs, 'L') + searchResult->second, dProof);
+				else
+					written = results.emplace(string(leadingNs, 'L') + searchResult->second, dProof);
+				if (isNew)
+					*isNew = written;
+				return true;
+			} else if (misses_speedupN)
+				(*misses_speedupN)++; // missed due to order of execution
+		}
+		// NOTE: Using 'minUseAmountToCreateHelperProof' = 1 yields (partially significantly) improved parser performance when the proofs are getting longer and heavier.
+		vector<DProofInfo> rawParseData = permissive ? DRuleParser::parseDProof_raw_permissive(dProof, _customAxiomsPtr, 1) : DRuleParser::parseDProof_raw(dProof, _customAxiomsPtr, 1);
+		if (permissive && rawParseData.empty())
+			return false;
+		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		if (maxSymbolicConclusionLength < SIZE_MAX && conclusion->size() > maxSymbolicConclusionLength)
+			return false;
+		tbb::concurrent_hash_map<string, string>::accessor rAcc;
+		bool written;
+		if (wAcc)
+			written = results.emplace(*wAcc, DlCore::toPolishNotation_noRename(conclusion), dProof);
+		else
+			written = results.emplace(rAcc, DlCore::toPolishNotation_noRename(conclusion), dProof);
+		if (isNew)
+			*isNew = written;
+		if (lookup_speedupN && !leadingNs) // NOTE: Also memorizing proofs that were not inserted, so their conclusions can be found regardless of potential proof variants.
+			lookup_speedupN->emplace(dProof, wAcc ? (*wAcc)->first : rAcc->first); // to save memory only store iterators of formulas without leading N's
+	} else {
+		if (misses_speedupN && _necessitationLimit && dProof.starts_with('N'))
+			(*misses_speedupN)++; // missed due to no lookup table, despite N-rules being enabled
+		vector<DProofInfo> rawParseData = permissive ? DRuleParser::parseDProof_raw_permissive(dProof, _customAxiomsPtr, 1) : DRuleParser::parseDProof_raw(dProof, _customAxiomsPtr, 1);
+		if (permissive && rawParseData.empty())
+			return false;
+		const shared_ptr<DlFormula>& conclusion = get<0>(rawParseData.back().second).back();
+		if (maxSymbolicConclusionLength < SIZE_MAX && conclusion->size() > maxSymbolicConclusionLength)
+			return false;
+		bool written;
+		if (wAcc)
+			written = results.emplace(*wAcc, DlCore::toPolishNotation_noRename(conclusion), dProof);
+		else
+			written = results.emplace(DlCore::toPolishNotation_noRename(conclusion), dProof);
+		if (isNew)
+			*isNew = written;
+	}
+	return true;
+}
+pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnumerator::parseAndInsertDProof_speedupN_um(const string& dProof, tbb::concurrent_unordered_map<string, string>& results, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, bool permissive, atomic<uint64_t>* misses_speedupN, size_t maxSymbolicConclusionLength) {
 	if (lookup_speedupN) { // NOTE: There shall never be N-rules without them being enabled, i.e. this should imply _necessitationLimit > 0.
 		auto countLeadingNs = [](const string& p) { size_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
 		size_t leadingNs = countLeadingNs(dProof);
@@ -1334,7 +1466,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
 	atomic<uint64_t> misses_speedupN = 0;
 	startTime = chrono::steady_clock::now();
-	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &misses_speedupN);
+	tbb::concurrent_hash_map<string, string> representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &misses_speedupN);
 	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << (misses_speedupN ? " Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / allRepresentativesCount, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results." : "") << endl;
 
 	// 4. Iterate and count candidates of length 'wordLengthLimit'.
@@ -1592,7 +1724,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
 	atomic<uint64_t> misses_speedupN = 0;
 	startTime = chrono::steady_clock::now();
-	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &misses_speedupN);
+	tbb::concurrent_hash_map<string, string> representativeProofs = withConclusions ? connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, &misses_speedupN);
 	cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " total " << (withConclusions ? "" : "parse, conversion & ") << "insertion duration." << (misses_speedupN ? " Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / allRepresentativesCount, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results." : "") << endl;
 	// e.g. 15:    165.82 ms                         total parse, conversion & insertion duration.  | [with conclusions]   1.06 ms total insertion duration.
 	//      17:    482.36 ms                         total parse, conversion & insertion duration.  |                      2.07 ms total insertion duration.
@@ -1606,7 +1738,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 
 	// 4. Compute and store new representatives.
 	const uint32_t c = _necessitationLimit ? 1 : 2;
-	tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator> lookup_speedupN;
+	tbb::concurrent_unordered_map<string, string> lookup_speedupN;
 	for (uint32_t wordLengthLimit = start; wordLengthLimit <= limit; wordLengthLimit += c) {
 		if (allRepresentatives.back().empty() && 2 * longestKnownMinimalProofLength + 1 < wordLengthLimit) { // proved non-generativeness when checked up to 2k+1, for the longest proof having length k
 			cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator cancelled due to non-generative system. " << myInfo() << endl;
@@ -1774,19 +1906,122 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			}
 		}
 
+#if 0	//### print inconsistencies of input vs. utilized (and terminate without creating a proof file if these exist)
+		{
+			map<string::size_type, size_t> amountPerLength_test1;
+			map<string::size_type, size_t> amountPerLength_test2;
+			map<string::size_type, size_t> amountPerLength_test3;
+			if (withConclusions) {
+				for (const pair<const string, string>& p : representativeProofs) {
+					string::size_type len = p.second.length();
+					amountPerLength_test1[len]++;
+				}
+				for (size_t i = 1; i < allRepresentatives.size(); i += c) {
+					vector<string>& representatives = allRepresentatives[i];
+					amountPerLength_test2[i] = representatives.size();
+				}
+				for (size_t i = 1; i < allConclusions.size(); i += c) {
+					vector<string>& conclusions = allConclusions[i];
+					amountPerLength_test3[i] = conclusions.size();
+				}
+			}
+			bool diff12 = amountPerLength_test1 != amountPerLength_test2;
+			bool diff13 = amountPerLength_test1 != amountPerLength_test3;
+			bool diff23 = amountPerLength_test2 != amountPerLength_test3;
+			auto fillDiffs = [](const map<string::size_type, size_t>& A, const map<string::size_type, size_t>& B, map<string::size_type, pair<size_t, size_t>>& diffAB, map<string::size_type, size_t>& missingA, map<string::size_type, size_t>& missingB) {
+				for (map<string::size_type, size_t>::const_iterator itA = A.begin(); itA != A.end(); ++itA)
+					if (!B.count(itA->first))
+						missingB.insert(*itA);
+					else if (B.at(itA->first) != itA->second)
+						diffAB.emplace(itA->first, make_pair(itA->second, B.at(itA->first)));
+				for (map<string::size_type, size_t>::const_iterator itB = B.begin(); itB != B.end(); ++itB)
+					if (!A.count(itB->first))
+						missingA.insert(*itB);
+			};
+			auto printDiffs = [&](const map<string::size_type, size_t>& A, const map<string::size_type, size_t>& B, const string& nameA, const string& nameB) {
+				map<string::size_type, pair<size_t, size_t>> diffAB;
+				map<string::size_type, size_t> missingA;
+				map<string::size_type, size_t> missingB;
+				fillDiffs(A, B, diffAB, missingA, missingB);
+				cout << " -> diffs:" << FctHelper::mapStringF(diffAB, [](const pair<const string::size_type, pair<size_t, size_t>>& p) { return "(" + to_string(p.first) + ": " + to_string(p.second.first) + "|" + to_string(p.second.second) + ")"; }) << endl;
+				cout << " -> missing from " << nameA << ":" << FctHelper::mapString(missingA) << endl;
+				cout << " -> missing from " << nameB << ":" << FctHelper::mapString(missingB) << endl;
+				if (!diffAB.empty()) {
+					for (map<string::size_type, pair<size_t, size_t>>::const_iterator it = diffAB.begin(); it != diffAB.end(); ++it) {
+						string::size_type proofLen = it->first;
+						vector<string>& representatives = allRepresentatives[proofLen];
+						vector<string>& conclusions = allConclusions[proofLen];
+						if (representatives.size() != conclusions.size())
+							throw logic_error("representatives.size() != conclusions.size(), for proofLen = " + to_string(proofLen));
+						for (size_t i = 0; i < conclusions.size(); i++) {
+							const string& conclusion = conclusions[i];
+							if (!representativeProofs.count(conclusion))
+								cout << "Missing from 'representativeProofs': [" << proofLen << "][" << i << "], i.e. " << representatives[i] << ":" << conclusions[i] << endl;
+						}
+						set<string> conclusionsSet(conclusions.begin(), conclusions.end());
+						vector<string> conclusionsOfProofLen;
+						for (tbb::concurrent_hash_map<string, string>::const_iterator itR = representativeProofs.begin(); itR != representativeProofs.end(); ++itR) {
+							if (itR->second.length() == proofLen)
+								conclusionsOfProofLen.push_back(itR->first);
+						}
+						cout << "[NOTE] For proof length " << proofLen << ": |representatives| = " << representatives.size() << ", |conclusions| = " << conclusions.size() << ", |conclusionsSet| = " << conclusionsSet.size() << ", |conclusionsOfProofLen| = " << conclusionsOfProofLen.size() << endl;
+						set<string> conclusionsOfProofLenSet(conclusionsOfProofLen.begin(), conclusionsOfProofLen.end());
+						for (size_t i = 0; i < conclusions.size(); i++) {
+							const string& conclusion = conclusions[i];
+							if (!conclusionsOfProofLenSet.count(conclusion)) {
+								cout << "Not found in 'representativeProofs': [" << proofLen << "][" << i << "], i.e. " << representatives[i] << ":" << conclusions[i] << endl;
+								if (representativeProofs.count(conclusion)) {
+									tbb::concurrent_hash_map<string, string>::const_accessor rAcc;
+									representativeProofs.find(rAcc, conclusion);
+									cout << "BUT representativeProofs[conclusion] exists: " << rAcc->second << ":" << rAcc->first << endl;
+									// NOTE: This was used to figure out the reason for loaded input not being used by 'representativeProofs'.
+									//       It turned out that the proof files had been edited manually ("squished") such that afterwards
+									//       the same conclusions existed for different proof lengths, i.e. in different proof files.
+								}
+							}
+						}
+						for (const string& conclusion : conclusionsOfProofLen)
+							if (!conclusionsSet.count(conclusion)) {
+								tbb::concurrent_hash_map<string, string>::const_accessor rAcc;
+								representativeProofs.find(rAcc, conclusion);
+								cout << "Missing from 'allRepresentatives' and 'allConclusions' at [" << proofLen << "]: " << rAcc->second << ":" << conclusion << endl;
+							}
+					}
+				}
+			};
+			if (diff12) {
+				cout << "amountPerLength: 'representativeProofs' != 'allRepresentatives'" << endl;
+				printDiffs(amountPerLength_test1, amountPerLength_test2, "'representativeProofs'", "'allRepresentatives'");
+			}
+			if (diff13) {
+				cout << "amountPerLength: 'representativeProofs' != 'allConclusions'" << endl;
+				printDiffs(amountPerLength_test1, amountPerLength_test3, "'representativeProofs'", "'allConclusions'");
+			}
+			if (diff23) {
+				cout << "amountPerLength: 'allRepresentatives' != 'allConclusions'" << endl;
+				printDiffs(amountPerLength_test2, amountPerLength_test3, "'allRepresentatives'", "'allConclusions'");
+			}
+			if (diff12 || diff13 || diff23)
+				exit(0);
+		}
+#endif	//###
+
 		// 4.6 In case this is the last iteration, try to prevent potential out-of-memory issues by clearing data that is no longer needed.
 		bool last = wordLengthLimit + c > limit;
 		map<string::size_type, size_t> amountPerLength;
 		if (last) {
 			for (size_t i = 1; i < allRepresentatives.size(); i += c)
 				allRepresentatives[i].clear();
-			for (tbb::concurrent_unordered_map<string, string>::iterator it = representativeProofs.begin(); it != representativeProofs.end();) {
-				string::size_type len = it->second.length();
-				if (len != wordLengthLimit) {
-					it = representativeProofs.unsafe_erase(it);
-					amountPerLength[len]++;
-				} else
-					++it;
+			for (size_t i = 1; i < allConclusions.size(); i += c) {
+				vector<string>& conclusions = allConclusions[i];
+				atomic<size_t> amount = 0;
+				tbb::parallel_for(size_t(0), conclusions.size(), [&](size_t j) {
+					if (representativeProofs.erase(conclusions[j]))
+						amount++;
+				});
+				if (amount)
+					amountPerLength[i] = amount; // erased from 'representativeProofs', thus won't be counted hereafter ; NOTE: May vary from conclusions.size() due to redundancies with equal conclusions from (manually edited) input files.
+				conclusions.clear();
 			}
 		}
 
@@ -1976,7 +2211,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	// 3. Prepare representative proofs that are already known addressable by conclusions, for filtering.
 	if (isMainProc)
 		startTime = chrono::steady_clock::now();
-	tbb::concurrent_unordered_map<string, string> representativeProofs = connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &connectProgress : nullptr);
+	tbb::concurrent_hash_map<string, string> representativeProofs = connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &connectProgress : nullptr);
 	if (isMainProc)
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) + " total insertion duration." << endl;
 
@@ -2083,8 +2318,8 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& dataLo
 		readConfigFile(true, &showProgress_bound, &parseProgressSteps5, &parseProgressSteps10);
 
 	// 2. Parse generated D-proofs and keep their conclusion representation strings.
-	tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator> lookup_speedupN;
-	vector<tbb::concurrent_unordered_map<string, string>> allRepresentativeProofs_speedupN;
+	tbb::concurrent_unordered_map<string, string> lookup_speedupN;
+	vector<tbb::concurrent_hash_map<string, string>> allRepresentativeProofs_speedupN;
 	if (_speedupN) // need to keep the entries alive for lookup_speedupN
 		allRepresentativeProofs_speedupN.resize(allRepresentatives.size()); // NOTE: _speedupN implies _necessitationLimit, thus c = 1.
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += c) {
@@ -2094,8 +2329,8 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& dataLo
 		atomic<uint64_t> misses_speedupN = 0;
 		if (debug)
 			startTime = chrono::steady_clock::now();
-		tbb::concurrent_unordered_map<string, string>* representativeProofs;
-		tbb::concurrent_unordered_map<string, string> _representativeProofs;
+		tbb::concurrent_hash_map<string, string>* representativeProofs;
+		tbb::concurrent_hash_map<string, string> _representativeProofs;
 		if (_speedupN) {
 			representativeProofs = &allRepresentativeProofs_speedupN[wordLengthLimit];
 			parseDProofRepresentatives(representativesOfWordLengthLimit, showProgress ? &parseProgress : nullptr, debug ? &misses_speedupN : nullptr, representativeProofs, &lookup_speedupN);
@@ -3558,21 +3793,22 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 			_mout << it->second << flush;
 }
 
-void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, tbb::concurrent_unordered_map<string, string>::iterator>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, const vector<vector<string>>* genIn_allConclusionsLookup, vector<vector<shared_ptr<DlFormula>>>* genInOut_allParsedConclusions, vector<vector<atomic<bool>>>* genInOut_allParsedConclusions_init, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) {
+void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_hash_map<string, string>& representativeProofs, uint32_t wordLengthLimit, DlProofEnumeratorMode mode, ProgressData* const progressData, tbb::concurrent_unordered_map<string, string>* lookup_speedupN, atomic<uint64_t>* misses_speedupN, uint64_t* optOut_counter, uint64_t* optOut_conclusionCounter, uint64_t* optOut_redundantCounter, uint64_t* optOut_invalidCounter, const vector<uint32_t>* genIn_stack, const uint32_t* genIn_n, const vector<vector<string>>* genIn_allRepresentativesLookup, const vector<vector<string>>* genIn_allConclusionsLookup, vector<vector<shared_ptr<DlFormula>>>* genInOut_allParsedConclusions, vector<vector<atomic<bool>>>* genInOut_allParsedConclusions_init, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength) {
 	atomic<uint64_t> counter = 0;
 	atomic<uint64_t> conclusionCounter = 0;
 	atomic<uint64_t> redundantCounter = 0;
 	atomic<uint64_t> invalidCounter = 0;
-	auto handleEmplacement = [&](const pair<tbb::concurrent_unordered_map<string, string>::iterator, bool>& emplaceResult, const string& dProof) {
-		if (!emplaceResult.second) { // a proof for the conclusion is already known
+	auto handleEmplacement = [&](tbb::concurrent_hash_map<string, string>::accessor& wAcc, bool isNew, const string& dProof) {
+		if (!isNew) { // a proof for the conclusion is already known
 			redundantCounter++;
-			string& storedDProof = emplaceResult.first->second;
+			string& storedDProof = wAcc->second;
 			if (storedDProof.length() > dProof.length())
 				storedDProof = dProof; // use the shorter proof
 			else if (storedDProof.length() == dProof.length() && storedDProof > dProof)
 				storedDProof = dProof; // use the "preceding" proof
 		} else
 			conclusionCounter++;
+		wAcc.release();
 	};
 	auto parseRuleSequence = [](const string& sequence, size_t& lenA, size_t& iA, size_t* lenB = nullptr, size_t* iB = nullptr) -> bool {
 		auto read = [](string::size_type& i, const string& s, unsigned& num) {
@@ -3660,9 +3896,10 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 	};
 	auto process = [&representativeProofs, &progressData, &misses_speedupN, &lookup_speedupN, &maxSymbolicConclusionLength, &counter, &invalidCounter, &handleEmplacement](string& sequence) {
 		counter++;
-		pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> emplaceResult = parseAndInsertDProof_speedupN(sequence, representativeProofs, lookup_speedupN, true, misses_speedupN, maxSymbolicConclusionLength);
-		if (emplaceResult.first != representativeProofs.end()) // parse was permissive
-			handleEmplacement(emplaceResult, sequence);
+		tbb::concurrent_hash_map<string, string>::accessor wAcc;
+		bool isNew;
+		if (parseAndInsertDProof_speedupN(&wAcc, &isNew, sequence, representativeProofs, lookup_speedupN, true, misses_speedupN, maxSymbolicConclusionLength)) // parse was permissive
+			handleEmplacement(wAcc, isNew, sequence);
 		else
 			invalidCounter++;
 
@@ -3717,7 +3954,9 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 				if (dRuleUnify(tA, tB, consequent, consequentSize) && (maxSymbolicConclusionLength == SIZE_MAX || consequentSize <= maxSymbolicConclusionLength)) {
 					const vector<vector<string>>& allRepresentatives = *genIn_allRepresentativesLookup;
 					string dProof = "D" + allRepresentatives[lenB][iB] + allRepresentatives[lenA][iA];
-					handleEmplacement(representativeProofs.emplace(consequent, dProof), dProof);
+					tbb::concurrent_hash_map<string, string>::accessor wAcc;
+					bool isNew = representativeProofs.emplace(wAcc, consequent, dProof);
+					handleEmplacement(wAcc, isNew, dProof);
 				} else
 					invalidCounter++;
 			} else { // N-rule
@@ -3725,7 +3964,9 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 				if (maxSymbolicConclusionLength == SIZE_MAX || 1 + DlCore::symbolicLen_polishNotation_noRename_numVars(f) <= maxSymbolicConclusionLength) {
 					const vector<vector<string>>& allRepresentatives = *genIn_allRepresentativesLookup;
 					string dProof = "N" + allRepresentatives[lenA][iA];
-					handleEmplacement(representativeProofs.emplace("L" + f, dProof), dProof);
+					tbb::concurrent_hash_map<string, string>::accessor wAcc;
+					bool isNew = representativeProofs.emplace(wAcc, "L" + f, dProof);
+					handleEmplacement(wAcc, isNew, dProof);
 				} else
 					invalidCounter++;
 			}
@@ -3770,7 +4011,9 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 				if (dRuleUnify(lenA == lenB && iA == iB ? distinguishVariables(tA) : tA, tB, consequent, consequentSize) && (maxSymbolicConclusionLength == SIZE_MAX || consequentSize <= maxSymbolicConclusionLength)) {
 					const vector<vector<string>>& allRepresentatives = *genIn_allRepresentativesLookup;
 					string dProof = "D" + allRepresentatives[lenB][iB] + allRepresentatives[lenA][iA];
-					handleEmplacement(representativeProofs.emplace(consequent, dProof), dProof);
+					tbb::concurrent_hash_map<string, string>::accessor wAcc;
+					bool isNew = representativeProofs.emplace(wAcc, consequent, dProof);
+					handleEmplacement(wAcc, isNew, dProof);
 				} else
 					invalidCounter++;
 			} else { // N-rule
@@ -3779,7 +4022,9 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 				if (maxSymbolicConclusionLength == SIZE_MAX || 1 + DlCore::symbolicLen_polishNotation_noRename_numVars(f) <= maxSymbolicConclusionLength) {
 					const vector<vector<string>>& allRepresentatives = *genIn_allRepresentativesLookup;
 					string dProof = "N" + allRepresentatives[lenA][iA];
-					handleEmplacement(representativeProofs.emplace("L" + f, dProof), dProof);
+					tbb::concurrent_hash_map<string, string>::accessor wAcc;
+					bool isNew = representativeProofs.emplace(wAcc, "L" + f, dProof);
+					handleEmplacement(wAcc, isNew, dProof);
 				} else
 					invalidCounter++;
 			}
@@ -3810,11 +4055,11 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_unordered_map<str
 		*optOut_invalidCounter = invalidCounter;
 }
 
-void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
+void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const uint32_t maxLength, tbb::concurrent_hash_map<string, string>& representativeProofs, ProgressData* const progressData, uint64_t& conclusionCounter, uint64_t& redundantCounter) {
 	//#chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
-		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_hash_map<string, string>::range_type& range) {
+		for (tbb::concurrent_hash_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& formula = it->first;
 			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
 		}
@@ -3834,11 +4079,11 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 					}
 		});
 	};
-	tbb::concurrent_unordered_map<const string*, tbb::concurrent_unordered_map<string, string>::const_iterator> toErase;
+	tbb::concurrent_unordered_map<const string*, string> toErase;
 	if (progressData)
 		progressData->setStartTime();
-	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_unordered_map<string, string>::range_type& range) {
-		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&maxLength, &progressData, &iterateFormulasOfStandardLengthUpTo, &toErase](tbb::concurrent_hash_map<string, string>::range_type& range) {
+		for (tbb::concurrent_hash_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string::size_type dProofLen = it->second.length();
 			if (dProofLen == maxLength) {
 				const string& formula = it->first;
@@ -3849,7 +4094,7 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 						redundant = true;
 				});
 				if (redundant) {
-					toErase.emplace(&it->first, it);
+					toErase.emplace(&it->first, it->first);
 
 					// Show progress if requested
 					if (progressData && progressData->nextStep()) {
@@ -3867,12 +4112,14 @@ void DlProofEnumerator::_removeRedundantConclusionsForProofsOfMaxLength(const ui
 	redundantCounter += toErase.size();
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for data iteration." << endl;
 	//#startTime = chrono::steady_clock::now();
-	for (const pair<const string* const, tbb::concurrent_unordered_map<string, string>::const_iterator>& p : toErase)
-		representativeProofs.unsafe_erase(p.second);
+	tbb::parallel_for(toErase.range(), [&representativeProofs](tbb::concurrent_unordered_map<const string*, string>::range_type& range) {
+		for (tbb::concurrent_unordered_map<const string*, string>::const_iterator it = range.begin(); it != range.end(); ++it)
+			representativeProofs.erase(it->second);
+	});
 	//#cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken for erasure of " << toErase.size() << " elements." << endl;
 }
 
-tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_removeRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_unordered_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, ProgressData* const progressData, bool smoothProgress) {
+tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_removeRedundantConclusionsForProofsOfMaxLength(int mpi_rank, int mpi_size, const uint32_t maxLength, tbb::concurrent_hash_map<string, string>& representativeProofs, const vector<string>& recentConclusionSequence, ProgressData* const progressData, bool smoothProgress) {
 	bool isMainProc = mpi_rank == 0;
 	size_t n = recentConclusionSequence.size();
 
@@ -3949,8 +4196,8 @@ tbb::concurrent_unordered_set<uint64_t> DlProofEnumerator::_mpi_removeRedundantC
 	}
 	//#startTime = chrono::steady_clock::now();
 	tbb::concurrent_map<size_t, tbb::concurrent_vector<const string*>> formulasByStandardLength;
-	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_unordered_map<string, string>::range_type& range) {
-		for (tbb::concurrent_unordered_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
+	tbb::parallel_for(representativeProofs.range(), [&formulasByStandardLength](tbb::concurrent_hash_map<string, string>::range_type& range) {
+		for (tbb::concurrent_hash_map<string, string>::const_iterator it = range.begin(); it != range.end(); ++it) {
 			const string& formula = it->first;
 			formulasByStandardLength[DlCore::standardLen_polishNotation_noRename_numVars(formula)].push_back(&formula);
 		}

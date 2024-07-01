@@ -82,7 +82,10 @@ void DRuleReducer::createReplacementsFile(const string& dProofDB, const string& 
 	bool showProgress = allRepresentatives.size() > showProgress_bound;
 	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > parseProgressSteps5 ? 5 : allRepresentatives.size() > parseProgressSteps10 ? 10 : 20, allRepresentativesCount) : ProgressData();
 	atomic<uint64_t> misses_speedupN = 0;
-	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? DlProofEnumerator::connectDProofConclusions(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : DlProofEnumerator::parseDProofRepresentatives(allRepresentatives, showProgress ? &parseProgress : nullptr, debug ? &misses_speedupN : nullptr);
+	// NOTE: In contrast to tbb::concurrent_hash_map, tbb::concurrent_unordered_map does not invalidate its existing iterators upon concurrent insertion (or even erasure) since it is implemented
+	//       as a split-ordered list (https://doi.org/10.1145/1147954.1147958 ; https://web.archive.org/web/20240417213014/https://ldhulipala.github.io/readings/split_ordered_lists.pdf).
+	//       So it is required here for a more straightforward approach using iterators.
+	tbb::concurrent_unordered_map<string, string> representativeProofs = withConclusions ? DlProofEnumerator::connectDProofConclusions_um(allRepresentatives, allConclusions, showProgress ? &parseProgress : nullptr) : DlProofEnumerator::parseDProofRepresentatives_um(allRepresentatives, showProgress ? &parseProgress : nullptr, debug ? &misses_speedupN : nullptr);
 	if (debug) {
 		cout << "Loaded and parsed " << representativeProofs.size() << " generated D-proof" << (withConclusions ? " conclusion" : "") << "s in " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << (misses_speedupN ? " Parsed " + to_string(misses_speedupN) + (misses_speedupN == 1 ? " proof" : " proofs") + " - i.e. ≈" + FctHelper::round((long double) misses_speedupN * 100 / allRepresentativesCount, 2) + "% - of the form Nα:Lβ, despite α:β allowing for composition based on previous results." : "") << endl;
 		startTime = chrono::steady_clock::now();

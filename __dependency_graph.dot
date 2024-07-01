@@ -126,6 +126,7 @@ digraph {
 	DlProofEnumerator -> "(condition_variable)" [color=red]
 	DlProofEnumerator -> "(iostream)" [color=red]
 	DlProofEnumerator -> "(iterator)" [color=red]
+	DlProofEnumerator -> concurrent_hash_map [color=red]
 	DlProofEnumerator -> concurrent_queue [color=red]
 	DlProofEnumerator -> concurrent_unordered_map [color=red]
 	DlProofEnumerator -> "(thread)" [color=red]
