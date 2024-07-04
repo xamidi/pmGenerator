@@ -51,11 +51,12 @@ Some more – and very special – proof systems are illustrated [further down b
            -d: default system ; ignore all other arguments except '-e'
 
     Composable:
-      -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-b] [-v] [-s]
+      -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]
          Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/
            -u: unfiltered (significantly faster, but generates redundant proofs)
            -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
            -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory
+           -k: similar to '-l' ; limit symbolic length of consequents in generated conclusions, i.e. antecedents in conditionals are not limited (but non-conditionals are limited in full length)
            -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified
            -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)
            -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified
@@ -115,14 +116,15 @@ Some more – and very special – proof systems are illustrated [further down b
            -p: search proofs (rather than conclusions) ; used only when '-n' and '-s' unspecified
            -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
-      --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-f] [-d]
+      --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
          Various options to extract information from proof files ; [Hint: Generate missing files with '--variate 1 -s'.]
            -t: compose file with up to the given amount of smallest conclusions that occur in proof files ; includes origins, symbolic lengths, proofs, and formulas in normal Polish notation
            -o: specify output file path for '-t' ; relative to effective data location ; default: "top<amount>SmallestConclusions_<min proof length>to<max proof length>Steps<unfiltered info>.txt"
            -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false
            -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'
            -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; "." to not modify axioms
-           -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have a symbolic length of at most the given number
+           -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have symbolic lengths of at most the given number
+           -k: similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number ; can be combined with '-l'
            -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
       --iterate [-u] [-s]

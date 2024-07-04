@@ -175,11 +175,13 @@ struct DlCore {
 	// Calculate the formula's symbolic length (i.e. the amount of nodes of its syntax tree), where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(),
 	// and all variable names consist of only numerical characters.
 	static std::size_t symbolicLen_polishNotation_noRename_numVars(const std::string& formula);
+	static std::size_t symbolicLen_polishNotation_noRename_numVars(const std::string& formula, std::string::size_type startIndex);
 
 	// Calculate the formula's standard length, where 'formula' is given in Łukasiewicz-format provided by toPolishNotation_noRename(), and all variable names consist of only numerical characters.
 	static std::size_t standardLen_polishNotation_noRename_numVars(const std::string& formula);
 
 	// Traverse the given amount of (sub-)formulas of the given formula in Łukasiewicz-format provided by toPolishNotation_noRename(), and return the index of the final character.
+	// In case 'formula' was traversed entirely (which should only happen for 'startIndex' = 0), does not return the final index, but formula.length().
 	static std::string::size_type traverseFormulas_polishNotation_noRename_numVars(const std::string& formula, std::string::size_type startIndex = 0, std::string::size_type formulasToTraverse = 1);
 
 	// Calculate the substitution's representation based on formulaRepresentation_traverse().

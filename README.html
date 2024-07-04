@@ -426,11 +426,12 @@ Configuring:
        -d: default system ; ignore all other arguments except '-e'
 
 Composable:
-  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-l &lt;limit or -1&gt;] [-b] [-v] [-s]
+  -g &lt;limit or -1&gt; [-u] [-q &lt;limit&gt;] [-l &lt;limit or -1&gt;] [-k &lt;limit or -1&gt;] [-b] [-v] [-s]
      Generate proof files ; at ./data/[&lt;hash&gt;/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[&lt;hash&gt;/]/dProofs-withoutConclusions/
        -u: unfiltered (significantly faster, but generates redundant proofs)
        -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)
        -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory
+       -k: similar to '-l' ; limit symbolic length of consequents in generated conclusions, i.e. antecedents in conditionals are not limited (but non-conditionals are limited in full length)
        -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified
        -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)
        -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified
@@ -490,14 +491,15 @@ Composable:
        -p: search proofs (rather than conclusions) ; used only when '-n' and '-s' unspecified
        -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -d: print debug information
-  --extract [-t &lt;limit or -1&gt;] [-o &lt;output file&gt;] [-s] [-# &lt;amount up to 35&gt;] [-h &lt;string&gt;] [-l &lt;limit or -1&gt;] [-f] [-d]
+  --extract [-t &lt;limit or -1&gt;] [-o &lt;output file&gt;] [-s] [-# &lt;amount up to 35&gt;] [-h &lt;string&gt;] [-l &lt;limit or -1&gt;] [-k &lt;limit or -1&gt;] [-f] [-d]
      Various options to extract information from proof files ; [Hint: Generate missing files with '--variate 1 -s'.]
        -t: compose file with up to the given amount of smallest conclusions that occur in proof files ; includes origins, symbolic lengths, proofs, and formulas in normal Polish notation
        -o: specify output file path for '-t' ; relative to effective data location ; default: "top&lt;amount&gt;SmallestConclusions_&lt;min proof length&gt;to&lt;max proof length&gt;Steps&lt;unfiltered info&gt;.txt"
        -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false
        -#: initialize proof system at ./data/[&lt;hash&gt;/]/extraction-&lt;id&gt;/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c &lt;parent system&gt; -e &lt;id&gt;'
        -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; "." to not modify axioms
-       -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have a symbolic length of at most the given number
+       -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have symbolic lengths of at most the given number
+       -k: similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number ; can be combined with '-l'
        -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -d: print debug information
   --iterate [-u] [-s]

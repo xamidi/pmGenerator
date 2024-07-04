@@ -63,11 +63,12 @@ static const map<Task, string>& cmdInfo() {
 				"         -e: specify extracted system with the given identifier\n"
 				"         -d: default system ; ignore all other arguments except '-e'\n";
 		_[Task::Generate] =
-				"    -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-b] [-v] [-s]\n"
+				"    -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]\n"
 				"       Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/\n"
 				"         -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"         -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates)\n"
 				"         -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory\n"
+				"         -k: similar to '-l' ; limit symbolic length of consequents in generated conclusions, i.e. antecedents in conditionals are not limited (but non-conditionals are limited in full length)\n"
 				"         -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified\n"
 				"         -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)\n"
 				"         -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified\n";
@@ -134,14 +135,15 @@ static const map<Task, string>& cmdInfo() {
 				"         -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
 		_[Task::ExtractFromProofFiles] =
-				"    --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-f] [-d]\n"
+				"    --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]\n"
 				"       Various options to extract information from proof files ; [Hint: Generate missing files with '--variate 1 -s'.]\n"
 				"         -t: compose file with up to the given amount of smallest conclusions that occur in proof files ; includes origins, symbolic lengths, proofs, and formulas in normal Polish notation\n"
 				"         -o: specify output file path for '-t' ; relative to effective data location ; default: \"top<amount>SmallestConclusions_<min proof length>to<max proof length>Steps<unfiltered info>.txt\"\n"
 				"         -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false\n"
 				"         -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'\n"
 				"         -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; \".\" to not modify axioms\n"
-				"         -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have a symbolic length of at most the given number\n"
+				"         -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have symbolic lengths of at most the given number\n"
+				"         -k: similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number ; can be combined with '-l'\n"
 				"         -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
 		_[Task::IterateProofCandidates] =
@@ -734,11 +736,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			mpiIgnoreCount++;
 			extractedEnv = false;
 			break;
-		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-b] [-v] [-s]
+		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 			try {
-				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 }, { "maxSymbolicConclusionLength", -1 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "useConclusionStrings", false }, { "useConclusionTrees", false }, { "whether -q was called", false } });
+				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 }, { "maxSymbolicConclusionLength", -1 }, { "maxSymbolicConsequentLength", -1 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "useConclusionStrings", false }, { "useConclusionTrees", false }, { "whether -q was called", false } });
 			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
 			}
@@ -788,8 +790,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
 				tasks.emplace_back(Task::SearchProofFiles, map<string, string> { { "string", argv[++i] } }, map<string, int64_t> { }, map<string, bool> { { "useInputFile", false }, { "normalPolishNotation", false }, { "searchProofs", false }, { "schemaSearch", false }, { "multiSchemaSearch", false }, { "debug", false } });
-			} else if (command == "extract") // --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-f] [-d]
-				tasks.emplace_back(Task::ExtractFromProofFiles, map<string, string> { { "proofs", "" }, { "outputFile", "" } }, map<string, int64_t> { { "extractToFileAmount", 0 }, { "extractToSystemAmount", 0 }, { "maxConclusionLength", 0 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "allowRedundantSchemaRemoval", false }, { "debug", false }, { "whether -f was called", false }, { "whether -# was called", false }, { "whether -h was called", false }, { "whether -l was called", false } });
+			} else if (command == "extract") // --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
+				tasks.emplace_back(Task::ExtractFromProofFiles, map<string, string> { { "proofs", "" }, { "outputFile", "" } }, map<string, int64_t> { { "extractToFileAmount", 0 }, { "extractToSystemAmount", 0 }, { "maxConclusionLength", 0 }, { "maxConsequentLength", 0 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "allowRedundantSchemaRemoval", false }, { "debug", false }, { "whether -f was called", false }, { "whether -# was called", false }, { "whether -h was called", false }, { "whether -l was called", false }, { "whether -k was called", false } });
 			else if (command == "iterate") // --iterate [-u] [-s]
 				tasks.emplace_back(Task::IterateProofCandidates, map<string, string> { }, map<string, int64_t> { }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true } });
 			else if (command == "variate") {  // --variate ( 0 | 1 ) [-l <path>] [-i <prefix>] [-o <prefix>] [-s] [-d]
@@ -964,6 +966,33 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				break;
 			}
 			break;
+		case 'k':
+			switch (lastTask()) {
+			default:
+				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+			case Task::Generate: // -g -k <limit or -1> (similar to '-l' ; limit symbolic length of consequents in generated conclusions)
+				if (!extractedEnv)
+					return printUsage("Invalid argument \"-" + string { c } + "\" for \"-g\": Specific filters can only be used in extracted environments. [Hint: '--extract -h .' extracts a system with all axioms unmodified that can be specified with '-c <parent system> -e <id>'.]", recent(string { c }));
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
+				try {
+					tasks.back().num["maxSymbolicConsequentLength"] = stoi(argv[++i]);
+				} catch (...) {
+					return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
+				}
+				break;
+			case Task::ExtractFromProofFiles: // --extract -k <limit or -1> (similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number)
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
+				try {
+					tasks.back().num["maxConsequentLength"] = stoi(argv[++i]);
+				} catch (...) {
+					return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
+				}
+				tasks.back().bln["whether -k was called"] = true;
+				break;
+			}
+			break;
 		case 'l':
 			switch (lastTask()) {
 			default:
@@ -1002,7 +1031,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
 				}
 				break;
-			case Task::ExtractFromProofFiles: // --extract -l <limit or -1> (similar to '-#' ; copy proofs with conclusions that have a symbolic length of at most the given number)
+			case Task::ExtractFromProofFiles: // --extract -l <limit or -1> (similar to '-#' ; copy proofs with conclusions that have symbolic lengths of at most the given number)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 				try {
@@ -1289,9 +1318,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				case Task::Customize: // -c
 					ss << ++index << ". resetRepresentativesFor(" << (t.bln["defaultSystem"] ? "null" : "\"" + (t.bln["useInputFile"] ? t.str["axiomFilePath"] : t.str["axiomString"]) + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (unsigned) t.num["necessitationLimit"] << ", " << bstr(t.bln["speedupN"]) << (t.bln["extractedSystem"] ? ", \"" + t.str["extractedSystemId"] + "\"" : "") << ")\n";
 					break;
-				case Task::Generate: // -g
-					ss << ++index << ". generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(t.bln["whether -q was called"] ? "" : ", null") + ", " + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : "") << (t.bln["useConclusionStrings"] || t.bln["useConclusionTrees"] ? string(t.num["maxSymbolicConclusionLength"] == -1 ? t.bln["whether -q was called"] ? ", -1" : ", null, -1" : "") + ", " + bstr(t.bln["useConclusionStrings"]) : "") << (t.bln["useConclusionTrees"] ? string(", ") + bstr(t.bln["useConclusionTrees"]) : "") << ")\n";
+				case Task::Generate: { // -g
+					unsigned optParams = t.bln["useConclusionTrees"] ? 5 : t.bln["useConclusionStrings"] ? 4 : t.num["maxSymbolicConsequentLength"] != -1 ? 3 : t.num["maxSymbolicConclusionLength"] != -1 ? 2 : t.bln["whether -q was called"] ? 1 : 0;
+					ss << ++index << ". generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? string(", ") + to_string(size_t(t.num["candidateQueueCapacities"])) : optParams > 1 ? ", null" : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : optParams > 2 ? ", -1" : "") << (t.num["maxSymbolicConsequentLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConsequentLength"])) : optParams > 3 ? ", -1" : "") << (t.bln["useConclusionStrings"] || optParams > 4 ? string(", ") + bstr(t.bln["useConclusionStrings"]) : "") << (t.bln["useConclusionTrees"] || optParams > 5 ? string(", ") + bstr(t.bln["useConclusionTrees"]) : "") << ")\n";
 					break;
+				}
 				case Task::CreateReplacements: // -r
 					ss << ++index << ". createReplacementsFile(\"" << t.str["dProofDB"] << "\", \"" << t.str["outputFile"] << "\", \"" << t.str["dataLocation"] << "\", \"" << t.str["inputFilePrefix"] << "\", " << bstr(t.bln["withConclusions"]) << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
@@ -1317,8 +1348,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 						ss << ++index << ". extractConclusions(ExtractionMethod::ProofSystemFromTopList, " << (unsigned) t.num["extractToSystemAmount"] << ", null, true, 0, " << bstr(t.bln["debug"]) << ")\n";
 					if (t.bln["whether -h was called"])
 						ss << ++index << ". extractConclusions(" << (t.bln["useInputFile"] ? "ExtractionMethod::ProofSystemFromFile" : "ExtractionMethod::ProofSystemFromString") << ", 0, \"" << t.str["proofs"] << "\", true, 0, " << bstr(t.bln["debug"]) << ")\n";
-					if (t.bln["whether -l was called"])
-						ss << ++index << ". extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (size_t) t.num["maxConclusionLength"] << ", " << bstr(t.bln["debug"]) << ")\n";
+					if (t.bln["whether -l was called"] || t.bln["whether -k was called"])
+						ss << ++index << ". extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (t.bln["whether -l was called"] ? to_string((size_t) t.num["maxConclusionLength"]) : "-1") << ", " << (t.bln["whether -k was called"] ? to_string((size_t) t.num["maxConsequentLength"]) : "-1") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
 				case Task::IterateProofCandidates: // --iterate
 					ss << ++index << ". countNextIterationAmount(" << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << ")\n";
@@ -1380,10 +1411,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				}
 				break;
 			}
-			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-b] [-v] [-s]
-				cout << "[Main] Calling generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? ", " + to_string(size_t(t.num["candidateQueueCapacities"])) : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(t.bln["whether -q was called"] ? "" : ", null") + ", " + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : "") << (t.bln["useConclusionStrings"] || t.bln["useConclusionTrees"] ? string(t.num["maxSymbolicConclusionLength"] == -1 ? t.bln["whether -q was called"] ? ", -1" : ", null, -1" : "") + ", " + bstr(t.bln["useConclusionStrings"]) : "") << (t.bln["useConclusionTrees"] ? string(", ") + bstr(t.bln["useConclusionTrees"]) : "") << ")." << endl;
+			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]
+				unsigned optParams = t.bln["useConclusionTrees"] ? 5 : t.bln["useConclusionStrings"] ? 4 : t.num["maxSymbolicConsequentLength"] != -1 ? 3 : t.num["maxSymbolicConclusionLength"] != -1 ? 2 : t.bln["whether -q was called"] ? 1 : 0;
+				cout << "[Main] Calling generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? string(", ") + to_string(size_t(t.num["candidateQueueCapacities"])) : optParams > 1 ? ", null" : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : optParams > 2 ? ", -1" : "") << (t.num["maxSymbolicConsequentLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConsequentLength"])) : optParams > 3 ? ", -1" : "") << (t.bln["useConclusionStrings"] || optParams > 4 ? string(", ") + bstr(t.bln["useConclusionStrings"]) : "") << (t.bln["useConclusionTrees"] || optParams > 5 ? string(", ") + bstr(t.bln["useConclusionTrees"]) : "") << ")." << endl;
 				size_t candidateQueueCapacities = static_cast<size_t>(t.num["candidateQueueCapacities"]);
-				DlProofEnumerator::generateDProofRepresentativeFiles((unsigned) t.num["limit"], t.bln["redundantSchemaRemoval"], t.bln["withConclusions"], t.bln["whether -q was called"] ? &candidateQueueCapacities : nullptr, t.num["maxSymbolicConclusionLength"], t.bln["useConclusionStrings"], t.bln["useConclusionTrees"]);
+				DlProofEnumerator::generateDProofRepresentativeFiles((unsigned) t.num["limit"], t.bln["redundantSchemaRemoval"], t.bln["withConclusions"], t.bln["whether -q was called"] ? &candidateQueueCapacities : nullptr, t.num["maxSymbolicConclusionLength"], t.num["maxSymbolicConsequentLength"], t.bln["useConclusionStrings"], t.bln["useConclusionTrees"]);
 				break;
 			}
 			case Task::CreateReplacements: // -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]
@@ -1414,22 +1446,22 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				cout << "[Main] Calling searchProofFiles(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : 0) << ", " << bstr(t.bln["schemaSearch"]) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 				DlProofEnumerator::searchProofFiles(t.bln["useInputFile"] ? vector<string> { } : FctHelper::stringSplit(t.str["string"], ","), t.bln["normalPolishNotation"], t.bln["searchProofs"], t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : 0, t.bln["useInputFile"] ? &t.str["string"] : nullptr , t.bln["debug"]);
 				break;
-			case Task::ExtractFromProofFiles: // --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-f] [-d]
+			case Task::ExtractFromProofFiles: // --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
 				if (t.bln["whether -f was called"]) {
-					cout << "[Main] Calling extractConclusions(ExtractionMethod::TopListFile, " << (unsigned) t.num["extractToFileAmount"] << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["allowRedundantSchemaRemoval"]) << ", 0, " << bstr(t.bln["debug"]) << ")." << endl;
-					DlProofEnumerator::extractConclusions(ExtractionMethod::TopListFile, (unsigned) t.num["extractToFileAmount"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["allowRedundantSchemaRemoval"], 0, t.bln["debug"]);
+					cout << "[Main] Calling extractConclusions(ExtractionMethod::TopListFile, " << (unsigned) t.num["extractToFileAmount"] << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["allowRedundantSchemaRemoval"]) << ", 0, 0, " << bstr(t.bln["debug"]) << ")." << endl;
+					DlProofEnumerator::extractConclusions(ExtractionMethod::TopListFile, (unsigned) t.num["extractToFileAmount"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["allowRedundantSchemaRemoval"], 0, 0, t.bln["debug"]);
 				}
 				if (t.bln["whether -# was called"]) {
-					cout << "[Main] Calling extractConclusions(ExtractionMethod::ProofSystemFromTopList, " << (unsigned) t.num["extractToSystemAmount"] << ", null, true, 0, " << bstr(t.bln["debug"]) << ")." << endl;
-					DlProofEnumerator::extractConclusions(ExtractionMethod::ProofSystemFromTopList, (unsigned) t.num["extractToSystemAmount"], nullptr, true, 0, t.bln["debug"]);
+					cout << "[Main] Calling extractConclusions(ExtractionMethod::ProofSystemFromTopList, " << (unsigned) t.num["extractToSystemAmount"] << ", null, true, 0, 0, " << bstr(t.bln["debug"]) << ")." << endl;
+					DlProofEnumerator::extractConclusions(ExtractionMethod::ProofSystemFromTopList, (unsigned) t.num["extractToSystemAmount"], nullptr, true, 0, 0, t.bln["debug"]);
 				}
 				if (t.bln["whether -h was called"]) {
-					cout << "[Main] Calling extractConclusions(" << (t.bln["useInputFile"] ? "ExtractionMethod::ProofSystemFromFile" : "ExtractionMethod::ProofSystemFromString") << ", 0, \"" << t.str["proofs"] << "\", true, 0, " << bstr(t.bln["debug"]) << ")." << endl;
-					DlProofEnumerator::extractConclusions(t.bln["useInputFile"] ? ExtractionMethod::ProofSystemFromFile : ExtractionMethod::ProofSystemFromString, 0, &t.str["proofs"], true, 0, t.bln["debug"]);
+					cout << "[Main] Calling extractConclusions(" << (t.bln["useInputFile"] ? "ExtractionMethod::ProofSystemFromFile" : "ExtractionMethod::ProofSystemFromString") << ", 0, \"" << t.str["proofs"] << "\", true, 0, 0, " << bstr(t.bln["debug"]) << ")." << endl;
+					DlProofEnumerator::extractConclusions(t.bln["useInputFile"] ? ExtractionMethod::ProofSystemFromFile : ExtractionMethod::ProofSystemFromString, 0, &t.str["proofs"], true, 0, 0, t.bln["debug"]);
 				}
-				if (t.bln["whether -l was called"]) {
-					cout << "[Main] Calling extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (size_t) t.num["maxConclusionLength"] << ", " << bstr(t.bln["debug"]) << ")." << endl;
-					DlProofEnumerator::extractConclusions(ExtractionMethod::CopyWithLimitedConclusions, 0, nullptr, true, t.num["maxConclusionLength"], t.bln["debug"]);
+				if (t.bln["whether -l was called"] || t.bln["whether -k was called"]) {
+					cout << "[Main] Calling extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (t.bln["whether -l was called"] ? to_string((size_t) t.num["maxConclusionLength"]) : "-1") << ", " << (t.bln["whether -k was called"] ? to_string((size_t) t.num["maxConsequentLength"]) : "-1") << ", " << bstr(t.bln["debug"]) << ")." << endl;
+					DlProofEnumerator::extractConclusions(ExtractionMethod::CopyWithLimitedConclusions, 0, nullptr, true, t.bln["whether -l was called"] ? t.num["maxConclusionLength"] : -1, t.bln["whether -k was called"] ? t.num["maxConsequentLength"] : -1, t.bln["debug"]);
 				}
 				break;
 			case Task::IterateProofCandidates: // --iterate [-u] [-s]

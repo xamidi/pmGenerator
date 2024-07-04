@@ -569,7 +569,7 @@ bool DlCore::isSchemaOf_polishNotation_noRename_numVars(const string& potentialS
 	bool prevVar = false;
 	auto readSubstitutedFormula = [&]() -> bool {
 		if (prevVar) { // read previous variable first
-			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex); // NOTE: Also traverses potential '.' that do not occur in 'potentialSchema'.
+			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex);
 			string substitutedFormula = formula.substr(formulaIndex, finalIndex - formulaIndex + 1);
 			formulaIndex += substitutedFormula.length();
 			pair<map<size_t, string>::iterator, bool> emplaceResult = substitutions.emplace(varNum, substitutedFormula);
@@ -594,7 +594,7 @@ bool DlCore::isSchemaOf_polishNotation_noRename_numVars(const string& potentialS
 			if (!readSubstitutedFormula())
 				return false;
 			if (formula[formulaIndex] == '.')
-				formulaIndex++;
+				formulaIndex++; // need to traverse an extra '.' to arrive at the next formula
 			break;
 		case '0':
 			varNum = 10 * varNum;
@@ -651,7 +651,7 @@ bool DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(const string& potent
 	bool prevVar = false;
 	auto readSubstitutedFormula = [&]() -> bool {
 		if (prevVar) { // read previous variable first
-			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex); // NOTE: Also traverses potential '.' that do not occur in 'potentialSchema'.
+			string::size_type finalIndex = traverseFormulas_polishNotation_noRename_numVars(formula, formulaIndex);
 			string substitutedFormula = formula.substr(formulaIndex, finalIndex - formulaIndex + 1);
 			formulaIndex += substitutedFormula.length();
 			if (substitutions.size() <= varNum) {
@@ -685,7 +685,7 @@ bool DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(const string& potent
 			if (!readSubstitutedFormula())
 				return false;
 			if (formula[formulaIndex] == '.')
-				formulaIndex++;
+				formulaIndex++; // need to traverse an extra '.' to arrive at the next formula
 			break;
 		case '0':
 			varNum = 10 * varNum;
@@ -1154,6 +1154,40 @@ size_t DlCore::symbolicLen_polishNotation_noRename_numVars(const string& formula
 	bool atVar = false;
 	for (char c : formula)
 		switch (c) {
+		default:
+			if (atVar)
+				atVar = false;
+			break;
+		case '.':
+			substract++;
+			if (atVar)
+				atVar = false;
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if (atVar)
+				substract++;
+			else
+				atVar = true;
+			break;
+		}
+	return repLen - substract;
+}
+
+size_t DlCore::symbolicLen_polishNotation_noRename_numVars(const string& formula, string::size_type startIndex) {
+	size_t repLen = formula.length() - startIndex; // formula representation length
+	size_t substract = 0;
+	bool atVar = false;
+	for (string::const_iterator it = formula.begin() + startIndex; it != formula.end(); ++it)
+		switch (*it) {
 		default:
 			if (atVar)
 				atVar = false;
