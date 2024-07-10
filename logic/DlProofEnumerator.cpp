@@ -1631,6 +1631,12 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (useConclusionStrings || useConclusionTrees)
 		withConclusions = true; // need conclusions in these modes
+	size_t defaultQC = 50;
+	if (candidateQueueCapacities) {
+		if (*candidateQueueCapacities == SIZE_MAX)
+			candidateQueueCapacities = nullptr;
+	} else
+		candidateQueueCapacities = &defaultQC;
 
 	// 1. Load representative D-proof strings.
 	auto myInfo = [&]() -> string {
