@@ -108,12 +108,13 @@ Some more – and very special – proof systems are illustrated [further down b
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
-      --search <string> [-n] [-s] [-w] [-p] [-f] [-d]
+      --search <string> [-n] [-s] [-w] [-t] [-p] [-f] [-d]
          Search in proof files at ./data/[<hash>/]/dProofs-withConclusions/ via comma-separated string of full formulas or full proofs ; [Hint: Generate missing files with '--variate 1 -s'.]
            -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
            -s: search for schemas of the given formulas
            -w: search whole collections of schemas (i.e. enable multiple results per term) ; entails '-s'
-           -p: search proofs (rather than conclusions) ; used only when '-n' and '-s' unspecified
+           -t: search for formulas of the given schemas (allows multiple results per term) ; used only when '-s' unspecified
+           -p: search proofs (rather than conclusions) ; used only when '-n', '-s' and '-t' unspecified
            -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
       --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]

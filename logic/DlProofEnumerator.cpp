@@ -2575,7 +2575,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 	switch (schemaSearch) { // select multi-threaded strategy based on request
 	// NOTE: In principle, one could parallelize over lines within files rather than over different files (using a tbb::concurrent_bounded_queue and worker threads), and even do
 	//       binary search when looking for proofs, but one would still have to read all lines from disk, which takes most of the time, so it wouldn't give much of an improvement.
-	//       Reading whole files even without searching (after which lines could be handled fully concurrently) tends to take far longer (and to run out of memory for huge files)
+	//       Reading whole files even without searching (after which lines could be handled fully concurrently) tends to take far longer (and runs out of memory for huge files)
 	//       than simply iterating _and_ searching lines.
 	default:
 		throw invalid_argument("Invalid schemaSearch = " + to_string(schemaSearch) + " > 2.");
@@ -2855,7 +2855,11 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 		break;
 	}
 
-	case 2: { // search for formula schemas ; there can be multiple results for each search term, and we want them all
+	case 2: //   search for formula schemas
+	case 3: // search for formulas of schemas
+	{
+		// there can be multiple results for each search term, and we want them all
+		const bool abstractSearch = schemaSearch == 3;
 		map<size_t, map<uint32_t, pair<vector<string>, string>>> results;
 		tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
 			chrono::time_point<chrono::steady_clock> startTime;
@@ -2887,7 +2891,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 					}
 					for (size_t i = 0; i < _searchTerms.size(); i++) {
 						const string& term = terms[i];
-						if (DlCore::isSchemaOf_polishNotation_noRename_numVars(line.substr(wordLengthLimit + 1), term, &substitutions)) {
+						if (abstractSearch ? DlCore::isSchemaOf_polishNotation_noRename_numVars(term, line.substr(wordLengthLimit + 1), &substitutions) : DlCore::isSchemaOf_polishNotation_noRename_numVars(line.substr(wordLengthLimit + 1), term, &substitutions)) {
 							stringstream ss;
 							ss << "Found [" << i << "] : \"" << term << "\"" << (modified[i] ? " (originally \"" + _searchTerms[i] + "\")" : "") << "\n\tin line " << lineNo << " - " + line + "\n\tof 'dProofs" << wordLengthLimit << currentFilePostfix << "'.";
 							ss << "\n\tSubstitution is " << FctHelper::mapString(substitutions) << ".";
@@ -2914,7 +2918,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 		});
 		if (debug)
 			cout << "Search completed after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula schema" << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " All results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, pair<vector<string>, string>>>& p) { return FctHelper::mapStringF(p.second, [](const pair<const uint32_t, pair<vector<string>, string>>& q) { return FctHelper::vectorString(q.second.first, { }, { }, "\n"); }, { }, { }, "\n"); }, { }, { }, "\n")) << endl;
+		cout << "Found " << results.size() << " of " << _searchTerms.size() << " formula " << (abstractSearch ? "type" : "schema") << (_searchTerms.size() == 1 ? "" : "s") << "." << (results.empty() ? "" : " All results:\n" + FctHelper::mapStringF(results, [](const pair<const size_t, map<uint32_t, pair<vector<string>, string>>>& p) { return FctHelper::mapStringF(p.second, [](const pair<const uint32_t, pair<vector<string>, string>>& q) { return FctHelper::vectorString(q.second.first, { }, { }, "\n"); }, { }, { }, "\n"); }, { }, { }, "\n")) << endl;
 		for (pair<const size_t, map<uint32_t, pair<vector<string>, string>>> p : results) {
 			size_t i = p.first;
 			string searchTerm = modified[i] ? _searchTerms[i] : terms[i];
