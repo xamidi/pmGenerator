@@ -364,6 +364,8 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 	map<size_t, size_t>& duplicates = optOut_duplicates ? *optOut_duplicates : _duplicates;
 	for (size_t i = 0; i < dProofs.size(); i++) {
 		const string& concreteDProof = dProofs[i];
+		if (concreteDProof.empty())
+			throw invalid_argument("DRuleParser::parseDProofs(): dProofs[" + to_string(i) + "] is empty.");
 		pair<set<string>::iterator, bool> empResult = knownDProofsByLength[concreteDProof.length()].emplace(concreteDProof);
 		if (needOriginalIndices) {
 			if (empResult.second)
@@ -1634,10 +1636,14 @@ vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>&
 				if (!targetIndices_orderedByTheorems.count(j))
 					throw invalid_argument("Cannot find theorem " + (*filterForTheorems)[j].name + " in given proof.");
 	}
+	set<size_t> knownTargetIndices;
 	vector<size_t> targetIndices;
 	for (const pair<const size_t, set<size_t>>& p : targetIndices_orderedByTheorems)
 		for (size_t i : p.second)
-			targetIndices.push_back(i);
+			if (!knownTargetIndices.count(i)) {
+				targetIndices.push_back(i);
+				knownTargetIndices.emplace(i);
+			}
 	if (targetIndices.empty())
 		targetIndices.push_back(inOut_abstractDProof.size() - 1);
 	return targetIndices;
