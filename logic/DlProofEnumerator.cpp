@@ -4697,11 +4697,11 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 
 	// 2. Build & register N-rules (if applicable).
 	if (necessitationLimit) {
-		const vector<string>& conclusions = allConclusions[knownLimit];
-		tbb::parallel_for(size_t(0), conclusions.size(), [&](size_t i) {
+		const vector<string>& representatives = allRepresentatives[knownLimit];
+		tbb::parallel_for(size_t(0), representatives.size(), [&](size_t i) {
 			if (necessitationLimit < UINT32_MAX) {
 				auto countLeadingNs = [](const string& p) { uint32_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
-				if (countLeadingNs(conclusions[i]) < necessitationLimit)
+				if (countLeadingNs(representatives[i]) < necessitationLimit)
 					registerN(knownLimit, i);
 			} else
 				registerN(knownLimit, i);
