@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <numeric>
 
 using namespace std;
 using namespace xamidi::helper;
@@ -175,7 +176,7 @@ bool DlProofEnumerator::resetRepresentativesFor(const vector<string>* customAxio
 			ss << "Supports " << (_necessitationLimit == 1 ? "non-consecutive " : "") << "necessitation steps" << (_necessitationLimit == UINT32_MAX || _necessitationLimit == 1 ? "" : ", up to " + to_string(_necessitationLimit) + " consecutive") << ".\n";
 		string infoFilePath = "data/" + _customizedPath + "!.def";
 		if (!filesystem::exists(infoFilePath))
-			while (!FctHelper::writeToFile(infoFilePath, "[" + _customAxiomsHash + "]\n" + ss.str() + "#removals;1:" + to_string(_customAxioms.size() - _customConclusions1.size()) + "\n#iterations;1:" + to_string(_customAxioms.size()) + "\n"))
+			while (!FctHelper::writeToFile(infoFilePath, "[" + _customAxiomsHash + "]\n" + ss.str() + "#removals;1:" + to_string(_customAxioms.size() - _customConclusions1.size()) + "\n"))
 				if (errOut)
 					*errOut << "Failed to create file at \"" + infoFilePath + "\", trying again." << endl;
 
@@ -319,18 +320,12 @@ bool DlProofEnumerator::resetRepresentativesFor(const vector<string>* customAxio
 	return true;
 }
 
-bool DlProofEnumerator::readInfoFile(map<uint32_t, uint64_t>* iterationCounts, map<uint32_t, uint64_t>* removalCounts, vector<string>* customInfoLines, size_t* iterationCounts_infoLine, size_t* iterationCounts_unfiltered_infoLine, size_t* removalCounts_infoLine, bool redundantSchemaRemoval, uint32_t unfilteredStart, string& error) {
-	map<uint32_t, uint64_t> __iterationCounts;
+bool DlProofEnumerator::readInfoFile(map<uint32_t, uint64_t>* removalCounts, vector<string>* customInfoLines, size_t* removalCounts_infoLine, string& error) {
 	map<uint32_t, uint64_t> __removalCounts;
 	vector<string> __customInfoLines;
-	size_t __iterationCounts_infoLine = 0;
-	size_t __iterationCounts_unfiltered_infoLine = 0;
 	size_t __removalCounts_infoLine = 0;
-	map<uint32_t, uint64_t>& _iterationCounts = iterationCounts ? *iterationCounts : __iterationCounts;
 	map<uint32_t, uint64_t>& _removalCounts = removalCounts ? *removalCounts : __removalCounts;
 	vector<string>& _customInfoLines = customInfoLines ? *customInfoLines : __customInfoLines;
-	size_t& _iterationCounts_infoLine = iterationCounts_infoLine ? *iterationCounts_infoLine : __iterationCounts_infoLine;
-	size_t& _iterationCounts_unfiltered_infoLine = iterationCounts_unfiltered_infoLine ? *iterationCounts_unfiltered_infoLine : __iterationCounts_unfiltered_infoLine;
 	size_t& _removalCounts_infoLine = removalCounts_infoLine ? *removalCounts_infoLine : __removalCounts_infoLine;
 	string infoFilePath = "data/" + _customizedPath + "!.def";
 	string info;
@@ -371,31 +366,14 @@ bool DlProofEnumerator::readInfoFile(map<uint32_t, uint64_t>* iterationCounts, m
 	};
 	_customInfoLines = FctHelper::stringSplit(info, "\n");
 	for (size_t i = 0; i < _customInfoLines.size(); i++)
-		if (_customInfoLines[i].starts_with("#iterations;")) {
-			_iterationCounts_infoLine = i;
-			string iterationCountsStr = _customInfoLines[i].substr(12);
-			if (!readCountPairs(_iterationCounts, iterationCountsStr, "#iterations", redundantSchemaRemoval ? UINT32_MAX : unfilteredStart))
-				return false;
-		} else if (!redundantSchemaRemoval && _customInfoLines[i].starts_with("#iterations-unfiltered" + to_string(unfilteredStart) + "+;")) {
-			_iterationCounts_unfiltered_infoLine = i;
-			string iterationCountsStr = _customInfoLines[i].substr(24 + FctHelper::digitsNum_uint32(unfilteredStart));
-			if (!readCountPairs(_iterationCounts, iterationCountsStr, "#iterations-unfiltered" + to_string(unfilteredStart) + "+"))
-				return false;
-		} else if (_customInfoLines[i].starts_with("#removals;")) {
+		if (_customInfoLines[i].starts_with("#removals;")) {
 			_removalCounts_infoLine = i;
 			string removalCountsStr = _customInfoLines[i].substr(10);
 			if (!readCountPairs(_removalCounts, removalCountsStr, "#removals"))
 				return false;
 		}
-	if (!redundantSchemaRemoval && !_iterationCounts_unfiltered_infoLine) {
-		_customInfoLines.back() = "#iterations-unfiltered" + to_string(unfilteredStart) + "+;";
-		_iterationCounts_unfiltered_infoLine = _customInfoLines.size() - 1;
-		_customInfoLines.push_back("");
-		if (!FctHelper::writeToFile(infoFilePath, FctHelper::stringJoin("\n", _customInfoLines)))
-			cerr << "Failed to update info file at \"" << infoFilePath << "\"." << endl;
-	}
-	if (!_iterationCounts_infoLine || !_removalCounts_infoLine) {
-		error = string("missing ") + (_iterationCounts_infoLine ? "removal" : "iteration") + " amounts in info file at \"" + infoFilePath;
+	if (!_removalCounts_infoLine) {
+		error = string("missing removal amounts in info file at \"") + infoFilePath;
 		return false;
 	}
 	return true;
@@ -1127,13 +1105,13 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 	}
 }
 
-bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRepresentatives, vector<vector<string>>* optOut_allConclusionsLookup, uint64_t* optOut_allRepresentativesCount, uint32_t* optOut_firstMissingIndex, bool debug, const string& filePrefix, const string& filePostfix, bool initFresh, uint32_t limit, const uint32_t* proofLenStepSize) {
+bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRepresentatives, vector<vector<string>>* optOut_allConclusions, uint64_t* optOut_allRepresentativesCount, map<uint32_t, uint64_t>* optOut_representativeCounts, uint32_t* optOut_firstMissingIndex, bool debug, const string& filePrefix, const string& filePostfix, bool initFresh, uint32_t limit, const uint32_t* proofLenStepSize) {
 	const uint32_t c = proofLenStepSize ? *proofLenStepSize : _necessitationLimit ? 1 : 2;
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
 		startTime = chrono::steady_clock::now();
 	size_t startSize = initFresh ? 0 : allRepresentatives.size();
-	if (!readRepresentativesLookupVectorFromFiles_par(allRepresentatives, optOut_allConclusionsLookup, debug, thread::hardware_concurrency(), filePrefix, filePostfix, initFresh, limit))
+	if (!readRepresentativesLookupVectorFromFiles_par(allRepresentatives, optOut_allConclusions, debug, thread::hardware_concurrency(), filePrefix, filePostfix, initFresh, limit))
 		return false;
 	size_t more = 1;
 	if (debug) {
@@ -1153,8 +1131,12 @@ bool DlProofEnumerator::loadDProofRepresentatives(vector<vector<string>>& allRep
 	for (uint32_t wordLengthLimit = 1; wordLengthLimit < allRepresentatives.size(); wordLengthLimit += c) {
 		size_t size = allRepresentatives[wordLengthLimit].size();
 		allRepresentativesCount += size;
-		if (debug && wordLengthLimit >= startSize)
-			cout << wordLengthLimit << " : " << size << endl;
+		if (wordLengthLimit >= startSize) {
+			if (optOut_representativeCounts)
+				optOut_representativeCounts->emplace(wordLengthLimit, size);
+			if (debug)
+				cout << wordLengthLimit << " : " << size << endl;
+		}
 	}
 	if (debug && more)
 		cout << allRepresentativesCount << " representatives in total." << endl;
@@ -1460,34 +1442,22 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	vector<vector<string>> allConclusions;
 	uint64_t allRepresentativesCount;
 	uint32_t wordLengthLimit;
-	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &wordLengthLimit, true, filePrefix, filePostfix))
+	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, nullptr, &wordLengthLimit, true, filePrefix, filePostfix))
 		return;
 	uint32_t unfilteredStart = 0;
 	if (!redundantSchemaRemoval) {
 		unfilteredStart = wordLengthLimit;
 		filePostfix = "-unfiltered" + to_string(unfilteredStart) + "+.txt";
-		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &wordLengthLimit, true, filePrefix, filePostfix, false))
+		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, nullptr, &wordLengthLimit, true, filePrefix, filePostfix, false))
 			return;
 	}
 
 	// 2. Initialize and prepare progress data.
-	map<uint32_t, uint64_t> iterationCounts;
-	vector<string> customInfoLines;
-	size_t iterationCounts_infoLine = 0;
-	size_t iterationCounts_unfiltered_infoLine = 0;
 	size_t showProgress_bound = 17;
 	size_t parseProgressSteps5 = 29;
 	size_t parseProgressSteps10 = 27;
-	if (_customAxiomsPtr) {
-		// '!.def' file
-		string error;
-		if (!readInfoFile(&iterationCounts, nullptr, &customInfoLines, &iterationCounts_infoLine, &iterationCounts_unfiltered_infoLine, nullptr, redundantSchemaRemoval, unfilteredStart, error)) {
-			cout << myTime() << ": Next iteration amount counter cancelled due to " << error << "\". " << myInfo() << endl;
-			return;
-		}
-		// '!.conf' file
+	if (_customAxiomsPtr) // '!.conf' file
 		readConfigFile(true, &showProgress_bound, &parseProgressSteps5, &parseProgressSteps10);
-	}
 	bool showProgress = allRepresentatives.size() > showProgress_bound;
 	ProgressData parseProgress = showProgress ? ProgressData(allRepresentatives.size() > parseProgressSteps5 ? 5 : allRepresentatives.size() > parseProgressSteps10 ? 10 : 20, allRepresentativesCount) : ProgressData();
 
@@ -1527,99 +1497,167 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	//      31              :  25234.09 ms (      25 s 234.09 ms) taken to iterate  78896376 ;  78896376 / 25589216 ≈ 3.08319 ; 25234.09 /  8597.53 ≈ 2.93504 (times duration of 29)
 	//      33              :  85834.30 ms (1 min 25 s 834.30 ms) taken to iterate 243907474 ; 243907474 / 78896376 ≈ 3.09149 ; 85834.30 / 25234.09 ≈ 3.40152 (times duration of 31)
 	cout << "[Copy] Next iteration count (" << (redundantSchemaRemoval || unfilteredStart == wordLengthLimit ? "filtered" : "unfiltered" + to_string(unfilteredStart) + "+") << "): { " << wordLengthLimit << ", " << counter << " }" << endl;
-	if (_customAxiomsPtr) {
-		if (iterationCounts.emplace(wordLengthLimit, counter).second) {
-			string& infoLine = customInfoLines[redundantSchemaRemoval || wordLengthLimit <= unfilteredStart ? iterationCounts_infoLine : iterationCounts_unfiltered_infoLine];
-			infoLine += (infoLine.back() != ';' && infoLine.back() != ',' ? "," : "") + to_string(wordLengthLimit) + ":" + to_string(counter);
-			string infoFilePath = "data/" + _customizedPath + "!.def";
-			if (!FctHelper::writeToFile(infoFilePath, FctHelper::stringJoin("\n", customInfoLines)))
-				cerr << "Failed to update info file at \"" << infoFilePath << "\"." << endl;
-		}
-		//#cout << "[Copy] Custom iteration counts: " << FctHelper::mapStringF(iterationCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
-	}
 	cout << myTime() << ": Next iteration amount counter complete. " << myInfo() << endl;
 }
 
-bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration) {
-	map<uint32_t, uint64_t>::const_iterator itIterationCount = counts.find(wordLengthLimit);
-	bool even = wordLengthLimit % 2 == 0;
-	if (itIterationCount == counts.end()) {
-		bool doubleStep = _necessitationLimit && !iteration; // to avoid oscillations that occur for removal counts when using N-rule
-		auto mprev = [&](map<uint32_t, uint64_t>::const_iterator it) {
-			it = prev(it);
-			while (doubleStep && even != (it->first % 2 == 0) && it != counts.begin())
-				it = prev(it);
-			return it;
+bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration, uint64_t* maxNs) {
+	if (iteration) {
+		constexpr bool detailed = false; // enable to print full summations towards iteration limits
+		if (counts.empty())
+			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): No representative counts provided to determine iteration limit.");
+		if (wordLengthLimit != counts.rbegin()->first + (_necessitationLimit ? 1 : 2))
+			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): Invalid representative counts provided to determine iteration limit for word length " + to_string(wordLengthLimit) + ".");
+		if (_necessitationLimit && _necessitationLimit != UINT32_MAX && !maxNs)
+			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): Missing 'maxNs' for non-trivial N-rule collection.");
+		bool hasMiddleEntry = counts.size() % 2 == 0 ? _necessitationLimit : !_necessitationLimit;
+		uint64_t off = _necessitationLimit ? 1 : 0;
+		map<uint32_t, uint64_t>::const_iterator itFwd = counts.begin();
+		map<uint32_t, uint64_t>::const_reverse_iterator itRev = counts.rbegin();
+		uint32_t mostRelevantLength1 = 0;
+		uint32_t mostRelevantLength2 = 0;
+		uint64_t mostRelevantAmount = 0;
+		bool mostRelevantIsHalf = true;
+		bool overflow = false;
+		uint64_t extra = _necessitationLimit ? (itRev++)->second : 0; // if step size is 1: longest known D-proofs can be used for N-rules, but need to be skipped for D-rule construction
+		uint64_t extraSubstract = _necessitationLimit && _necessitationLimit != UINT32_MAX ? *maxNs : 0;
+		if (extra < extraSubstract)
+			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): Invalid 'maxNs' for non-trivial N-rule collection.");
+		uint64_t limit = 0;
+		cout << "Determined the number of proof string candidates for iteration as";
+		if (detailed) {
+			if (counts.size() <= off + 1)
+				cout << "\n  " + (extra ? to_string(extra) + (extraSubstract ? "-" + to_string(extraSubstract) : "") : "");
+			else
+				cout << "\n  " << (extra ? to_string(extra) + (extraSubstract ? "-" + to_string(extraSubstract) : "") + "+" : "") << "2*(";
+		}
+		auto safe_add = [](uint64_t a, uint64_t b, bool& overflow) -> uint64_t {
+			if (b > UINT64_MAX - a)
+				overflow = true;
+			return a + b;
 		};
-		const uint32_t dist = !_necessitationLimit || doubleStep ? 2 : 1;
-		if (counts.empty()) {
-			count = 0;
-			cout << "Could not estimate " << (iteration ? "iteration" : "removal") << " count since there are no known entries yet." << endl;
-			return true;
+		auto safe_multiply = [](uint64_t a, uint64_t b, bool& overflow) -> uint64_t {
+			uint64_t x = a * b; // x := ab mod n, i.e. there is an integer k with x = kn + ab, for n := 2^#bits > 0
+			if (a != 0 && x / a != b) // The condition holds whenever an overflow occurred, as shown by n ≤ ab => x < ab => x ≤ ab - n => floor(x/a) ≤ floor((ab-n)/a) = floor(ab/a - n/a) = b - floor(n/a) ≤ b - 1 => floor(x/a) ≠ b.
+				overflow = true;
+			return x;
+		};
+		for (size_t i = 0; i < (counts.size() - off) / 2; i++) {
+			uint64_t amount = itFwd->second * itRev->second;
+			if (mostRelevantAmount < amount) {
+				mostRelevantLength1 = itFwd->first;
+				mostRelevantLength2 = itRev->first;
+				mostRelevantAmount = amount;
+			}
+			limit = safe_add(limit, amount, overflow);
+			if (detailed) {
+				if (i)
+					cout << "+";
+				cout << itFwd->second << "*" << itRev->second;
+			}
+			++itFwd;
+			++itRev;
 		}
-		map<uint32_t, uint64_t>::const_iterator itLastKnown = mprev(counts.end());
-		if (itLastKnown == counts.begin()) {
-			count = 0;
-			cout << "Could not estimate " << (iteration ? "iteration" : "removal") << " count since there are no relevant entries yet." << endl;
-			return true;
+		limit = safe_multiply(limit, 2, overflow);
+		if (detailed && counts.size() > off + 1)
+			cout << ")";
+		if (extra)
+			limit = safe_add(extra - extraSubstract, limit, overflow);
+		if (hasMiddleEntry) {
+			uint64_t amount = itFwd->second * itFwd->second;
+			if (mostRelevantAmount * 2 < amount) {
+				mostRelevantLength1 = itFwd->first;
+				mostRelevantAmount = amount;
+				mostRelevantIsHalf = false;
+			}
+			limit = safe_add(limit, amount, overflow);
+			if (detailed) {
+				if (itFwd != counts.begin() || extra)
+					cout << "+";
+				cout << itFwd->second << "²" << endl;
+			}
+		} else if (detailed)
+			cout << endl;
+		if (extra && mostRelevantAmount * (mostRelevantIsHalf ? 2 : 1) < extra - extraSubstract) {
+			mostRelevantLength1 = counts.rbegin()->first;
+			mostRelevantAmount = extra - extraSubstract;
+			mostRelevantIsHalf = false;
 		}
-		while (itLastKnown->first > wordLengthLimit) {
-			itLastKnown = mprev(itLastKnown); // bridge potential gaps to reach the relevant entries
+		if (overflow)
+			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): Iteration limit exceeds UINT64_MAX.");
+		uint64_t mostRelevantPart = mostRelevantIsHalf ? 2 * mostRelevantAmount : mostRelevantAmount;
+		uint32_t dec = UINT32_MAX;
+		if (gcd(mostRelevantPart * 100, limit) == limit)
+			dec = 0;
+		else if (gcd(mostRelevantPart * 1000, limit) == limit)
+			dec = 1;
+		else if (gcd(mostRelevantPart * 10000, limit) == limit)
+			dec = 2;
+		string percentage = (dec > 2 ? "≈" : "") + FctHelper::round((long double) mostRelevantPart * 100 / limit, dec > 2 ? 2 : dec) + "%";
+		if (detailed)
+			cout << "=";
+		cout << " " << limit << ". [most relevant: " << (mostRelevantIsHalf ? "{" + to_string(mostRelevantLength1) + "," + to_string(mostRelevantLength2) + "}" : to_string(mostRelevantLength1)) << " with " << (mostRelevantIsHalf ? "2*" : "") << mostRelevantAmount << (mostRelevantIsHalf ? " = " + to_string(mostRelevantPart) : "") << ", i.e. " << percentage << "]" << endl;
+		count = limit;
+		return false;
+	} else {
+		map<uint32_t, uint64_t>::const_iterator itIterationCount = counts.find(wordLengthLimit);
+		bool even = wordLengthLimit % 2 == 0;
+		if (itIterationCount == counts.end()) {
+			bool doubleStep = _necessitationLimit; // to avoid oscillations that occur for removal counts when using N-rule
+			auto mprev = [&](map<uint32_t, uint64_t>::const_iterator it) {
+				it = prev(it);
+				while (doubleStep && even != (it->first % 2 == 0) && it != counts.begin())
+					it = prev(it);
+				return it;
+			};
+			constexpr uint32_t dist = 2;
+			if (counts.empty()) {
+				count = 0;
+				cout << "Could not estimate removal count since there are no known entries yet." << endl;
+				return true;
+			}
+			map<uint32_t, uint64_t>::const_iterator itLastKnown = mprev(counts.end());
 			if (itLastKnown == counts.begin()) {
 				count = 0;
-				cout << "Could not estimate " << (iteration ? "iteration" : "removal") << " count since there are no relevant entries yet." << endl;
+				cout << "Could not estimate removal count since there are no relevant entries yet." << endl;
 				return true;
 			}
-		}
-		map<uint32_t, uint64_t>::const_iterator itPrevLastKnown = mprev(itLastKnown);
-		uint32_t lastKnownLimit = itLastKnown->first;
-		uint64_t lastKnownCount = itLastKnown->second;
-		while (itLastKnown->first != itPrevLastKnown->first + dist) { // to not require the initial amount stored, approximate from earlier pairs if necessary
-			if (itPrevLastKnown == counts.begin()) {
+			while (itLastKnown->first > wordLengthLimit) {
+				itLastKnown = mprev(itLastKnown); // bridge potential gaps to reach the relevant entries
+				if (itLastKnown == counts.begin()) {
+					count = 0;
+					cout << "Could not estimate removal count since there are no relevant entries yet." << endl;
+					return true;
+				}
+			}
+			map<uint32_t, uint64_t>::const_iterator itPrevLastKnown = mprev(itLastKnown);
+			uint32_t lastKnownLimit = itLastKnown->first;
+			uint64_t lastKnownCount = itLastKnown->second;
+			while (itLastKnown->first != itPrevLastKnown->first + dist) { // to not require the initial amount stored, approximate from earlier pairs if necessary
+				if (itPrevLastKnown == counts.begin()) {
+					count = 0;
+					cout << "Could not estimate removal count since there are no relevant entries yet." << endl;
+					return true;
+				}
+				itLastKnown = mprev(itLastKnown);
+				itPrevLastKnown = mprev(itPrevLastKnown);
+			}
+			if (!itPrevLastKnown->second) {
 				count = 0;
-				cout << "Could not estimate " << (iteration ? "iteration" : "removal") << " count since there are no relevant entries yet." << endl;
+				cout << "Could not estimate removal count since the last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") has undefined growth." << endl;
 				return true;
 			}
-			itLastKnown = mprev(itLastKnown);
-			itPrevLastKnown = mprev(itPrevLastKnown);
-		}
-		if (!itPrevLastKnown->second) {
-			count = 0;
-			cout << "Could not estimate " << (iteration ? "iteration" : "removal") << " count since the last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") has undefined growth." << endl;
+			double lastKnownGrowth = static_cast<double>(itLastKnown->second) / static_cast<double>(itPrevLastKnown->second);
+			uint32_t exp = (wordLengthLimit - lastKnownLimit) / dist;
+			double estimatedLimit = static_cast<double>(lastKnownCount) * pow(lastKnownGrowth, exp);
+			count = static_cast<uint64_t>(estimatedLimit);
+			cout << "Estimated removal count set to " << count << ", based on entry " << lastKnownLimit << ":" << lastKnownCount << " and last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") with " << itLastKnown->second << "/" << itPrevLastKnown->second << " ≈ " << lastKnownGrowth << " and " << lastKnownCount << " * (" << itLastKnown->second << "/" << itPrevLastKnown->second << ")^" << exp << " ≈ " << FctHelper::round(estimatedLimit, 2) << "." << endl;
 			return true;
+		} else {
+			count = itIterationCount->second;
+			cout << "Known removal count loaded from " << itIterationCount->first << ":" << itIterationCount->second << "." << endl;
+			return false;
 		}
-		double lastKnownGrowth = static_cast<double>(itLastKnown->second) / static_cast<double>(itPrevLastKnown->second);
-		uint32_t exp = (wordLengthLimit - lastKnownLimit) / dist;
-		double estimatedLimit = static_cast<double>(lastKnownCount) * pow(lastKnownGrowth, exp);
-		count = static_cast<uint64_t>(estimatedLimit);
-		cout << "Estimated " << (iteration ? "iteration" : "removal") << " count set to " << count << ", based on entry " << lastKnownLimit << ":" << lastKnownCount << " and last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") with " << itLastKnown->second << "/" << itPrevLastKnown->second << " ≈ " << lastKnownGrowth << " and " << lastKnownCount << " * (" << itLastKnown->second << "/" << itPrevLastKnown->second << ")^" << exp << " ≈ " << FctHelper::round(estimatedLimit, 2) << "." << endl;
-		return true;
-	} else {
-		count = itIterationCount->second;
-		cout << "Known " << (iteration ? "iteration" : "removal") << " count loaded from " << itIterationCount->first << ":" << itIterationCount->second << "." << endl;
-		return false;
 	}
-}
-
-map<uint32_t, uint64_t>& DlProofEnumerator::iterationCounts_filtered() {
-	static map<uint32_t, uint64_t> _ = { { 1, 3 }, { 3, 9 }, { 5, 36 }, { 7, 108 }, { 9, 372 }, { 11, 1134 }, { 13, 3354 }, { 15, 10360 }, { 17, 31388 }, { 19, 94907 }, { 21, 290392 }, { 23, 886041 }, { 25, 2709186 }, { 27, 8320672 }, { 29, 25589216 }, { 31, 78896376 }, { 33, 243907474 }, { 35, 755567051 } };
-	return _;
-}
-
-map<uint32_t, map<uint32_t, uint64_t>>& DlProofEnumerator::iterationCounts_unfiltered() {
-	static map<uint32_t, map<uint32_t, uint64_t>> _ = {
-			{ 17, { { 19, 103475 }, { 21, 350830 }, { 23, 1173825 }, { 25, 3951918 }, { 27, 13339002 }, { 29, 44934432 } } },
-			{ 19, {                 { 21, 315238 }, { 23, 1061733 }, { 25, 3546684 }, { 27, 11942738 }, { 29, 40243692 } } },
-			{ 21, {                                 { 23,  958731 }, { 25, 3221706 }, { 27, 10765954 }, { 29, 36185400 } } },
-			{ 23, {                                                  { 25, 2921214 }, { 27,  9822130 }, { 29, 32772266 } } },
-			{ 25, {                                                                   { 27,  8949562 }, { 29, 30038660 } } },
-			{ 27, {                                                                                     { 29, 27452198 }, { 31, 92103906 } } },
-			{ 29, {                                                                                                       { 31, 84452466 }, { 33, 283384726 } } },
-			{ 31, {                                                                                                                         { 33, 260604052 }, { 35, 874253765 }, { 37, 2917037256 }, { 39, 9795199165 } } },
-			{ 33, {                                                                                                                                            { 35, 805814039 }, { 37, 2703737502 }, { 39, 9024472289 } } },
-			{ 35, {                                                                                                                                                               { 37, 2497890936 }, { 39, 8383579055 }, { 41, 27991573448 } } },
-	};
-	return _;
 }
 
 map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
@@ -1652,8 +1690,9 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	vector<vector<shared_ptr<DlFormula>>> allParsedConclusions; // used when 'useConclusionTrees' is enabled
 	vector<vector<atomic<bool>>> allParsedConclusions_init;
 	uint64_t allRepresentativesCount;
+	map<uint32_t, uint64_t> representativeCounts;
 	uint32_t start;
-	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix))
+	if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &representativeCounts, &start, true, filePrefix, filePostfix))
 		return;
 	// e.g., for up to 'data/dProofs29.txt' present:
 	//   0.07 ms taken to load built-in representatives.                                             | [with conclusions]    0.30 ms [...] detachment proofs and conclusions from [...]
@@ -1686,7 +1725,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	if (!redundantSchemaRemoval) {
 		unfilteredStart = start;
 		filePostfix = "-unfiltered" + to_string(unfilteredStart) + "+.txt";
-		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, true, filePrefix, filePostfix, false))
+		if (!loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &representativeCounts, &start, true, filePrefix, filePostfix, false))
 			return;
 	}
 #if 0 //### print cardinalities with file names
@@ -1725,11 +1764,8 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		}
 
 	// 2. Initialize and prepare progress data.
-	map<uint32_t, uint64_t> iterationCounts;
 	map<uint32_t, uint64_t> removalCounts_custom;
 	vector<string> customInfoLines;
-	size_t iterationCounts_infoLine = 0;
-	size_t iterationCounts_unfiltered_infoLine = 0;
 	size_t removalCounts_infoLine = 0;
 	size_t showProgress_bound = 17;
 	size_t parseProgressSteps5 = 29;
@@ -1743,7 +1779,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 	if (_customAxiomsPtr) {
 		// '!.def' file
 		string error;
-		if (!readInfoFile(&iterationCounts, &removalCounts_custom, &customInfoLines, &iterationCounts_infoLine, &iterationCounts_unfiltered_infoLine, &removalCounts_infoLine, redundantSchemaRemoval, unfilteredStart, error)) {
+		if (!readInfoFile(&removalCounts_custom, &customInfoLines, &removalCounts_infoLine, error)) {
 			cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator cancelled due to " << error << "\". " << myInfo() << endl;
 			return;
 		}
@@ -1784,22 +1820,9 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		// NOTE: Static count maps are built dynamically and may contain gaps, in which case earlier
 		//       values are used to approximate the exponential growth rate, based on which new values
 		//       are approximated in order to estimate ongoing progress of unknown scale.
-		if (iterationCounts.empty() && !_customAxiomsPtr) {
-			if (redundantSchemaRemoval)
-				iterationCounts = iterationCounts_filtered();
-			else {
-				for (const pair<const uint32_t, uint64_t>& p : iterationCounts_filtered())
-					if (p.first <= unfilteredStart)
-						iterationCounts.insert(p);
-					else
-						break;
-				map<uint32_t, uint64_t>& counts = iterationCounts_unfiltered()[unfilteredStart];
-				iterationCounts.insert(counts.begin(), counts.end());
-			}
-		}
 #if 0
-		auto estimationSummary = [&](const map<uint32_t, uint64_t>& counts, bool iteration) {
-			cout << "\n[" << (iteration ? "ITERATION" : "REMOVAL") << " COUNT ESTIMATION] counts = " << FctHelper::mapString(counts) << endl;
+		auto estimationSummary = [&](const map<uint32_t, uint64_t>& counts) {
+			cout << "\n[REMOVAL COUNT ESTIMATION] counts = " << FctHelper::mapString(counts) << endl;
 			map<uint32_t, uint64_t> myCounts;
 			vector<pair<const uint32_t, uint64_t>> pairs;
 			for (const pair<const uint32_t, uint64_t>& p : counts) {
@@ -1826,7 +1849,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						return to_string(p.first) + ":" + to_string(p.second);
 					}, { }, { }, ",") << "). Correct limit: " << correct << "." << endl;
 					uint64_t count;
-					bool countEstimated = determineCountingLimit(p.first + c, count, myCounts, iteration);
+					bool countEstimated = determineCountingLimit(p.first + c, count, myCounts, false);
 					if (!countEstimated) {
 						cerr << "WHAT?!" << endl;
 						exit(0);
@@ -1842,14 +1865,25 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 				}
 			}
 		};
-		estimationSummary(iterationCounts, true);
-		estimationSummary(_customAxiomsPtr ? removalCounts_custom : removalCounts(), false);
+		estimationSummary(_customAxiomsPtr ? removalCounts_custom : removalCounts());
 		exit(0);
 #endif
 		if (showProgress) {
+			uint64_t maxNs = 0; // how many longest known D-N-proofs have the maximum amount of leading 'N's
+			if (_necessitationLimit && _necessitationLimit != UINT32_MAX) { // initialize further information required to determine iteration count
+				auto countLeadingNs = [](const string& p) { uint32_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
+				const vector<string>& representatives = allRepresentatives.back();
+				if (!representatives.empty()) {
+					for (vector<string>::const_reverse_iterator it = representatives.rbegin(); it != representatives.rend(); ++it)
+						if (countLeadingNs(*it) >= _necessitationLimit) // also tolerate manual file edits such that some entries exceed '_necessitationLimit'
+							maxNs++;
+						else
+							break;
+				}
+			}
 			uint64_t iterationCount;
-			bool iterationCountEstimated = determineCountingLimit(wordLengthLimit, iterationCount, iterationCounts, true);
-			collectProgress = ProgressData(wordLengthLimit >= collectProgressSteps2 ? 2 : wordLengthLimit >= collectProgressSteps5 ? 5 : wordLengthLimit >= collectProgressSteps10 ? 10 : 20, iterationCount, iterationCountEstimated);
+			determineCountingLimit(wordLengthLimit, iterationCount, representativeCounts, true, &maxNs);
+			collectProgress = ProgressData(wordLengthLimit >= collectProgressSteps2 ? 2 : wordLengthLimit >= collectProgressSteps5 ? 5 : wordLengthLimit >= collectProgressSteps10 ? 10 : 20, iterationCount);
 			if (redundantSchemaRemoval) {
 				uint64_t removalCount;
 				bool removalCountEstimated = determineCountingLimit(wordLengthLimit, removalCount, _customAxiomsPtr ? removalCounts_custom : removalCounts(), false);
@@ -1877,27 +1911,10 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		//      25:  258267.65 ms ( 4 min 18 s 267.65 ms) taken to collect  490604 [...] ;  258267.65 /  72496.97 ≈ 3.56246
 		//      27:  916905.86 ms (15 min 16 s 905.86 ms) taken to collect 1459555 [...] ;  916905.86 / 258267.65 ≈ 3.55022
 		//      29: 3187900.65 ms (53 min  7 s 900.65 ms) taken to collect 4375266 [...] ; 3187900.65 / 916905.86 ≈ 3.47680
+		if (showProgress && collectProgress.maximum != counter)
+			cerr << "Warning: Determined " << collectProgress.maximum << " candidate" << (collectProgress.maximum == 1 ? "" : "s") << " for iteration, but iterated " << counter << "." << endl;
 
-		// 4.3 Update iteration progress information.
-		bool iterationCount_inserted = iterationCounts.emplace(wordLengthLimit, counter).second;
-		if (_customAxiomsPtr) {
-			if (iterationCount_inserted) {
-				string& infoLine = customInfoLines[redundantSchemaRemoval || wordLengthLimit <= unfilteredStart ? iterationCounts_infoLine : iterationCounts_unfiltered_infoLine];
-				infoLine += (infoLine.back() != ';' && infoLine.back() != ',' ? "," : "") + to_string(wordLengthLimit) + ":" + to_string(counter);
-				string infoFilePath = "data/" + _customizedPath + "!.def";
-				if (!FctHelper::writeToFile(infoFilePath, FctHelper::stringJoin("\n", customInfoLines)))
-					cerr << "Failed to update info file at \"" << infoFilePath << "\"." << endl;
-			}
-			cout << "[Copy] Custom iteration counts: " << FctHelper::mapStringF(iterationCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
-		} else {
-			(redundantSchemaRemoval ? iterationCounts_filtered() : (wordLengthLimit <= unfilteredStart ? iterationCounts_filtered() : iterationCounts_unfiltered()[unfilteredStart])).emplace(wordLengthLimit, counter); // also save progress statically for potential subsequent generations
-			//#cout << "Updated iterationCounts: " << FctHelper::mapString(iterationCounts) << ", static entry: " << FctHelper::mapString(redundantSchemaRemoval ? iterationCounts_filtered() : iterationCounts_unfiltered()[unfilteredStart]) << endl;
-			cout << "[Copy] Static filtered iteration counts: " << FctHelper::mapStringF(iterationCounts_filtered(), [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
-			if (!redundantSchemaRemoval)
-				cout << "[Copy] Static unfiltered iteration counts: { " << unfilteredStart << ", " << FctHelper::mapStringF(iterationCounts_unfiltered()[unfilteredStart], [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << " }," << endl;
-		}
-
-		// 4.4 Remove new proofs with redundant conclusions.
+		// 4.3 Remove new proofs with redundant conclusions.
 		// NOTE: For a few steps more to not take ages (but still get all minimal D-proofs up to a certain length), one can skip the time-intensive filtering below and then
 		//       load 'dProofs17.txt', ..., 'dProofs<n>.txt', 'dProofs<n+1>-unfiltered<n+1>+.txt', ..., 'dProofs<n+m>-unfiltered<n+1>+.txt', for <n+1> being the first 'wordLengthLimit'
 		//       used to generate files without redundant conclusions removal.
@@ -1922,8 +1939,10 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			//      23:  1136294.46 ms (        18 min 56 s 294.46 ms) taken to detect  35338 conclusions [...] ;  1136294.46 /   120905.65 ≈ 9.39819
 			//      25: 10569544.36 ms (    2 h 56 min  9 s 544.36 ms) taken to detect 104815 conclusions [...] ; 10569544.36 /  1136294.46 ≈ 9.30177
 			//      27: 96153314.21 ms (1 d 2 h 42 min 33 s 314.21 ms) taken to detect 310497 conclusions [...] ; 96153314.21 / 10569544.36 ≈ 9.09721
+			if (showProgress && !filterProgress.maximumEstimated && filterProgress.maximum != oldRepresentativeCounter - representativeCounter)
+				cerr << "Warning: Determined " << filterProgress.maximum << " candidate" << (filterProgress.maximum == 1 ? "" : "s") << " for removal, but removed " << oldRepresentativeCounter - representativeCounter << "." << endl;
 
-			// 4.5 Update removal progress information.
+			// 4.4 Update removal progress information.
 			if (_customAxiomsPtr) {
 				if (removalCounts_custom.emplace(wordLengthLimit, oldRepresentativeCounter - representativeCounter).second) {
 					string& infoLine = customInfoLines[removalCounts_infoLine];
@@ -2040,7 +2059,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		}
 #endif	//###
 
-		// 4.6 In case this is the last iteration, try to prevent potential out-of-memory issues by clearing data that is no longer needed.
+		// 4.5 In case this is the last iteration, try to prevent potential out-of-memory issues by clearing data that is no longer needed.
 		bool last = wordLengthLimit + c > limit;
 		map<string::size_type, size_t> amountPerLength;
 		if (last) {
@@ -2059,7 +2078,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			}
 		}
 
-		// 4.7 Order and output information.
+		// 4.6 Order and output information.
 		startTime = chrono::steady_clock::now();
 		set<string, cmpStringGrow> newRepresentatives;
 		map<string, string, cmpStringGrow> newContent;
@@ -2087,7 +2106,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		//      25:  385789 representative, 1243007 redundant, and 1080390 invalid condensed detachment proof strings
 		//      27: 1149058 representative, 3778453 redundant, and 3393161 invalid condensed detachment proof strings
 
-		// 4.8 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		// 4.7 Store information permanently. Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
 		startTime = chrono::steady_clock::now();
 		filesystem::path file = filesystem::u8path(filePrefix + to_string(wordLengthLimit) + filePostfix);
 		string::size_type bytes = 0;
@@ -2123,7 +2142,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		}
 		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes of representative condensed detachment proof strings to " << file.string() << "." << endl;
 
-		// 4.9 Store information from current iteration for next iteration. Note that 'allRepresentatives' must be updated since it is used for D-proof generation,
+		// 4.8 Store information from current iteration for next iteration. Note that 'allRepresentatives' must be updated since it is used for D-proof generation,
 		//     but 'allConclusions' must only be updated if 'useConclusionStrings' or 'useConclusionTrees' (which imply 'withConclusions') are enabled.
 		//     NOTE: Do this after storing to disk in order to delay potential out-of-memory issues until after information was secured.
 		if (!last) {
@@ -2148,6 +2167,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 				representatives.insert(representatives.end(), newRepresentatives.begin(), newRepresentatives.end());
 			if (!representatives.empty())
 				longestKnownMinimalProofLength = wordLengthLimit;
+			representativeCounts.emplace(wordLengthLimit, representatives.size());
 		}
 	}
 	cout << myTime() << ": Limited D-proof representative generator complete. " << myInfo() << endl;
@@ -2178,7 +2198,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	vector<vector<string>> allConclusions;
 	uint64_t allRepresentativesCount;
 	uint32_t start;
-	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &start, isMainProc, filePrefix, filePostfix)) {
+	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, nullptr, &start, isMainProc, filePrefix, filePostfix)) {
 		cerr << "[Rank " + to_string(mpi_rank) + "] Failed to load D-proof representatives. Aborting." << endl;
 		MPI_Abort(MPI_COMM_WORLD, 1);
 		return;
@@ -2188,7 +2208,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 		MPI_Abort(MPI_COMM_WORLD, 1);
 		return;
 	}
-	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, &start, isMainProc, filePrefix, "-unfiltered" + to_string(start) + "+.txt", false, wordLengthLimit)) {
+	if (!loadDProofRepresentatives(allRepresentatives, &allConclusions, &allRepresentativesCount, nullptr, &start, isMainProc, filePrefix, "-unfiltered" + to_string(start) + "+.txt", false, wordLengthLimit)) {
 		cerr << "[Rank " + to_string(mpi_rank) + "] Failed to load D-proof representatives. Aborting." << endl;
 		MPI_Abort(MPI_COMM_WORLD, 1);
 		return;
@@ -2225,7 +2245,7 @@ void DlProofEnumerator::mpi_filterDProofRepresentativeFile(uint32_t wordLengthLi
 	if (isMainProc && _customAxiomsPtr) {
 		// '!.def' file
 		string error;
-		if (!readInfoFile(nullptr, &removalCounts_custom, &customInfoLines, nullptr, nullptr, &removalCounts_infoLine, false, wordLengthLimit, error)) {
+		if (!readInfoFile(&removalCounts_custom, &customInfoLines, &removalCounts_infoLine, error)) {
 			cout << myTime() + ": MPI-based D-proof representative filter cancelled due to " + error + "\". " + myInfo() << endl;
 			MPI_Abort(MPI_COMM_WORLD, 1);
 			return;
@@ -2333,14 +2353,14 @@ void DlProofEnumerator::createGeneratorFilesWithConclusions(const string& dataLo
 	vector<vector<string>> allRepresentatives;
 	uint64_t allRepresentativesCount;
 	uint32_t filteredMissing;
-	if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, &filteredMissing, debug, fullInputFilePrefix, filePostfix, true, memoryOnly ? 0 : UINT32_MAX)) {
+	if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, nullptr, &filteredMissing, debug, fullInputFilePrefix, filePostfix, true, memoryOnly ? 0 : UINT32_MAX)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	if (!memoryOnly) {
 		filePostfix = "-unfiltered" + to_string(filteredMissing) + "+.txt";
 		uint32_t unfilteredMissing;
-		if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, &unfilteredMissing, debug, fullInputFilePrefix, filePostfix, false)) {
+		if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, nullptr, &unfilteredMissing, debug, fullInputFilePrefix, filePostfix, false)) {
 			cerr << "Failed to load generated D-proof data." << endl;
 			return;
 		}
@@ -2423,14 +2443,14 @@ void DlProofEnumerator::createGeneratorFilesWithoutConclusions(const string& dat
 	vector<vector<string>> allRepresentatives;
 	uint64_t allRepresentativesCount;
 	uint32_t filteredMissing;
-	if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, &filteredMissing, debug, fullInputFilePrefix, filePostfix, true, memoryOnly ? 0 : UINT32_MAX)) {
+	if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, nullptr, &filteredMissing, debug, fullInputFilePrefix, filePostfix, true, memoryOnly ? 0 : UINT32_MAX)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	if (!memoryOnly) {
 		filePostfix = "-unfiltered" + to_string(filteredMissing) + "+.txt";
 		uint32_t unfilteredMissing;
-		if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, &unfilteredMissing, debug, fullInputFilePrefix, filePostfix, false)) {
+		if (!loadDProofRepresentatives(allRepresentatives, nullptr, &allRepresentativesCount, nullptr, &unfilteredMissing, debug, fullInputFilePrefix, filePostfix, false)) {
 			cerr << "Failed to load generated D-proof data." << endl;
 			return;
 		}
@@ -3283,7 +3303,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 				ss << "Supports " << (_necessitationLimit == 1 ? "non-consecutive " : "") << "necessitation steps" << (_necessitationLimit == UINT32_MAX || _necessitationLimit == 1 ? "" : ", up to " + to_string(_necessitationLimit) + " consecutive") << ".\n";
 		}
 		if (!filesystem::exists(infoFilePath))
-			while (!FctHelper::writeToFile(infoFilePath, "[" + (_customAxiomsHash.empty() ? "default" : _customAxiomsHash) + "]\n" + ss.str() + "extraction;" + extractionInfoLine + "\n#removals;\n#iterations;\n"))
+			while (!FctHelper::writeToFile(infoFilePath, "[" + (_customAxiomsHash.empty() ? "default" : _customAxiomsHash) + "]\n" + ss.str() + "extraction;" + extractionInfoLine + "\n#removals;\n"))
 				if (debug)
 					cout << "Failed to create file at \"" + infoFilePath + "\", trying again." << endl;
 		return infoFilePath;

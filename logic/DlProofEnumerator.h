@@ -31,7 +31,7 @@ enum class ExtractionMethod {
 
 struct DlProofEnumerator {
 	// Data loading
-	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusionsLookup, std::uint64_t* optOut_allRepresentativesCount = nullptr, std::uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::uint32_t limit = UINT32_MAX, const std::uint32_t* proofLenStepSize = nullptr);
+	static bool loadDProofRepresentatives(std::vector<std::vector<std::string>>& allRepresentatives, std::vector<std::vector<std::string>>* optOut_allConclusions, std::uint64_t* optOut_allRepresentativesCount = nullptr, std::map<std::uint32_t, std::uint64_t>* optOut_representativeCounts = nullptr, std::uint32_t* optOut_firstMissingIndex = nullptr, bool debug = false, const std::string& filePrefix = "data/dProofs", const std::string& filePostfix = ".txt", bool initFresh = true, std::uint32_t limit = UINT32_MAX, const std::uint32_t* proofLenStepSize = nullptr);
 	static tbb::concurrent_hash_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::string>& representatives, helper::ProgressData* const progressData = nullptr, std::atomic<std::uint64_t>* misses_speedupN = nullptr, tbb::concurrent_hash_map<std::string, std::string>* target_speedupN = nullptr, tbb::concurrent_unordered_map<std::string, std::string>* lookup_speedupN = nullptr);
 	static tbb::concurrent_hash_map<std::string, std::string> parseDProofRepresentatives(const std::vector<std::vector<std::string>>& allRepresentatives, helper::ProgressData* const progressData = nullptr, std::atomic<std::uint64_t>* misses_speedupN = nullptr, tbb::concurrent_unordered_map<std::string, std::string>* lookup_speedupN = nullptr, const std::uint32_t* proofLenStepSize = nullptr);
 	static tbb::concurrent_hash_map<std::string, std::string> connectDProofConclusions(const std::vector<std::vector<std::string>>& allRepresentatives, const std::vector<std::vector<std::string>>& allConclusions, helper::ProgressData* const progressData = nullptr, const std::uint32_t* proofLenStepSize = nullptr);
@@ -62,7 +62,7 @@ public:
 	static std::uint32_t getNecessitationLimit();
 	static std::string concatenateDataPath(const std::string& dataLocation, const std::string& append);
 	static bool resetRepresentativesFor(const std::vector<std::string>* customAxioms = nullptr, bool normalPolishNotation = false, std::uint32_t necessitationLimit = 0, bool speedupN = true, const std::string* extractedSystemId = nullptr, std::ostream* stdOut = &std::cout, std::ostream* errOut = &std::cerr);
-	static bool readInfoFile(std::map<std::uint32_t, std::uint64_t>* iterationCounts, std::map<std::uint32_t, std::uint64_t>* removalCounts, std::vector<std::string>* customInfoLines, std::size_t* iterationCounts_infoLine, std::size_t* iterationCounts_unfiltered_infoLine, std::size_t* removalCounts_infoLine, bool redundantSchemaRemoval, std::uint32_t unfilteredStart, std::string& error);
+	static bool readInfoFile(std::map<std::uint32_t, std::uint64_t>* removalCounts, std::vector<std::string>* customInfoLines, std::size_t* removalCounts_infoLine, std::string& error);
 	static void readConfigFile(bool initMissingFile = true, std::size_t* showProgress_bound = nullptr, std::size_t* parseProgressSteps5 = nullptr, std::size_t* parseProgressSteps10 = nullptr, std::size_t* collectProgressSteps2 = nullptr, std::size_t* collectProgressSteps5 = nullptr, std::size_t* collectProgressSteps10 = nullptr, std::size_t* filterProgressSteps2 = nullptr, std::size_t* filterProgressSteps5 = nullptr, std::size_t* filterProgressSteps10 = nullptr);
 	static std::vector<const std::vector<std::string>*>& currentRepresentatives();
 	static std::vector<const std::vector<std::string>*>& currentConclusions();
@@ -79,9 +79,7 @@ public:
 
 	// Data prediction
 	static void countNextIterationAmount(bool redundantSchemaRemoval = true, bool withConclusions = true);
-	static bool determineCountingLimit(std::uint32_t wordLengthLimit, std::uint64_t& count, const std::map<std::uint32_t, std::uint64_t>& counts, bool iteration);
-	static std::map<std::uint32_t, std::uint64_t>& iterationCounts_filtered();
-	static std::map<std::uint32_t, std::map<std::uint32_t, std::uint64_t>>& iterationCounts_unfiltered();
+	static bool determineCountingLimit(std::uint32_t wordLengthLimit, std::uint64_t& count, const std::map<std::uint32_t, std::uint64_t>& counts, bool iteration, std::uint64_t* maxNs = nullptr);
 	static std::map<std::uint32_t, std::uint64_t>& removalCounts();
 
 	// Data generation

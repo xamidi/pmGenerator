@@ -65,12 +65,12 @@ void DRuleReducer::createReplacementsFile(const string& dProofDB, const string& 
 	vector<vector<string>> allConclusions; // TODO: Need ability to parse conclusions on-the-fly in order to save RAM for huge generator files.
 	uint64_t allRepresentativesCount;
 	uint32_t start;
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, fullInputFilePrefix)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, nullptr, &start, debug, fullInputFilePrefix)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}
 	filePostfix = "-unfiltered" + to_string(start) + "+.txt";
-	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, &start, debug, fullInputFilePrefix, filePostfix, false)) {
+	if (!DlProofEnumerator::loadDProofRepresentatives(allRepresentatives, withConclusions ? &allConclusions : nullptr, &allRepresentativesCount, nullptr, &start, debug, fullInputFilePrefix, filePostfix, false)) {
 		cerr << "Failed to load generated D-proof data." << endl;
 		return;
 	}

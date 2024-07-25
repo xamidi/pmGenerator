@@ -119,6 +119,7 @@ digraph {
 	DlProofEnumerator -> parallel_sort [color=blue]
 	DlProofEnumerator -> "(cstdlib)" [color=blue]
 	DlProofEnumerator -> "(cstring)" [color=blue]
+	DlProofEnumerator -> "(numeric)" [color=blue]
 	DlProofEnumerator -> FwdTbb [color=red]
 	DlProofEnumerator -> ProgressData [color=red]
 	DlProofEnumerator -> DRuleParser [color=red]
