@@ -43,6 +43,7 @@ enum class Task {
 	UnfoldProofSummary, //     --unfold
 	SearchProofFiles, //       --search
 	ExtractFromProofFiles, //  --extract
+	AssessGeneration, //       --assess
 	IterateProofCandidates, // --iterate
 	FileConversion, //         --variate
 	ConclusionLengthPlot, //   --plot
@@ -147,9 +148,15 @@ static const map<Task, string>& cmdInfo() {
 				"         -k: similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number ; can be combined with '-l'\n"
 				"         -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'\n"
 				"         -d: print debug information\n";
+		_[Task::AssessGeneration] =
+				"    --assess [-u] [-s] [-d]\n"
+				"       Print proof file cardinalities, numbers of proof candidates for all generation steps up to the next one, and all stored and estimated next removal amounts (to assess generation expenditures)\n"
+				"         -u: use unfiltered proof files\n"
+				"         -s: use proof files without conclusions\n"
+				"         -d: print debug information\n";
 		_[Task::IterateProofCandidates] =
 				"    --iterate [-u] [-s]\n"
-				"       Iterate proof candidates currently next up for generation and print (and store for custom proof systems) their amount for prediction purposes\n"
+				"       Iterate proof candidates currently next up for generation and print their amount (for resource consumption measurements)\n"
 				"         -u: use unfiltered proof files\n"
 				"         -s: use proof files without conclusions\n";
 		_[Task::FileConversion] =
@@ -627,6 +634,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			cout << cmdInfo().at(Task::UnfoldProofSummary);
 			cout << cmdInfo().at(Task::SearchProofFiles);
 			cout << cmdInfo().at(Task::ExtractFromProofFiles);
+			cout << cmdInfo().at(Task::AssessGeneration);
 			cout << cmdInfo().at(Task::IterateProofCandidates);
 			cout << cmdInfo().at(Task::FileConversion);
 			cout << cmdInfo().at(Task::ConclusionLengthPlot);
@@ -793,6 +801,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				tasks.emplace_back(Task::SearchProofFiles, map<string, string> { { "string", argv[++i] } }, map<string, int64_t> { }, map<string, bool> { { "useInputFile", false }, { "normalPolishNotation", false }, { "searchProofs", false }, { "schemaSearch", false }, { "multiSchemaSearch", false }, { "abstractSearch", false }, { "debug", false } });
 			} else if (command == "extract") // --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
 				tasks.emplace_back(Task::ExtractFromProofFiles, map<string, string> { { "proofs", "" }, { "outputFile", "" } }, map<string, int64_t> { { "extractToFileAmount", 0 }, { "extractToSystemAmount", 0 }, { "maxConclusionLength", 0 }, { "maxConsequentLength", 0 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "allowRedundantSchemaRemoval", false }, { "debug", false }, { "whether -f was called", false }, { "whether -# was called", false }, { "whether -h was called", false }, { "whether -l was called", false }, { "whether -k was called", false } });
+			else if (command == "assess") // --assess [-u] [-s] [-d]
+				tasks.emplace_back(Task::AssessGeneration, map<string, string> { }, map<string, int64_t> { }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "debug", false } });
 			else if (command == "iterate") // --iterate [-u] [-s]
 				tasks.emplace_back(Task::IterateProofCandidates, map<string, string> { }, map<string, int64_t> { }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true } });
 			else if (command == "variate") {  // --variate ( 0 | 1 ) [-l <path>] [-i <prefix>] [-o <prefix>] [-s] [-d]
@@ -860,6 +870,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::UnfoldProofSummary: //       --unfold -d (print debug information)
 			case Task::SearchProofFiles: //         --search -d (print debug information)
 			case Task::ExtractFromProofFiles: //   --extract -d (print debug information)
+			case Task::AssessGeneration: //         --assess -d (print debug information)
 			case Task::FileConversion: //          --variate -d (print debug information)
 			case Task::ConclusionLengthPlot: //       --plot -d (print debug information)
 				tasks.back().bln["debug"] = true;
@@ -1141,6 +1152,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				tasks.back().str["axiomString"] = argv[++i];
 				break;
 			case Task::Generate: //                      -g -s (proof files without conclusions)
+			case Task::AssessGeneration: //        --assess -s (use proof files without conclusions)
 			case Task::IterateProofCandidates: // --iterate -s (use proof files without conclusions)
 				tasks.back().bln["withConclusions"] = false;
 				break;
@@ -1212,6 +1224,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
 			case Task::Generate: //                      -g -u (unfiltered)
+			case Task::AssessGeneration: //        --assess -u (use unfiltered proof files)
 			case Task::IterateProofCandidates: // --iterate -u (use unfiltered proof files)
 				tasks.back().bln["redundantSchemaRemoval"] = false;
 				break;
@@ -1355,6 +1368,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					if (t.bln["whether -l was called"] || t.bln["whether -k was called"])
 						ss << ++index << ". extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (t.bln["whether -l was called"] ? to_string((size_t) t.num["maxConclusionLength"]) : "-1") << ", " << (t.bln["whether -k was called"] ? to_string((size_t) t.num["maxConsequentLength"]) : "-1") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
+				case Task::AssessGeneration: // --assess
+					ss << ++index << ". printGenerationExpenditures(" << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << ", " << bstr(t.bln["debug"]) << ")\n";
+					break;
 				case Task::IterateProofCandidates: // --iterate
 					ss << ++index << ". countNextIterationAmount(" << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << ")\n";
 					break;
@@ -1467,6 +1483,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					cout << "[Main] Calling extractConclusions(ExtractionMethod::CopyWithLimitedConclusions" << ", 0, null, true, " << (t.bln["whether -l was called"] ? to_string((size_t) t.num["maxConclusionLength"]) : "-1") << ", " << (t.bln["whether -k was called"] ? to_string((size_t) t.num["maxConsequentLength"]) : "-1") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 					DlProofEnumerator::extractConclusions(ExtractionMethod::CopyWithLimitedConclusions, 0, nullptr, true, t.bln["whether -l was called"] ? t.num["maxConclusionLength"] : -1, t.bln["whether -k was called"] ? t.num["maxConsequentLength"] : -1, t.bln["debug"]);
 				}
+				break;
+			case Task::AssessGeneration: // --assess [-u] [-s] [-d]
+				cout << "[Main] Calling printGenerationExpenditures(" << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << ", " << bstr(t.bln["debug"]) << ")." << endl;
+				DlProofEnumerator::printGenerationExpenditures(t.bln["redundantSchemaRemoval"], t.bln["withConclusions"], t.bln["debug"]);
 				break;
 			case Task::IterateProofCandidates: // --iterate [-u] [-s]
 				cout << "[Main] Calling countNextIterationAmount(" << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << ")." << endl;

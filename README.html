@@ -503,8 +503,13 @@ Composable:
        -k: similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number ; can be combined with '-l'
        -f: proofs for '-h' are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -d: print debug information
+  --assess [-u] [-s] [-d]
+     Print proof file cardinalities, numbers of proof candidates for all generation steps up to the next one, and all stored and estimated next removal amounts (to assess generation expenditures)
+       -u: use unfiltered proof files
+       -s: use proof files without conclusions
+       -d: print debug information
   --iterate [-u] [-s]
-     Iterate proof candidates currently next up for generation and print (and store for custom proof systems) their amount for prediction purposes
+     Iterate proof candidates currently next up for generation and print their amount (for resource consumption measurements)
        -u: use unfiltered proof files
        -s: use proof files without conclusions
   --variate ( 0 | 1 ) [-l &lt;path&gt;] [-i &lt;prefix&gt;] [-o &lt;prefix&gt;] [-s] [-d]

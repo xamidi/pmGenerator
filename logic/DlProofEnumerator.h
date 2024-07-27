@@ -78,8 +78,9 @@ public:
 	static void unfoldProofSummary(const std::string& input, bool useInputFile, bool normalPolishNotation, const std::string* filterForTheorems = nullptr, std::size_t storeIntermediateUnfoldingLimit = SIZE_MAX, std::size_t maxLengthToComputeDProof = 134217728, bool wrap = false, const std::string* outputFile = nullptr, bool debug = false);
 
 	// Data prediction
+	static void printGenerationExpenditures(bool redundantSchemaRemoval = true, bool withConclusions = true, bool debug = false);
 	static void countNextIterationAmount(bool redundantSchemaRemoval = true, bool withConclusions = true);
-	static bool determineCountingLimit(std::uint32_t wordLengthLimit, std::uint64_t& count, const std::map<std::uint32_t, std::uint64_t>& counts, bool iteration, std::uint64_t* maxNs = nullptr);
+	static bool determineCountingLimit(std::uint32_t wordLengthLimit, std::uint64_t& count, const std::map<std::uint32_t, std::uint64_t>& counts, bool iteration, std::uint64_t* maxNs = nullptr, bool assess = false);
 	static std::map<std::uint32_t, std::uint64_t>& removalCounts();
 
 	// Data generation

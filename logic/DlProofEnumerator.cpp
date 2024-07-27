@@ -446,7 +446,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_seq(vector<vect
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to load " << (_customAxiomsPtr ? "initial" : "built-in") << " representatives." << endl;
 	}
-	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + c - 1); wordLengthLimit <= limit; wordLengthLimit += c) { // look for files containing D-proofs, starting from built-in limit + 2
+	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + c - 1); wordLengthLimit <= limit; wordLengthLimit += c) { // look for files containing D-proofs, starting from built-in limit + c
 		string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		if (filesystem::exists(file)) { // load
 			allRepresentativesLookup.resize(allRepresentativesLookup.size() + c);
@@ -524,7 +524,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 		optOut_allConclusionsLookup->reserve(containerReserve);
 
 	// 2. Load files
-	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + c - 1); wordLengthLimit <= limit; wordLengthLimit += c) { // look for files containing D-proofs, starting from built-in limit + 2
+	for (uint32_t wordLengthLimit = static_cast<uint32_t>(allRepresentativesLookup.size() + c - 1); wordLengthLimit <= limit; wordLengthLimit += c) { // look for files containing D-proofs, starting from built-in limit + c
 		const string file = filePrefix + to_string(wordLengthLimit) + filePostfix;
 		if (filesystem::exists(file)) {
 			allRepresentativesLookup.resize(allRepresentativesLookup.size() + c);
@@ -1426,6 +1426,178 @@ pair<tbb::concurrent_unordered_map<string, string>::iterator, bool> DlProofEnume
 	}
 }
 
+void DlProofEnumerator::printGenerationExpenditures(bool redundantSchemaRemoval, bool withConclusions, bool debug) {
+	chrono::time_point<chrono::steady_clock> startTime;
+
+	// 1. Count representative D-proof strings.
+	auto myInfo = [&]() -> string {
+		stringstream ss;
+		ss << "[parallel ; " << thread::hardware_concurrency() << " hardware thread contexts" << (redundantSchemaRemoval ? "" : ", unfiltered") << "]";
+		return ss.str();
+	};
+	if (debug)
+		cout << myTime() << ": Generation expenditure printer started. " << myInfo() << endl;
+	const uint32_t c = _necessitationLimit ? 1 : 2;
+	map<uint32_t, uint64_t> allRepresentativeCounts;
+	map<uint32_t, uint64_t> maxNCounts; // how many known D-N-proofs have the maximum amount of leading 'N's
+	bool needMaxNs = _necessitationLimit && _necessitationLimit != UINT32_MAX;
+	uint32_t unfiltered = 0;
+	{
+		string searchPath = "data/" + _customizedPath + (withConclusions ? "dProofs-withConclusions/" : "dProofs-withoutConclusions/");
+		if (debug)
+			cout << "Search path is \"" << searchPath << "\"." << endl;
+		string filePrefix = searchPath + "dProofs";
+		string filePostfix = ".txt";
+		string filePostfix_unf;
+		const size_t maxFileStart = 1 + c * currentRepresentatives().size();
+		vector<uint32_t> limits;
+		for (uint32_t limit = 1; true; limit += c)
+			if (!filesystem::exists(filePrefix + to_string(limit) + filePostfix)) {
+				if (limit >= maxFileStart) {
+					if (!redundantSchemaRemoval && !unfiltered) {
+						unfiltered = limit;
+						limit -= c;
+						filePostfix = "-unfiltered" + to_string(unfiltered) + "+" + filePostfix;
+					} else
+						break; // remains to generate
+				}
+			} else
+				limits.push_back(limit);
+		filePostfix_unf = filePostfix;
+		filePostfix = ".txt";
+
+		mutex mtx_cout;
+		atomic<bool> run = true;
+		if (debug)
+			startTime = chrono::steady_clock::now();
+
+		tbb::concurrent_map<uint32_t, uint64_t> cardinalities;
+		tbb::concurrent_map<uint32_t, uint64_t> maxed;
+		tbb::parallel_for(tbb::blocked_range<vector<uint32_t>::const_iterator>(limits.begin(), limits.end()), [&](tbb::blocked_range<vector<uint32_t>::const_iterator>& range) {
+			chrono::time_point<chrono::steady_clock> startTime;
+			for (vector<uint32_t>::const_iterator it = range.begin(); run && it != range.end(); ++it) {
+				uint32_t wordLengthLimit = *it;
+
+				// 1.1 Read current file.
+				const string& currentFilePostfix = wordLengthLimit < unfiltered ? filePostfix : filePostfix_unf;
+				string file = filePrefix + to_string(wordLengthLimit) + currentFilePostfix;
+				if (debug)
+					startTime = chrono::steady_clock::now();
+				ifstream fin(file, fstream::in | fstream::binary);
+				if (!fin.is_open()) {
+					run = false; // stop all threads
+					throw runtime_error("Failed to read the data file \"" + file + "\".");
+				}
+
+				// 1.2 Count lines (and how many of those have the maximum amount of leading 'N's, if relevant).
+				uint64_t lineCounter = 0;
+				uint64_t maxNs = 0;
+				auto countLeadingNs = [](const string& p) { uint32_t counter = 0; for (string::const_iterator it = p.begin(); it != p.end() && *it == 'N'; ++it) counter++; return counter; };
+				string line;
+				while (run && getline(fin, line)) {
+					lineCounter++;
+					if (needMaxNs) {
+						if (countLeadingNs(line) >= _necessitationLimit) // also tolerate manual file edits such that some entries exceed '_necessitationLimit'
+							maxNs++;
+					}
+				}
+				if (run && debug) {
+					stringstream ss;
+					ss << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to load and count " << lineCounter << " line" << (lineCounter == 1 ? "" : "s") << (needMaxNs ? " (" + to_string(maxNs) + " with maximum amount of leading 'N's)" : "") << " from 'dProofs" << wordLengthLimit << currentFilePostfix << "'. [tid:" << this_thread::get_id() << "]";
+					lock_guard<mutex> lock(mtx_cout);
+					cout << ss.str() << endl;
+				}
+				cardinalities.emplace(wordLengthLimit, lineCounter);
+				if (needMaxNs)
+					maxed.emplace(wordLengthLimit, maxNs);
+			}
+		});
+		allRepresentativeCounts.insert(cardinalities.begin(), cardinalities.end());
+		if (needMaxNs)
+			maxNCounts.insert(maxed.begin(), maxed.end());
+		if (debug) {
+			string dur = FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime));
+			size_t linesTotal = 0;
+			for (const pair<const uint32_t, uint64_t>& p : cardinalities)
+				linesTotal += p.second;
+			cout << dur << " taken to traverse " << cardinalities.size() << " proof file" << (cardinalities.size() == 1 ? "" : "s") << " and count " << linesTotal << " line" << (linesTotal == 1 ? "" : "s") << "." << endl;
+		}
+
+		// 1.3 Consult built-in collections. ; NOTE: It is assumed that only axioms are built-in when limited consecutive necessitation steps are configured (just like with all customized systems), so 'maxNCounts' can be ignored here.
+		if (debug)
+			startTime = chrono::steady_clock::now();
+		const vector<const vector<string>*>& builtIn = currentRepresentatives();
+		uint32_t wordLengthLimit = 1;
+		size_t counter = 0;
+		for (const vector<string>* v : builtIn) {
+			if (!allRepresentativeCounts.count(wordLengthLimit)) {
+				allRepresentativeCounts.emplace(wordLengthLimit, v->size());
+				counter++;
+			} else {
+				uint64_t lineCount = allRepresentativeCounts.at(wordLengthLimit);
+				size_t s = v->size();
+				if (lineCount != s)
+					throw domain_error(string("There ") + (s == 1 ? "is " : "are ") + to_string(s) + " built-in D-proof" + (s == 1 ? "" : "s") + " of length " + to_string(wordLengthLimit) + ", but the corresponding proof file has " + to_string(lineCount) + " line" + (lineCount == 1 ? "" : "s") + ".");
+			}
+			wordLengthLimit += c;
+		}
+		if (counter && debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to additionally load " << counter << " cardinalit" << (counter == 1 ? "y" : "ies") << " of built-in proof collections. New total amount of representatives is " << [&]() { size_t s = 0; for (const pair<const uint32_t, uint64_t>& p : allRepresentativeCounts) s += p.second; return s; }() << "." << endl;
+	}
+
+	// 2. Obtain removal counts.
+	map<uint32_t, uint64_t> remCounts;
+	if (_customAxiomsPtr) {
+		// '!.def' file
+		string error;
+		if (!readInfoFile(&remCounts, nullptr, nullptr, error)) {
+			cout << myTime() << ": Generation expenditure printer cancelled due to " << error << "\". " << myInfo() << endl;
+			return;
+		}
+	} else
+		remCounts = removalCounts();
+
+	// 3. Print cardinalities of proof collections.
+	unsigned maxKeyLen =  FctHelper::digitsNum_uint32(max(allRepresentativeCounts.rbegin()->first, remCounts.rbegin()->first) + c), maxValLen = 0;
+	for (const pair<const uint32_t, uint64_t>& p : allRepresentativeCounts) {
+		unsigned valLen = FctHelper::digitsNum_uint64(p.second);
+		if (valLen > maxValLen)
+			maxValLen = valLen;
+	}
+	cout << "Found " << allRepresentativeCounts.size() << " representative collection" << (allRepresentativeCounts.size() == 1 ? "" : "s") << " of size" << (allRepresentativeCounts.size() == 1 ? "" : "s") << ":" << endl;
+	cout << FctHelper::mapStringF(allRepresentativeCounts, [&](const pair<const uint32_t, uint64_t>& p) { return string(maxKeyLen - FctHelper::digitsNum_uint32(p.first), ' ') + to_string(p.first) + " : " + string(maxValLen - FctHelper::digitsNum_uint64(p.second), ' ') + to_string(p.second); }, { }, { }, "\n") << endl;
+	if (!redundantSchemaRemoval && allRepresentativeCounts.rbegin()->first >= unfiltered)
+		cout << "(Unfiltered: " << unfiltered << "+)" << endl;
+
+	// 4. Print iteration counts.
+	map<uint32_t, uint64_t> itCounts;
+	map<uint32_t, uint64_t> representativeCounts;
+	for (map<uint32_t, uint64_t>::const_iterator it = allRepresentativeCounts.begin(); it != allRepresentativeCounts.end(); ++it) {
+		representativeCounts.insert(*it);
+		uint64_t iterationCount;
+		uint32_t wordLengthLimit = representativeCounts.rbegin()->first + c;
+		unsigned len = FctHelper::digitsNum_uint32(wordLengthLimit);
+		cout << string(maxKeyLen - len, ' ') << wordLengthLimit << " : ";
+		determineCountingLimit(wordLengthLimit, iterationCount, representativeCounts, true, needMaxNs ? &maxNCounts[representativeCounts.rbegin()->first] : nullptr, true);
+		itCounts.emplace(representativeCounts.rbegin()->first + c, iterationCount);
+	}
+
+	// 5. Print next estimated removal count.
+	uint64_t removalCount;
+	uint32_t wordLengthLimit = remCounts.rbegin()->first + c;
+	unsigned len = FctHelper::digitsNum_uint32(wordLengthLimit);
+	cout << string(maxKeyLen - len, ' ') << wordLengthLimit << " : ";
+	determineCountingLimit(wordLengthLimit, removalCount, remCounts, false, nullptr, true);
+
+	// 6. Print formatted data.
+	cout << "[Copy] Stored proof collection sizes:\n       " << FctHelper::mapStringF(allRepresentativeCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
+	if (needMaxNs)
+		cout << "[Copy] Detected representatives with maximum amount of leading 'N's:\n       " << FctHelper::mapStringF(maxNCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
+	cout << "[Copy] Calculated iteration counts:\n       " << FctHelper::mapStringF(itCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
+	cout << "[Copy] " << (_customAxiomsPtr ? "Custom" : "Static filtered") << " removal counts:\n       " << FctHelper::mapStringF(remCounts, [](const pair<const uint32_t, uint64_t>& p) { return "{ " + to_string(p.first) + ", " + to_string(p.second) + " }"; }, "{ ", " }") << endl;
+	cout << myTime() << ": Generation expenditure printer complete. " << myInfo() << endl;
+}
+
 void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bool withConclusions) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
@@ -1436,7 +1608,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 		return ss.str();
 	};
 	cout << myTime() << ": Next iteration amount counter started. " << myInfo() << endl;
-	string filePrefix = withConclusions ? "data/" + _customizedPath + "dProofs-withConclusions/dProofs" : "data/" + _customizedPath + "dProofs-withoutConclusions/dProofs";
+	string filePrefix = "data/" + _customizedPath + (withConclusions ? "dProofs-withConclusions/dProofs" : "dProofs-withoutConclusions/dProofs");
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
 	vector<vector<string>> allConclusions;
@@ -1500,7 +1672,7 @@ void DlProofEnumerator::countNextIterationAmount(bool redundantSchemaRemoval, bo
 	cout << myTime() << ": Next iteration amount counter complete. " << myInfo() << endl;
 }
 
-bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration, uint64_t* maxNs) {
+bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_t& count, const map<uint32_t, uint64_t>& counts, bool iteration, uint64_t* maxNs, bool assess) {
 	if (iteration) {
 		constexpr bool detailed = false; // enable to print full summations towards iteration limits
 		if (counts.empty())
@@ -1523,7 +1695,10 @@ bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_
 		if (extra < extraSubstract)
 			throw invalid_argument("DlProofEnumerator::determineCountingLimit(): Invalid 'maxNs' for non-trivial N-rule collection.");
 		uint64_t limit = 0;
-		cout << "Determined the number of proof string candidates for iteration as";
+		if (assess)
+			cout << "Iteration count is";
+		else
+			cout << "Determined the number of proof string candidates for iteration as";
 		if (detailed) {
 			if (counts.size() <= off + 1)
 				cout << "\n  " + (extra ? to_string(extra) + (extraSubstract ? "-" + to_string(extraSubstract) : "") : "");
@@ -1650,7 +1825,11 @@ bool DlProofEnumerator::determineCountingLimit(uint32_t wordLengthLimit, uint64_
 			uint32_t exp = (wordLengthLimit - lastKnownLimit) / dist;
 			double estimatedLimit = static_cast<double>(lastKnownCount) * pow(lastKnownGrowth, exp);
 			count = static_cast<uint64_t>(estimatedLimit);
-			cout << "Estimated removal count set to " << count << ", based on entry " << lastKnownLimit << ":" << lastKnownCount << " and last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") with " << itLastKnown->second << "/" << itPrevLastKnown->second << " ≈ " << lastKnownGrowth << " and " << lastKnownCount << " * (" << itLastKnown->second << "/" << itPrevLastKnown->second << ")^" << exp << " ≈ " << FctHelper::round(estimatedLimit, 2) << "." << endl;
+			if (assess)
+				cout << "Removal count estimation is ";
+			else
+				cout << "Estimated removal count set to ";
+			cout << count << ", based on entry " << lastKnownLimit << ":" << lastKnownCount << " and last known " << (doubleStep ? even ? "even " : "odd " : "") << "pair (" << itPrevLastKnown->first << ":" << itPrevLastKnown->second << ", " << itLastKnown->first << ":" << itLastKnown->second << ") with " << itLastKnown->second << "/" << itPrevLastKnown->second << " ≈ " << lastKnownGrowth << " and " << lastKnownCount << " * (" << itLastKnown->second << "/" << itPrevLastKnown->second << ")^" << exp << " ≈ " << FctHelper::round(estimatedLimit, 2) << "." << endl;
 			return true;
 		} else {
 			count = itIterationCount->second;
@@ -1683,7 +1862,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 		return ss.str();
 	};
 	cout << myTime() << ": " << (limit == UINT32_MAX ? "Unl" : "L") << "imited D-proof representative generator started. " << myInfo() << endl;
-	string filePrefix = withConclusions ? "data/" + _customizedPath + "dProofs-withConclusions/dProofs" : "data/" + _customizedPath + "dProofs-withoutConclusions/dProofs";
+	string filePrefix = "data/" + _customizedPath + (withConclusions ? "dProofs-withConclusions/dProofs" : "dProofs-withoutConclusions/dProofs");
 	string filePostfix = ".txt";
 	vector<vector<string>> allRepresentatives;
 	vector<vector<string>> allConclusions;
@@ -2566,13 +2745,12 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 	uint32_t unfiltered = 0;
 	const uint32_t c = _necessitationLimit ? 1 : 2;
 	const size_t maxFileStart = 1 + c * currentRepresentatives().size();
-	uint32_t limit;
 	unordered_set<uint32_t> proofLengths;
 	if (searchProofs)
 		for (const string& s : _searchTerms)
 			proofLengths.emplace(s.length());
 	vector<uint32_t> limits;
-	for (limit = 1; true; limit += c)
+	for (uint32_t limit = 1; true; limit += c)
 		if (!filesystem::exists(filePrefix + to_string(limit) + filePostfix)) {
 			if (limit >= maxFileStart) {
 				if (!unfiltered) {
@@ -3525,7 +3703,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		cout << "Created " << infoFilePath << " with " << axioms.size() << " copied axiom" << (axioms.size() == 1 ? "" : "s") << ". [id = " << id << "]" << endl;
 
 		// 3. Copy specified proofs to files in 'targetPath'.
-		string searchPath = "data/" + _customizedPath + "dProofs-withConclusions/";
+		string searchPath = effectiveDataLocation + "dProofs-withConclusions/";
 		if (bound2 == SIZE_MAX)
 			cout << "Going to extract proofs from " << searchPath << " with conclusions of symbolic lengths up to " << bound1 << "." << endl;
 		else if (bound1 == SIZE_MAX)
@@ -3537,9 +3715,8 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		string filePostfix_unf;
 		uint32_t unfiltered = 0;
 		const uint32_t c = _necessitationLimit ? 1 : 2;
-		uint32_t limit;
 		vector<uint32_t> limits;
-		for (limit = 1; true; limit += c)
+		for (uint32_t limit = 1; true; limit += c)
 			if (!filesystem::exists(filePrefix + to_string(limit) + filePostfix)) {
 				if (limit > c) {
 					if (!unfiltered) {
@@ -3649,9 +3826,8 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 	string filePostfix = ".txt";
 	string filePostfix_unf;
 	uint32_t unfiltered = 0;
-	uint32_t limit;
 	vector<uint32_t> limits;
-	for (limit = 1; true; limit += c)
+	for (uint32_t limit = 1; true; limit += c)
 		if (!filesystem::exists(fullInputFilePrefix + to_string(limit) + filePostfix)) {
 			if (limit > c) {
 				if (!unfiltered) {
