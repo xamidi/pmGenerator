@@ -882,7 +882,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 		cout << "Index correspondences (out,in) are " << FctHelper::mapString(map<size_t, size_t>(indexOrigins.begin(), indexOrigins.end())) << "." << endl;
 }
 
-void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input, vector<DRuleParser::AxiomInfo>& out_customAxioms, vector<string>& out_abstractDProof, vector<DRuleParser::AxiomInfo>* optOut_requiredIntermediateResults, bool useInputFile, bool normalPolishNotation, bool debug) {
+void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input, vector<DRuleParser::AxiomInfo>* optOut_customAxioms, vector<string>* optOut_abstractDProof, vector<DRuleParser::AxiomInfo>* optOut_requiredIntermediateResults, bool useInputFile, bool normalPolishNotation, bool debug) {
 	vector<string> summaryLines;
 	{
 		string inputFromFile;
@@ -915,7 +915,8 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 			pos = line.find_first_not_of(" =:", posEnd + 1);
 			if (pos == string::npos)
 				throw invalid_argument("Missing D-proof in \"" + line + "\".");
-			out_abstractDProof.push_back(line.substr(pos));
+			if (optOut_abstractDProof)
+				optOut_abstractDProof->push_back(line.substr(pos));
 		} else { // axiom
 			if (axiomIndex == 35)
 				throw invalid_argument("Too many axioms. (Axiom numbers must be in {1, ..., 9, a, ..., z}, i.e. there are 35 at most.)");
@@ -939,7 +940,8 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 					throw domain_error("Could not parse \"" + axiom + "\" as a formula in normal Polish notation.");
 			} else if (!DlCore::fromPolishNotation_noRename(ax, axiom, false, debug))
 				throw domain_error("Could not parse \"" + axiom + "\" as a formula in dotted Polish notation.");
-			out_customAxioms.push_back(DRuleParser::AxiomInfo(axName, ax));
+			if (optOut_customAxioms)
+				optOut_customAxioms->push_back(DRuleParser::AxiomInfo(axName, ax));
 		}
 	if (optOut_requiredIntermediateResults) {
 		vector<DRuleParser::AxiomInfo>& requiredIntermediateResults = *optOut_requiredIntermediateResults;
@@ -954,7 +956,8 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 		}
 		//#cout << "inputConclusions = " << FctHelper::vectorString(inputConclusions) << endl;
 	}
-	//#cout << "customAxioms = " << FctHelper::vectorStringF(out_customAxioms, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom); }) << "\nabstractDProof = " << FctHelper::vectorString(out_abstractDProof) << endl;
+	//#if (optOut_customAxioms) cout << "customAxioms = " << FctHelper::vectorStringF(*optOut_customAxioms, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom); }) << endl;
+	//#if (optOut_abstractDProof) cout << "abstractDProof = " << FctHelper::vectorString(*optOut_abstractDProof) << endl;
 	//#if (optOut_requiredIntermediateResults) cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(*optOut_requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom) + "[" + ax.name + "]"; }) << endl;
 }
 
@@ -962,7 +965,7 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 	vector<DRuleParser::AxiomInfo> customAxioms;
 	vector<string> abstractDProof_input;
 	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
-	convertProofSummaryToAbstractDProof(input, customAxioms, abstractDProof_input, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
+	convertProofSummaryToAbstractDProof(input, &customAxioms, &abstractDProof_input, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
 
 	auto toAxiomInfoVector = [&](const string& list, vector<DRuleParser::AxiomInfo>& target) {
 		const vector<string> v = FctHelper::stringSplit(list, ",");
@@ -1027,7 +1030,7 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 	vector<DRuleParser::AxiomInfo> customAxioms;
 	vector<string> abstractDProof;
 	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
-	convertProofSummaryToAbstractDProof(input, customAxioms, abstractDProof, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
+	convertProofSummaryToAbstractDProof(input, &customAxioms, &abstractDProof, &requiredIntermediateResults, useInputFile, normalPolishNotation, debug);
 
 	auto toAxiomInfoVector = [&](const string& list, vector<DRuleParser::AxiomInfo>& target) {
 		const vector<string> v = FctHelper::stringSplit(list, ",");

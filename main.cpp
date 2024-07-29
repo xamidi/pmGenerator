@@ -190,6 +190,91 @@ static const map<Task, string>& cmdInfo() {
 
 int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, ..., <argN> }
 	// Custom tools' code - (v1.2) : https://github.com/xamidi/pmGenerator/commit/018ac7854f3e620406ba04726802a77acbd6d461
+#if 0 //### ./formulasFromSummaries ; extract comma-separated ordered list of formulas in normal Polish notation that are used in the given proof summaries
+	// NOTE: Requires '#include "logic/DlCore.h"'
+	// e.g. ./formulasFromSummaries data/summary-formulas.txt data/m.txt,data/w1.txt,data/w2.txt,data/w3.txt,data/w4.txt,data/w5.txt,data/w6.txt,data/s5.txt
+	if (argc <= 2) {
+		cerr << "Need 1. path for output file, and 2. comma-separated list of paths to proof summary files." << endl;
+		return 0;
+	}
+	string tmpFile = "data/tmp.txt";
+	string outputFile = argv[1];
+	vector<string> inputFiles = FctHelper::stringSplit(argv[2], ",");
+	set<string, cmpStringGrow> formulas;
+	for (const string& proofSummaryFile : inputFiles) {
+		string filterForTheorems = ".";
+		DlProofEnumerator::recombineProofSummary(proofSummaryFile, true, nullptr, 1, SIZE_MAX, true, false, &filterForTheorems, true, SIZE_MAX, 134217728, false, &tmpFile, false);
+		set<string, cmpStringGrow> conclusions;
+		vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(tmpFile, nullptr, nullptr, &requiredIntermediateResults, true, true, false);
+		for (const DRuleParser::AxiomInfo& info : requiredIntermediateResults) {
+			const shared_ptr<DlFormula>& f = info.refinedAxiom;
+			conclusions.emplace(DlCore::toPolishNotation(f));
+			//conclusions.emplace(DlCore::toPolishNotation_noRename(f));
+		}
+		cout << "Found " << conclusions.size() << " different intermediate conclusion" << (conclusions.size() == 1 ? "" : "s") << " in \"" << proofSummaryFile << "\"." << endl;
+		formulas.insert(conclusions.begin(), conclusions.end());
+	}
+	cout << "In total, found " << formulas.size() << " different formula" << (formulas.size() == 1 ? "" : "s") << " in " << inputFiles.size() << " file" << (inputFiles.size() == 1 ? "" : "s") << "." << endl;
+	if (!formulas.empty())
+		cout << "Smallest formula: " << *formulas.begin() << "\n                  (length " << formulas.begin()->length() << ")\nLargest formula:  " << *formulas.rbegin() << "\n                  (length " << formulas.rbegin()->length() << ")" << endl;
+	string result = FctHelper::setString(formulas, { }, { }, ",");
+	FctHelper::writeToFile(outputFile, result);
+	cout << result.length() << " bytes written to \"" << outputFile<< "\"." << endl;
+	return 0;
+#endif
+#if 0 //### ./uniteLists ; combine comma-separated ordered lists of strings
+	// e.g. ./uniteLists data/summary-formulas.txt data/summary-formulas1.txt,data/summary-formulas2.txt,data/summary-formulas3.txt
+	if (argc <= 2) {
+		cerr << "Need 1. path for output file, and 2. comma-separated list of paths to files with comma-separated elements." << endl;
+		return 0;
+	}
+	string outputFile = argv[1];
+	vector<string> inputFiles = FctHelper::stringSplit(argv[2], ",");
+	set<string, cmpStringGrow> unionOfLists;
+	for (const string& inputFile : inputFiles) {
+		string fileString;
+		if (!FctHelper::readFile(inputFile, fileString))
+			throw runtime_error("Failed to read file \"" + inputFile + "\".");
+
+		// Erase all '\r', '\n', '\t', ' ', and lines starting with '%'. ; NOTE: Much faster than using regular expressions.
+		bool startOfLine = true;
+		bool erasingLine = false;
+		fileString.erase(remove_if(fileString.begin(), fileString.end(), [&](const char c) {
+			switch (c) {
+			case '\r':
+			case '\n':
+				startOfLine = true;
+				erasingLine = false;
+				return true;
+			case '\t':
+			case ' ':
+				startOfLine = false;
+				return true;
+			case '%':
+				if (startOfLine) {
+					startOfLine = false;
+					erasingLine = true;
+				}
+				return erasingLine;
+			default:
+				startOfLine = false;
+				return erasingLine;
+			}
+		}), fileString.end());
+
+		vector<string> elements = FctHelper::stringSplit(fileString, ",");
+		cout << "Found " << elements.size() << " separated element" << (elements.size() == 1 ? "" : "s") << " in \"" << inputFile << "\"." << endl;
+		unionOfLists.insert(elements.begin(), elements.end());
+	}
+	cout << "In total, found " << unionOfLists.size() << " different element" << (unionOfLists.size() == 1 ? "" : "s") << " in " << inputFiles.size() << " file" << (inputFiles.size() == 1 ? "" : "s") << "." << endl;
+	if (!unionOfLists.empty())
+		cout << "Smallest element: " << *unionOfLists.begin() << "\n                  (length " << unionOfLists.begin()->length() << ")\nLargest element:  " << *unionOfLists.rbegin() << "\n                  (length " << unionOfLists.rbegin()->length() << ")" << endl;
+	string result = FctHelper::setString(unionOfLists, { }, { }, ",");
+	FctHelper::writeToFile(outputFile, result);
+	cout << result.length() << " bytes written to \"" << outputFile<< "\"." << endl;
+	return 0;
+#endif
 #if 0 //### ./dProofsFromDB ; extract comma-separated list of proofs from all proofs explicitly given in a proof database
 	if (argc <= 2) {
 		cerr << "Need 1. path to proof database and 2. path for output file. Optional: 3. whether to only keep unique proofs (default: 0), 4. whether to remove proofs of length 1 (which are invalid in abstract proofs, default: 0)" << endl;
@@ -417,7 +502,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	vector<shared_ptr<DlFormula>> abstractDProofConclusions;
 	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
 	{
-		DlProofEnumerator::convertProofSummaryToAbstractDProof(tmpFile, customAxioms, abstractDProof, &requiredIntermediateResults, true, true, false);
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(tmpFile, &customAxioms, &abstractDProof, &requiredIntermediateResults, true, true, false);
 		for (const DRuleParser::AxiomInfo& info : requiredIntermediateResults) {
 			const shared_ptr<DlFormula>& f = info.refinedAxiom;
 			abstractDProofConclusions.push_back(f);
@@ -542,7 +627,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 		//vector<DRuleParser::AxiomInfo> customAxioms;
 		vector<string> abstractDProof;
 		vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
-		DlProofEnumerator::convertProofSummaryToAbstractDProof(outputFile, customAxioms, abstractDProof, &requiredIntermediateResults, true, true, false);
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(outputFile, &customAxioms, &abstractDProof, &requiredIntermediateResults, true, true, false);
 		//#cout << "abstractDProof = " << FctHelper::vectorString(abstractDProof) << endl;
 		//#cout << "|abstractDProof| = " << abstractDProof.size() << endl;
 		//#cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::toPolishNotation(ax.refinedAxiom); }) << endl;
