@@ -1492,7 +1492,16 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 			} catch (...) {
 				throw invalid_argument("Bad index number in \"" + rule + "\".");
 			}
-			if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
+			if (rule[0] == '[') { // no rule, just a redundant reference => direct build
+				if (posEnd != rule.size() - 1)
+					throw logic_error("First ']' should be final character in \"" + rule + "\".");
+				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
+				if (!f) // still need to parse rule at 'num'?
+					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
+				if (optOut_indexEvalSequence)
+					indexEvalSequence.push_back(i);
+				return f;
+			} else if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
 				if (posEnd != rule.size() - 1)
 					throw logic_error("First ']' should be final character in \"" + rule + "\".");
 				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
