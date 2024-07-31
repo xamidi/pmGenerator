@@ -458,7 +458,7 @@ Composable:
        -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -o: redirect the result's output to the specified file
        -d: print debug information
-  --transform &lt;string&gt; [-s &lt;string&gt;] [-j &lt;limit or -1&gt;] [-p &lt;limit or -1&gt;] [-n] [-u] [-t &lt;string&gt;] [-e] [-i &lt;limit or -1&gt;] [-l &lt;limit or -1&gt;] [-z] [-f] [-o &lt;output file&gt;] [-d]
+  --transform &lt;string&gt; [-s &lt;string&gt;] [-j &lt;limit or -1&gt;] [-p &lt;limit or -1&gt;] [-n] [-u] [-t &lt;string&gt;] [-e] [-i &lt;limit or -1&gt;] [-l &lt;limit or -1&gt;] [-z] [-y] [-f] [-o &lt;output file&gt;] [-d]
      Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
        -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
        -j: join common subproofs together when they are used at least a given amount of times ; default: 2
@@ -470,6 +470,7 @@ Composable:
        -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
        -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
        -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions
+       -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic solution procedure)
        -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
        -o: redirect the result's output to the specified file
        -d: print debug information
@@ -552,7 +553,7 @@ pmGenerator --variate 1 -s --extract -t 1000 -s -d
 pmGenerator --variate 1 -s --extract -# 35 -d -c -d -e 0
 pmGenerator -m 17 -s
 </code></pre><h4 id="multi-node-computing">Multi-node Computing</h4>
-<p>For MPI-based filtering, each spawned process is multithreaded and attempts to use as many threads as the hardware specifies as concurrent. Therefore, it is ideal to spawn the same amount of processes and nodes.<br>The following exemplary <a href="https://slurm.schedmd.com/documentation.html">Slurm</a> batch script has been used via <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> in order to reduce <code>dProofs31‑unfiltered31+.txt</code> to <code>dProofs31.txt</code>.</p>
+<p>For MPI-based filtering, each spawned process is multi-threaded and attempts to use as many threads as the hardware specifies as concurrent. Therefore, it is ideal to spawn the same amount of processes and nodes.<br>The following exemplary <a href="https://slurm.schedmd.com/documentation.html">Slurm</a> batch script has been used via <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> in order to reduce <code>dProofs31‑unfiltered31+.txt</code> to <code>dProofs31.txt</code>.</p>
 <pre><code>#!/bin/zsh
 #SBATCH --job-name=pmGen-20
 #SBATCH --output=output_%J.txt

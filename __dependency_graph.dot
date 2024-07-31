@@ -160,6 +160,7 @@ digraph {
 	DRuleParser -> DlCore [color=blue]
 	DRuleParser -> DlFormula [color=blue]
 	DRuleParser -> "boost/algorithm/string" [color=blue]
+	DRuleParser -> parallel_for_each [color=blue]
 	DRuleParser -> "(iostream)" [color=blue]
 	DRuleParser -> "(numeric)" [color=blue]
 	DRuleParser -> "(cstddef)" [color=red]

@@ -7,6 +7,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <tbb/parallel_for_each.h>
+
 #include <iostream>
 #include <numeric>
 
@@ -1858,7 +1860,7 @@ vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractD
 	return unfoldRulesInAbstractDProof(targetIndices, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 }
 
-void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, const vector<AxiomInfo>* customAxioms) {
+void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, const vector<AxiomInfo>* customAxioms, bool concurrentDRuleSearch) {
 	auto switchRefs = [](char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
 		if (inReference)
 			switch (c) {
@@ -2006,7 +2008,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		iota(allIndices.begin(), allIndices.end(), 0);
 		vector<size_t> fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions);
 		//#cout << "fundamentalLengths = " << FctHelper::vectorString(fundamentalLengths) << endl;
-		cout << "[Proof compression (rule search), round " << compressionRound << "] Started. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << endl;
+		cout << "[Proof compression (rule search), round " << compressionRound << "] Started. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << (concurrentDRuleSearch ? " Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for D-rule replacement search." : "") << endl;
 
 		// 3. Group elements based on fundamental lengths.
 		map<size_t, vector<size_t>> indicesByLen;
@@ -2035,7 +2037,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			for (size_t i : indices) {
 				ProofElement& e = proofElements[i];
 				array<int64_t, 2>& refs = e.refs;
-				bool found = false;
+				atomic<bool> found = false;
 				bool dRule = e.rule == 'D';
 				bool nonMinimalD = dRule && (refs[0] >= 0 || refs[1] >= 0);
 				bool nonMinimalN = !dRule && refs[0] >= 0;
@@ -2087,79 +2089,104 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						continue;
 				}
 
-				// 4.2 Look for D-rules as replacements.
-				if (nonMinimalD || nonMinimalN) // NOTE: Even an axiom should be replaced when the other input is a rule no shorter than two alternative inputs combined).
-					for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
-						size_t candidateAFundamentalLength = itFwdA->first;
-						if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
-							break;
-						for (map<size_t, vector<size_t>>::iterator itFwdB = indicesByLen.begin(); itFwdB != indicesByLen.end(); ++itFwdB) {
-							size_t candidateBFundamentalLength = itFwdB->first;
-							if (candidateAFundamentalLength + candidateBFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
-								break;
-							for (size_t iA : itFwdA->second) {
-								for (size_t iB : itFwdB->second) {
-									ProofElement& eB = proofElements[iB];
-									const shared_ptr<DlFormula>& conditional = eB.result;
-									const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
-									if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
-										continue;
-									ProofElement& eA = proofElements[iA];
-									// For special case: When itFwdA == itFwdB and iA == iB, a formula is unified with itself, thus there needs to be an extra separation of variables.
-									shared_ptr<DlFormula> _distinguishedFormula;
-									auto distinguishVariables = [&](const shared_ptr<DlFormula>& f) -> const shared_ptr<DlFormula>& {
-										vector<string> vars = DlCore::primitivesOfFormula_ordered(f);
-										map<string, shared_ptr<DlFormula>> substitutions;
-										for (const string& v : vars)
-											substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(v + "_")));
-										_distinguishedFormula = DlCore::substitute(f, substitutions);
-										return _distinguishedFormula;
-									};
-									const shared_ptr<DlFormula>& antecedent = itFwdA == itFwdB && iA == iB ? distinguishVariables(eA.result) : eA.result;
+				// 4.2 Look for D-rules as replacements. ; NOTE: When parallelized, the solution procedure is not deterministic anymore.
+				mutex mtx;
+				auto searchDRuleReplacement = [&](const pair<const size_t, vector<size_t>>& fwdA, const size_t candidateAFundamentalLength) {
+					// Unmodified captures: &compressionRound, &dRule, &fundamentalLength, &i, &indicesByLen, &iToId, &idToLen, &printIndex, &proofElements
+					// Modifiable captures: &abstractDProofConclusions, &e, &found, &fundamentalLengths, &helperRules, &helperRulesConclusions, &modified, &mtx, &newImprovements, &retractedDProof
+					for (map<size_t, vector<size_t>>::iterator itFwdB = indicesByLen.begin(); itFwdB != indicesByLen.end(); ++itFwdB) {
+						size_t candidateBFundamentalLength = itFwdB->first;
+						if (candidateAFundamentalLength + candidateBFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
+							return;
+						for (size_t iA : fwdA.second) {
+							for (size_t iB : itFwdB->second) {
+								const ProofElement& eB = proofElements[iB]; // NOTE: 'e' might be modified concurrently, but eB != e = proofElements[i], since 'e' is fundamentally longer than 'eB'.
+								const shared_ptr<DlFormula>& conditional = eB.result;
+								const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
+								if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
+									continue;
+								const ProofElement& eA = proofElements[iA]; // NOTE: 'e' might be modified concurrently, but eA != e = proofElements[i], since 'e' is fundamentally longer than 'eA'.
+								// For special case: When itFwdA == itFwdB and iA == iB, a formula is unified with itself, thus there needs to be an extra separation of variables.
+								shared_ptr<DlFormula> _distinguishedFormula;
+								auto distinguishVariables = [&](const shared_ptr<DlFormula>& f) -> const shared_ptr<DlFormula>& {
+									vector<string> vars = DlCore::primitivesOfFormula_ordered(f);
 									map<string, shared_ptr<DlFormula>> substitutions;
-									if (DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
-										shared_ptr<DlFormula> consequent = DlCore::substitute(conditional_children[1], substitutions);
-										if (DlCore::isSchemaOf(consequent, e.result)) {
-											bool isMainStep = i < retractedDProof.size();
-											if (!DlCore::isSchemaOf(e.result, consequent)) { // 'e.result' needs to be modified
-												DlCore::fromPolishNotation_noRename(consequent, DlCore::toPolishNotation_numVars(consequent));
-												(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
-												vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
-												map<string, shared_ptr<DlFormula>> substitutions;
-												for (const string& v : vars)
-													substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
-												consequent = DlCore::substitute(consequent, substitutions);
-												cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
-												e.result = consequent;
+									for (const string& v : vars)
+										substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(v + "_")));
+									_distinguishedFormula = DlCore::substitute(f, substitutions);
+									return _distinguishedFormula;
+								};
+								const shared_ptr<DlFormula>& antecedent = &fwdA == &*itFwdB && iA == iB ? distinguishVariables(eA.result) : eA.result;
+								map<string, shared_ptr<DlFormula>> substitutions;
+								if (!found && DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
+									shared_ptr<DlFormula> consequent = DlCore::substitute(conditional_children[1], substitutions);
+									if (!found && DlCore::isSchemaOf(consequent, e.result)) {
+										if (!found) {
+											lock_guard<mutex> lock(mtx);
+											if (!found) {
+												found = true;
+												bool isMainStep = i < retractedDProof.size();
+												if (!DlCore::isSchemaOf(e.result, consequent)) { // 'e.result' needs to be modified
+													DlCore::fromPolishNotation_noRename(consequent, DlCore::toPolishNotation_numVars(consequent));
+													(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
+													vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
+													map<string, shared_ptr<DlFormula>> substitutions;
+													for (const string& v : vars)
+														substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
+													consequent = DlCore::substitute(consequent, substitutions);
+													cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
+													e.result = consequent;
+												}
+												string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+												string newDProof = "D" + printIndex(iB) + printIndex(iA);
+												if (dRule)
+													cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+												else {
+													cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+													e.rule = 'D';
+												}
+												e.refs[0] = iToId(iB);
+												e.refs[1] = iToId(iA);
+												dProof = newDProof; // update 'retractedDProof' or 'helperRules'
+												fundamentalLengths[i] = candidateAFundamentalLength + candidateBFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
+												modified = true;
+												newImprovements++;
+												return;
 											}
-											string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
-											string newDProof = "D" + printIndex(iB) + printIndex(iA);
-											if (dRule)
-												cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-											else {
-												cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-												e.rule = 'D';
-											}
-											e.refs[0] = iToId(iB);
-											e.refs[1] = iToId(iA);
-											dProof = newDProof; // update 'retractedDProof' or 'helperRules'
-											fundamentalLengths[i] = candidateAFundamentalLength + candidateBFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
-											modified = true;
-											newImprovements++;
-											found = true;
-											break;
-										}
+										} else
+											return;
 									}
 								}
 								if (found)
-									break;
+									return;
 							}
+							if (found)
+								return;
+						}
+						if (found)
+							return;
+					}
+				};
+				if (nonMinimalD || nonMinimalN) { // NOTE: Even an axiom should be replaced when the other input is a rule no shorter than two alternative inputs combined).
+					if (concurrentDRuleSearch)
+						tbb::parallel_for_each(indicesByLen.begin(), indicesByLen.end(), [&](const pair<const size_t, vector<size_t>>& fwdA) {
+							if (found)
+								return;
+							size_t candidateAFundamentalLength = fwdA.first;
+							if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
+								return;
+							searchDRuleReplacement(fwdA, candidateAFundamentalLength);
+						});
+					else
+						for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
+							size_t candidateAFundamentalLength = itFwdA->first;
+							if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
+								break;
+							searchDRuleReplacement(*itFwdA, candidateAFundamentalLength);
 							if (found)
 								break;
 						}
-						if (found)
-							break;
-					}
+				}
 			}
 		}
 
@@ -2255,7 +2282,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 	}
 }
 
-vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool compress) {
+vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool compress, bool compress_concurrentDRuleSearch) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
@@ -2292,7 +2319,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		//       and 'indexEvalSequence' provides a rule evaluation sequence respecting dependencies between the rules.
 		//       For proof compression, we can now operate over this fully detailed proof summary in order to remove the kind of internal redundancy where other parts
 		//       of the summary provide a shorter alternative subproof at any position.
-		compressAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, customAxioms);
+		compressAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, customAxioms, compress_concurrentDRuleSearch);
 	}
 
 	// 3. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.
