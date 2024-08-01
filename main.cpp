@@ -64,15 +64,15 @@ static const map<Task, string>& cmdInfo() {
 				"         -e: specify extracted system with the given identifier\n"
 				"         -d: default system ; ignore all other arguments except '-e'\n";
 		_[Task::Generate] =
-				"    -g <limit or -1> [-u] [-q <limit or -1>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]\n"
+				"    -g <limit or -1> [-u] [-q <limit or -1>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-f] [-s]\n"
 				"       Generate proof files ; at ./data/[<hash>/]/dProofs-withConclusions/ when '-s' unspecified ; otherwise at ./data/[<hash>/]/dProofs-withoutConclusions/\n"
 				"         -u: unfiltered (significantly faster, but generates redundant proofs)\n"
 				"         -q: limit number of proof candidate strings queued per worker thread (may lower memory requirements for systems with low acceptance rates) ; default: 50\n"
 				"         -l: limit symbolic length of generated conclusions to at most the given number ; works only in extracted environments ; recommended to use in combination with '-q' to save memory\n"
 				"         -k: similar to '-l' ; limit symbolic length of consequents in generated conclusions, i.e. antecedents in conditionals are not limited (but non-conditionals are limited in full length)\n"
-				"         -b: brief parsing ; refer to conclusion strings for D-proof processing and use them for rule evaluation (collects faster, but requires more memory) ; used only when '-v' unspecified\n"
-				"         -v: very brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects fastest, but requires significantly more memory)\n"
-				"         -s: proof files without conclusions, requires additional parsing ; used only when '-b' and '-v' unspecified\n";
+				"         -b: brief parsing ; append conclusion structures to D-proof processing and use them for rule evaluation (collects faster, but requires significantly more memory)\n"
+				"         -f: full parsing ; parse entire D-proofs rather than using conclusion strings for rule evaluation ; used only when '-b' unspecified\n"
+				"         -s: proof files without conclusions, requires additional parsing ; entails '-f' ; used only when '-b' unspecified\n";
 		_[Task::CreateReplacements] =
 				"    -r <D-proof database> <output file> [-l <path>] [-i <prefix>] [-s] [-d]\n"
 				"       Replacements file creation based on proof files\n"
@@ -893,11 +893,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			mpiIgnoreCount++;
 			extractedEnv = false;
 			break;
-		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]
+		case 'g': // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-f] [-s]
 			if (i + 1 >= argc)
 				return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 			try {
-				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 }, { "maxSymbolicConclusionLength", -1 }, { "maxSymbolicConsequentLength", -1 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "useConclusionStrings", false }, { "useConclusionTrees", false }, { "whether -q was called", false } });
+				tasks.emplace_back(Task::Generate, map<string, string> { }, map<string, int64_t> { { "limit", stoi(argv[++i]) }, { "candidateQueueCapacities", 0 }, { "maxSymbolicConclusionLength", -1 }, { "maxSymbolicConsequentLength", -1 } }, map<string, bool> { { "redundantSchemaRemoval", true }, { "withConclusions", true }, { "useConclusionStrings", true }, { "useConclusionTrees", false }, { "whether -q was called", false } });
 			} catch (...) {
 				return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
 			}
@@ -995,7 +995,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
 			case Task::Generate: // -g -b (brief parsing)
-				tasks.back().bln["useConclusionStrings"] = true;
+				tasks.back().bln["useConclusionTrees"] = true;
 				break;
 			case Task::ParseAndPrintProofs: // --parse -b (only print conclusions of the given proofs)
 				tasks.back().bln["conclusionsOnly"] = true;
@@ -1046,6 +1046,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+			case Task::Generate: // -g -f (full parsing)
+				tasks.back().bln["useConclusionStrings"] = false;
+				break;
 			case Task::ParseAndPrintProofs: //       --parse -f (proofs are given by input file path)
 			case Task::TransformProofSummary: // --transform -f (proof summary is given by input file path)
 			case Task::UnfoldProofSummary: //       --unfold -f (proof summary is given by input file path)
@@ -1387,15 +1390,6 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				break;
 			}
 			break;
-		case 'v':
-			switch (lastTask()) {
-			default:
-				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::Generate: // -g -v (very brief parsing)
-				tasks.back().bln["useConclusionTrees"] = true;
-				break;
-			}
-			break;
 		case 'w':
 			switch (lastTask()) {
 			default:
@@ -1582,7 +1576,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				}
 				break;
 			}
-			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-v] [-s]
+			case Task::Generate: { // -g <limit or -1> [-u] [-q <limit>] [-l <limit or -1>] [-k <limit or -1>] [-b] [-f] [-s]
 				unsigned optParams = t.bln["useConclusionTrees"] ? 5 : t.bln["useConclusionStrings"] ? 4 : t.num["maxSymbolicConsequentLength"] != -1 ? 3 : t.num["maxSymbolicConclusionLength"] != -1 ? 2 : t.bln["whether -q was called"] ? 1 : 0;
 				cout << "[Main] Calling generateDProofRepresentativeFiles(" << (unsigned) t.num["limit"] << ", " << bstr(t.bln["redundantSchemaRemoval"]) << ", " << bstr(t.bln["withConclusions"]) << (t.bln["whether -q was called"] ? string(", ") + to_string(size_t(t.num["candidateQueueCapacities"])) : optParams > 1 ? ", null" : "") << (t.num["maxSymbolicConclusionLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConclusionLength"])) : optParams > 2 ? ", -1" : "") << (t.num["maxSymbolicConsequentLength"] != -1 ? string(", ") + to_string(size_t(t.num["maxSymbolicConsequentLength"])) : optParams > 3 ? ", -1" : "") << (t.bln["useConclusionStrings"] || optParams > 4 ? string(", ") + bstr(t.bln["useConclusionStrings"]) : "") << (t.bln["useConclusionTrees"] || optParams > 5 ? string(", ") + bstr(t.bln["useConclusionTrees"]) : "") << ")." << endl;
 				size_t candidateQueueCapacities = static_cast<size_t>(t.num["candidateQueueCapacities"]);

@@ -1849,8 +1849,10 @@ map<uint32_t, uint64_t>& DlProofEnumerator::removalCounts() {
 
 void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool redundantSchemaRemoval, bool withConclusions, size_t* candidateQueueCapacities, size_t maxSymbolicConclusionLength, size_t maxSymbolicConsequentLength, bool useConclusionStrings, bool useConclusionTrees) { // NOTE: More debug code & performance results available before https://github.com/deontic-logic/proof-tool/commit/45627054d14b6a1e08eb56eaafcf7cf202f2ab96 ; representation of formulas as tree structures before https://github.com/xamidi/pmGenerator/commit/63c7f17b82d56ec639f2b843b688d3e9a0a2a077
 	chrono::time_point<chrono::steady_clock> startTime;
-	if (useConclusionStrings || useConclusionTrees)
-		withConclusions = true; // need conclusions in these modes
+	if (useConclusionTrees)
+		withConclusions = true; // need conclusions when brief parsing was requested
+	else if (!withConclusions)
+		useConclusionStrings = false; // otherwise, enable full parsing when not using conclusions was requested
 	size_t defaultQC = 50;
 	if (candidateQueueCapacities) {
 		if (*candidateQueueCapacities == SIZE_MAX)
