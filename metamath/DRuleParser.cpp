@@ -2701,7 +2701,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 
 		// 5.3 Obtain unfolded proof.
 		vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(indicesForNewProof, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug, limit);
-		newAbstractDProof = unfoldRulesInAbstractDProof(indicesForNewProof, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
+		newAbstractDProof = unfoldRulesInAbstractDProof(indicesForNewProof, retractedDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 		for (size_t i : indicesForNewProof) {
 			const shared_ptr<DlFormula>& f = i < retractedDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()];
 			out_conclusions.push_back(f);
