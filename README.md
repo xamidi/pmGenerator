@@ -119,11 +119,12 @@ Some more – and very special – proof systems are illustrated [further down b
            -p: search proofs (rather than conclusions) ; used only when '-n', '-s' and '-t' unspecified
            -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -d: print debug information
-      --extract [-t <limit or -1>] [-o <output file>] [-s] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
+      --extract [-t <limit or -1>] [-o <output file>] [-s] [-z] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
          Various options to extract information from proof files ; [Hint: Generate missing files with '--variate 1 -s'.]
            -t: compose file with up to the given amount of smallest conclusions that occur in proof files ; includes origins, symbolic lengths, proofs, and formulas in normal Polish notation
            -o: specify output file path for '-t' ; relative to effective data location ; default: "top<amount>SmallestConclusions_<min proof length>to<max proof length>Steps<unfiltered info>.txt"
            -s: redundant schema removal for '-t' ; very time-intensive for requesting huge collections from unfiltered proof files - better pre-filter via '-g' or '-m' instead ; default: false
+           -z: force redundant schema removal for '-t' ; like '-s', but also filter proof files not declared as unfiltered (which might be useful for non-standard procedures)
            -#: initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount of smallest filtered conclusions that occur in proof files ; specify with '-c <parent system> -e <id>'
            -h: similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs ; "." to not modify axioms
            -l: similar to '-#' (but creates identical system with prebuilt proof files) ; copy proofs with conclusions that have symbolic lengths of at most the given number

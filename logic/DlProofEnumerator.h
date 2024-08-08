@@ -105,7 +105,7 @@ public:
 
 	// Data search ; input files with conclusions are required
 	static std::map<std::string, std::string> searchProofFiles(const std::vector<std::string>& searchTerms, bool normalPolishNotation = false, bool searchProofs = false, unsigned schemaSearch = 0, const std::string* inputFile = nullptr, bool debug = false);
-	static void extractConclusions(ExtractionMethod method, std::uint32_t extractAmount, const std::string* config = nullptr, bool allowRedundantSchemaRemoval = false, std::size_t bound1 = 0, std::size_t bound2 = 0, bool debug = false, std::string* optOut_createdExDir = nullptr);
+	static void extractConclusions(ExtractionMethod method, std::uint32_t extractAmount, const std::string* config = nullptr, bool allowRedundantSchemaRemoval = false, bool forceRedundantSchemaRemoval = false, std::size_t bound1 = 0, std::size_t bound2 = 0, bool debug = false, std::string* optOut_createdExDir = nullptr);
 
 	// Data representation ; input files with conclusions are required
 	static void printConclusionLengthPlotData(bool measureSymbolicLength = true, bool table = true, std::int64_t cutX = -1, std::int64_t cutY = -1, const std::string& dataLocation = "data", const std::string& inputFilePrefix = "dProofs-withConclusions/dProofs", bool includeUnfiltered = false, std::ostream* mout = nullptr, bool debug = false, const std::uint32_t* proofLenStepSize = nullptr);

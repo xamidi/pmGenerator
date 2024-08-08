@@ -3151,7 +3151,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 	return bestResults;
 }
 
-void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, size_t bound1, size_t bound2, bool debug, string* optOut_createdExDir) {
+void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t extractAmount, const string* config, bool allowRedundantSchemaRemoval, bool forceRedundantSchemaRemoval, size_t bound1, size_t bound2, bool debug, string* optOut_createdExDir) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<string> dProofs;
 	if ((method == ExtractionMethod::ProofSystemFromTopList && !extractAmount) || (method == ExtractionMethod::ProofSystemFromString && (!config || config->empty()))) {
@@ -3249,7 +3249,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		//       removals are performed (unless requested by ridiculous limits for ExtractionMethod::TopListFile), which should be done via -g or -m anyway.
 		//       For small sets, where this loop can occur for ExtractionMethod::ProofSystemFromTopList (and under reasonable parameters for
 		//       ExtractionMethod::TopListFile), its performance overhead is insignificant.
-		redundantSchemaRemoval = useUnfilteredFiles && (method == ExtractionMethod::ProofSystemFromTopList || allowRedundantSchemaRemoval);
+		redundantSchemaRemoval = forceRedundantSchemaRemoval || (useUnfilteredFiles && (method == ExtractionMethod::ProofSystemFromTopList || allowRedundantSchemaRemoval));
 		if (redundantSchemaRemoval && limits.front() > 1)
 			cerr << "Warning: Schemas are filtered only partially, because proofs with less than " + to_string(limits.front()) + " steps are missing from the collection. Generate corresponding file(s) to avoid this." << endl;
 		bool repeat = false;
@@ -3353,7 +3353,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 										uint32_t proofLen = q.first;
 										size_t lineNo = r.first;
 										bool schemaFound = false;
-										if (proofLen >= unfiltered) { // detect conclusions that are merely instances of other formulas proven in lower or equal amounts of steps
+										if (forceRedundantSchemaRemoval || proofLen >= unfiltered) { // detect conclusions that are merely instances of other formulas proven in lower or equal amounts of steps
 											bool search = true;
 											for (const pair<const size_t, tbb::concurrent_map<uint32_t, tbb::concurrent_map<size_t, string>>>& p_ : topList)
 												if (search && p_.first <= symConLen) {
@@ -3524,7 +3524,7 @@ void DlProofEnumerator::extractConclusions(ExtractionMethod method, uint32_t ext
 		size_t maxSymConNumLen = FctHelper::digitsNum_uint64(maxSymConLen);
 
 		// 3. Print relevant results to file.
-		filesystem::path file = filesystem::u8path(config ? effectiveDataLocation + *config : effectiveDataLocation + "top" + (extractAmount == UINT32_MAX ? "" : to_string(counter)) + "SmallestConclusions_" + to_string(limits.empty() ? 0 : limits.front()) + "to" + to_string(limits.empty() ? 0 : limits.back()) + "Steps" + (!useUnfilteredFiles || (redundantSchemaRemoval && limits.front() == 1) ? "" : string("-") + (redundantSchemaRemoval ? "partially-" : "un") + "filtered" + to_string(unfiltered) + "+") + ".txt");
+		filesystem::path file = filesystem::u8path(config ? effectiveDataLocation + *config : effectiveDataLocation + "top" + (extractAmount == UINT32_MAX ? "" : to_string(counter)) + "SmallestConclusions_" + to_string(limits.empty() ? 0 : limits.front()) + "to" + to_string(limits.empty() ? 0 : limits.back()) + "Steps" + ((!useUnfilteredFiles && !forceRedundantSchemaRemoval) || (redundantSchemaRemoval && limits.front() == 1) ? (forceRedundantSchemaRemoval ? "-filtered" : "") : string("-") + (redundantSchemaRemoval ? "partially-" : "un") + "filtered" + (forceRedundantSchemaRemoval ? "" : to_string(unfiltered) + "+")) + ".txt");
 		string::size_type bytes = 0;
 		while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
 			cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;

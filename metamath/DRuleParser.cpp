@@ -1476,7 +1476,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	vector<AxiomInfo> refBase(2, axBase[0]); // two slots to be used by extra conclusions
 	out_abstractDProofConclusions = vector<shared_ptr<DlFormula>>(inOut_abstractDProof.size());
 	vector<shared_ptr<DlFormula>> helperRulesConclusions(helperRules.size());
-	set<size_t> indexEvalSet; // to avoid duplicate evaluation indices in case lower indices use higher indices
+	set<size_t> registered; // to avoid duplicate evaluation indices in case lower indices use higher indices
 	vector<size_t> indexEvalSequence;
 	auto parse = [&](const string& rule, size_t i, const auto& me) -> shared_ptr<DlFormula> {
 		vector<DProofInfo> rawParseData;
@@ -1499,9 +1499,9 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
 				if (!f) // still need to parse rule at 'num'?
 					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
-				if (optOut_indexEvalSequence && !indexEvalSet.count(i)) {
+				if (optOut_indexEvalSequence && !registered.count(i)) {
 					indexEvalSequence.push_back(i);
-					indexEvalSet.emplace(i);
+					registered.emplace(i);
 				}
 				return f;
 			} else if (rule[0] == 'N') { // N-rule with no axioms, one reference => direct build
@@ -1510,9 +1510,9 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
 				if (!f) // still need to parse rule at 'num'?
 					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
-				if (optOut_indexEvalSequence && !indexEvalSet.count(i)) {
+				if (optOut_indexEvalSequence && !registered.count(i)) {
 					indexEvalSequence.push_back(i);
-					indexEvalSet.emplace(i);
+					registered.emplace(i);
 				}
 				return make_shared<DlFormula>(_nece(), vector<shared_ptr<DlFormula>> { f });
 			} else {
@@ -1565,9 +1565,9 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				}
 			}
 		}
-		if (optOut_indexEvalSequence && !indexEvalSet.count(i)) {
+		if (optOut_indexEvalSequence && !registered.count(i)) {
 			indexEvalSequence.push_back(i);
-			indexEvalSet.emplace(i);
+			registered.emplace(i);
 		}
 		return get<0>(rawParseData.back().second).back();
 	};
@@ -2223,11 +2223,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 	// 6. Rebuild 'indexEvalSequence' (if some rules changed).
 	if (modified) {
 		vector<size_t> newIndexEvalSequence;
-		set<size_t> registered;
+		set<size_t> registered; // to avoid duplicate evaluation indices in case lower indices use higher indices
 		set<size_t> explored;
 
 		// Similar to 'auto parse' in DRuleParser::parseAbstractDProof(), but everything is parsed already.
-		// Additionally, need to avoid duplicate registration of evaluation indices, which here could occur due to non-orderliness of the input.
 		auto explore = [&](const string& rule, size_t i, const auto& me) -> void {
 			vector<DProofInfo> rawParseData;
 			string::size_type pos = rule.find('[');
