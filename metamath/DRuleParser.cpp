@@ -20,6 +20,13 @@ using namespace xamidi::logic;
 namespace xamidi {
 namespace metamath {
 
+namespace {
+inline string myTime() {
+	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	return strtok(ctime(&time), "\n");
+}
+}
+
 vector<string> DRuleParser::readFromMmsolitaireFile(const string& file, vector<string>* optOut_dProofNamesInFile, bool debug) {
 	vector<string> dProofsInFile;
 	chrono::time_point<chrono::steady_clock> startTime;
@@ -2024,7 +2031,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		iota(allIndices.begin(), allIndices.end(), 0);
 		vector<size_t> fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions);
 		//#cout << "fundamentalLengths = " << FctHelper::vectorString(fundamentalLengths) << endl;
-		cout << "[Proof compression (rule search), round " << compressionRound << "] Started. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << (concurrentDRuleSearch ? " Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for D-rule replacement search." : "") << endl;
+		chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Started. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << (concurrentDRuleSearch ? " Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for D-rule replacement search." : "") << endl;
 
 		// 3. Group elements based on fundamental lengths.
 		map<size_t, vector<size_t>> indicesByLen;
@@ -2216,7 +2224,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			}
 		}
 
-		cout << "[Proof compression (rule search), round " << compressionRound << "] Complete. Applied " << newImprovements << " shortening replacement" << (newImprovements == 1 ? "" : "s") << "." << endl;
+		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << ". Applied " << newImprovements << " shortening replacement" << (newImprovements == 1 ? "" : "s") << "." << endl;
 		compressionRound++;
 	} while (newImprovements);
 
