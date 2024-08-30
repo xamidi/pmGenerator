@@ -2391,12 +2391,9 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 				startTime = chrono::steady_clock::now();
 			map<string, size_t, cmpStringGrow> formulaAmounts;
 			set<size_t> duplicateIndices;
-			size_t duplicateCounter = 0;
 			for (size_t i = 0; i < filterForTheorems->size(); i++)
-				if (formulaAmounts[DlCore::toPolishNotation_noRename((*filterForTheorems)[i].refinedAxiom)]++) {
-					duplicateCounter++;
+				if (formulaAmounts[DlCore::toPolishNotation_noRename((*filterForTheorems)[i].refinedAxiom)]++)
 					duplicateIndices.emplace(i);
-				}
 			if (!duplicateIndices.empty()) {
 				for (size_t i = 0; i < filterForTheorems->size(); i++)
 					if (!duplicateIndices.count(i))
