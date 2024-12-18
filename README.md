@@ -83,7 +83,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
-      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-z] [-y] [-f] [-o <output file>] [-d]
+      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-y] [-f] [-o <output file>] [-d]
          Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
            -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
            -j: join common subproofs together when they are used at least a given amount of times ; default: 2
@@ -95,18 +95,20 @@ Some more – and very special – proof systems are illustrated [further down b
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
            -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
            -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-z'
+           -w: read input without conclusions given
            -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions
            -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic solution procedure)
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
-      --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-f] [-o <output file>] [-d]
+      --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-v] [-f] [-o <output file>] [-d]
          Break down proof summary (as by '--parse [...] -s') into primitive steps ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
            -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
            -t: obtain proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to obtain a proof for each conclusion ; default: final theorem only
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
            -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
            -w: wrap results
+           -v: read input without conclusions given
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
