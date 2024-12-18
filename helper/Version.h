@@ -11,8 +11,8 @@
 #define TOOL_REPOSITORY "https://github.com/xamidi/pmGenerator"
 #define TOOL_VERSION_MAJOR 1
 #define TOOL_VERSION_MINOR 2
-#define TOOL_VERSION_PATCH 1
-#define TOOL_VERSION_SPEC "1.2.1"
+#define TOOL_VERSION_PATCH 2
+#define TOOL_VERSION_SPEC "1.2.2"
 #define TOOL_VERSION_BRANCH "master"
 
 #define BUILD_YEAR \
