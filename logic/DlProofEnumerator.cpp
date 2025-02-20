@@ -1590,9 +1590,10 @@ void DlProofEnumerator::printGenerationExpenditures(bool redundantSchemaRemoval,
 		}
 	} else
 		remCounts = removalCounts();
+	bool hasRemovalCounts = !remCounts.empty();
 
 	// 3. Print cardinalities of proof collections.
-	unsigned maxKeyLen =  FctHelper::digitsNum_uint32(max(allRepresentativeCounts.rbegin()->first, remCounts.rbegin()->first) + c), maxValLen = 0;
+	unsigned maxKeyLen =  FctHelper::digitsNum_uint32(max(allRepresentativeCounts.rbegin()->first, hasRemovalCounts ? remCounts.rbegin()->first : 1) + c), maxValLen = 0;
 	for (const pair<const uint32_t, uint64_t>& p : allRepresentativeCounts) {
 		unsigned valLen = FctHelper::digitsNum_uint64(p.second);
 		if (valLen > maxValLen)
@@ -1618,7 +1619,7 @@ void DlProofEnumerator::printGenerationExpenditures(bool redundantSchemaRemoval,
 
 	// 5. Print next estimated removal count.
 	uint64_t removalCount;
-	uint32_t wordLengthLimit = remCounts.rbegin()->first + c;
+	uint32_t wordLengthLimit = (hasRemovalCounts ? remCounts.rbegin()->first : 1) + c;
 	unsigned len = FctHelper::digitsNum_uint32(wordLengthLimit);
 	cout << string(maxKeyLen - len, ' ') << wordLengthLimit << " : ";
 	determineCountingLimit(wordLengthLimit, removalCount, remCounts, false, nullptr, true);
