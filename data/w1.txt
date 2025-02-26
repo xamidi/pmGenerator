@@ -7,8 +7,8 @@
 % Full summary: pmGenerator --transform data/w1.txt -f -n -t . -j 1
 % Step counting: pmGenerator --transform data/w1.txt -f -n -t . -p -2 -d
 %                pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
-% Compact (1008 bytes): pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCNpCCqrpCrp,CCCCpCCNpqrstCst,CCCpqrCqr,CpCCNqCCNrsqCrq,CCpqCpq,CCCCNNpCpNpqrCpr,CCNpCqpCrCCNsCpsCqs,CCCCNpCqpprCqr
-% Concrete (2982 bytes): pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
+% Compact (898 bytes): pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCNpCCqrpCrp,CCCCpCCNpqrstCst,CCCpqrCqr,CpCCNqCCNrsqCrq,CCCCNNpCpNpqrCpr,CCNpCqpCrCCNsCpsCqs,CCCCNpCqpprCqr
+% Concrete (2288 bytes): pmGenerator --transform data/w1.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
 
     CCpCCNpqrCsCCNtCrtCpt = 1
 [0] CpCCNqCCCNrCsrCtrqCCtCCNtusq = D11
@@ -21,42 +21,39 @@
 [7] CCCNCpCCNpqrstCuCCNvCtvCCpCCNpqrv = D[5]1
 [8] CCCNpqrCsCCNtCrtCpt = D[6]1
 [9] CpCCNqCrqCCNrCCCNsCCCNtCutCvtsCCvCCNvwusrq = D1DD[7][0]1
-[10] CpCCNqCrqCrq = D1D[6][4]
-[11] CpCCNqCCNrsqCrq = D1DDD[8]11[2]
-[12] CpCqCCNrCprCCsCCNstur = D[5][7]
+[10] CpCCqrCNpr = DDD[8]11[2]
+[11] CpCCNqCrqCrq = D1D[6][4]
+[12] CpCCNqCCNrsqCrq = D1[10]
+[13] CpCqCCNrCprCCsCCNstur = D[5][7]
 
 % Axiom 1 by Frege (CpCqp), i.e. 0→(1→0) ; 33 steps
-[13] CpCqp = D[6][5]
+[14] CpCqp = D[6][5]
 
-[14] CCpqCCNpCCCNrCCCNsCtsCusrCCuCCNuvtrpq = D[3][9]
-[15] CpCqCCNrCprCsr = D[5][8]
-[16] CCpqCpq = D[3][10]
-[17] CCCNpqrCpr = D[3][11]
-[18] CCCCNpCqpCCrCCNrstpuCqu = D[3]D1[12]
-[19] CpCqCCNrCCsprCtr = D[6][15]
+[15] CCpqCCNpCCCNrCCCNsCtsCusrCCuCCNuvtrpq = D[3][9]
+[16] CCpqCpq = D[3][11]
+[17] CCCNpqrCpr = D[3][12]
 
 % Axiom 3 by Łukasiewicz (CpCNpq), i.e. 0→(¬0→1) ; 87 steps
-[20] CpCNpq = D[17][16]
+[18] CpCNpq = D[17][16]
 
-[21] CCCCNNpCpNpqrCpr = D[3]D1D[5]D[5]D[4]D[4][6]
-[22] CCNpCqpCrCCNsCpsCqs = DD[3]D[8]DD[9]1[9][8]
-[23] CpCCpNpq = D[21][6]
-[24] CCCCNpCqpCrpsCCNqCrqs = D[3]D1[22]
-[25] CCCCNpCqpCrpsCCrqs = D[3]D1D[6][22]
+[19] CCCCNNpCpNpqrCpr = D[3]D1D[5]D[5]D[4]D[4][6]
+[20] CCNpCqpCrCCNsCpsCqs = DD[3]D[8]DD[9]1[9][8]
+[21] CpCCpNpq = D[19][6]
+[22] CCCCNpCqpCrpsCCrqs = D[3]D1D[6][20]
 
 % Identity principle (Cpp), i.e. 0→0 ; 143 steps
-[26] Cpp = DD[11]1[23]
+[23] Cpp = DD[12]1[21]
 
 % Axiom 1 by Łukasiewicz (CCpqCCqrCpr), i.e. (0→1)→((1→2)→(0→2)) ; 151 steps
-[27] CCpqCCqrCpr = D[6]D[24][6]
+[24] CCpqCCqrCpr = D[6]DD[3]D1[20][6]
 
-[28] CCCCNpCqpprCqr = D[3]D1D[18]D[4]D[3]D[12]D[21]D[3]D[8][13]
+[25] CCCCNpCqpprCqr = D[3]D1DD[3]D1[13]D[4]D[3]D[13]D[19]D[3]D[8][14]
 
 % Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 323 steps
-[29] CCNppp = D[3]D[28][16]
+[26] CCNppp = D[3]D[25][16]
 
-% Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 343 steps
-[30] CCNpNqCqp = DDD1D[25]D[3]D[19][23]1[11]
+% Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 341 steps
+[27] CCNpNqCqp = DDD1D[22]D[3]DD[6][13][21]1[12]
 
-% Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 1763 steps
-[31] CCpCqrCCpqCpr = DD[25]D[3]D1D[28]D[6]D[5]D[6]D[4]D[3]D[15][2]DD[3]D[8]DD[3]D1DD[7][2]1[27]DDDD1D[6]D[24]D[3]D[19][20]1D[18]D[4]DD[3]D1D[3]DD[6][12]D[6][13][16]DD[3]DD[1]1DD[3]D[8]D[3]D1DD[3]D1[15]DDD[8]D[3]D[8]DD[10]1D[17][14]1[0]D[17]1D[5]D[5]DD[3]D1DD[3]D[7]DD[3]D1D[14]1[6]1[6]
+% Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 1071 steps
+[28] CCpCqrCCpqCpr = DDD[8]D[15]D[22]D[3]D1D[25]D[6]D[5]D[6]D[4]D[3]D[13][2]1DD[3]D1DDD[0]1DD[3]D[8]D[3]D1D[6]D[6]DDD[8]D[3]D[8]DD[11]1D[17][15]1[0]D[6][10]1D[5]D[5]DD[3]D1DD[3]D[7]DD[3]D1D[15]1[6]1[6]
