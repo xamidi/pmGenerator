@@ -972,7 +972,7 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 	//#if (optOut_requiredIntermediateResults) cout << "requiredIntermediateResults = " << FctHelper::vectorStringF(*optOut_requiredIntermediateResults, [](const DRuleParser::AxiomInfo& ax) { return DlCore::formulaRepresentation_traverse(ax.refinedAxiom) + "[" + ax.name + "]"; }) << endl;
 }
 
-void DlProofEnumerator::recombineProofSummary(const string& input, bool useInputFile, const string* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, size_t maxLengthToKeepProof, bool normalPolishNotation, bool printInfixUnicode, const string* filterForTheorems, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, bool removeDuplicateConclusions, bool compress, bool noInputConclusions, const string* outputFile, bool debug, bool compress_concurrentDRuleSearch) {
+void DlProofEnumerator::recombineProofSummary(const string& input, bool useInputFile, const string* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, size_t maxLengthToKeepProof, bool normalPolishNotation, bool printInfixUnicode, const string* filterForTheorems, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t maxLengthToComputeDProof, bool removeDuplicateConclusions, bool compress, bool noInputConclusions, const string* outputFile, bool debug, bool compress_concurrentDRuleSearch, size_t compress_modificationRange, bool compress_keepMaxRules, const string* compress_vaultFile, bool compress_sureSaves, bool compress_skipFirstPrep) {
 	vector<DRuleParser::AxiomInfo> customAxioms;
 	vector<string> abstractDProof_input;
 	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
@@ -991,8 +991,11 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 		}
 	};
 	vector<DRuleParser::AxiomInfo> filterForTheorems_axInfo;
+	bool targetEverything = false;
 	if (filterForTheorems) {
-		if (*filterForTheorems != ".")
+		if (*filterForTheorems == "_")
+			targetEverything = true;
+		else if (*filterForTheorems != ".")
 			toAxiomInfoVector(*filterForTheorems, filterForTheorems_axInfo);
 		else if (noInputConclusions) { // ".": target theorems are all conclusions from the input
 			vector<shared_ptr<DlFormula>> conclusions;
@@ -1007,7 +1010,7 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 	if (conclusionsWithHelperProofs)
 		toAxiomInfoVector(*conclusionsWithHelperProofs, conclusionsWithHelperProofs_axInfo);
 	vector<shared_ptr<DlFormula>> conclusions;
-	const vector<string> abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof_input, conclusions, &customAxioms, filterForTheorems ? *filterForTheorems != "." || noInputConclusions ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, conclusionsWithHelperProofs ? &conclusionsWithHelperProofs_axInfo : nullptr, minUseAmountToCreateHelperProof, noInputConclusions ? nullptr : &requiredIntermediateResults, debug, maxLengthToKeepProof, abstractProofStrings, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof, removeDuplicateConclusions, compress, compress_concurrentDRuleSearch);
+	const vector<string> abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof_input, conclusions, &customAxioms, targetEverything, filterForTheorems && !targetEverything ? *filterForTheorems != "." || noInputConclusions ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, conclusionsWithHelperProofs ? &conclusionsWithHelperProofs_axInfo : nullptr, minUseAmountToCreateHelperProof, noInputConclusions ? nullptr : &requiredIntermediateResults, debug, maxLengthToKeepProof, abstractProofStrings, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof, removeDuplicateConclusions, compress, compress_concurrentDRuleSearch, compress_modificationRange, compress_keepMaxRules, compress_vaultFile, compress_sureSaves, compress_skipFirstPrep);
 
 	auto print = [&](ostream& mout) -> string::size_type {
 		auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
@@ -1066,8 +1069,11 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 		}
 	};
 	vector<DRuleParser::AxiomInfo> filterForTheorems_axInfo;
+	bool targetEverything = false;
 	if (filterForTheorems) {
-		if (*filterForTheorems != ".")
+		if (*filterForTheorems == "_")
+			targetEverything = true;
+		else if (*filterForTheorems != ".")
 			toAxiomInfoVector(*filterForTheorems, filterForTheorems_axInfo);
 		else if (noInputConclusions) { // ".": target theorems are all conclusions from the input
 			vector<shared_ptr<DlFormula>> conclusions;
@@ -1078,7 +1084,7 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 			//#cout << "filterForTheorems_axInfo = " << FctHelper::vectorStringF(filterForTheorems_axInfo, [](const DRuleParser::AxiomInfo a) { return a.name; }) << endl;
 		}
 	}
-	const vector<string> dProofs = DRuleParser::unfoldAbstractDProof(abstractDProof, &customAxioms, filterForTheorems ? *filterForTheorems != "." || noInputConclusions ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, noInputConclusions ? nullptr : &requiredIntermediateResults, debug, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof);
+	const vector<string> dProofs = DRuleParser::unfoldAbstractDProof(abstractDProof, &customAxioms, targetEverything, filterForTheorems && !targetEverything ? *filterForTheorems != "." || noInputConclusions ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, noInputConclusions ? nullptr : &requiredIntermediateResults, debug, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof);
 
 	auto print = [&](ostream& mout) -> string::size_type {
 		string::size_type bytes = 0;

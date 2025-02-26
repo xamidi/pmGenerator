@@ -267,7 +267,7 @@ b, strong {
 </head>
 <body><div class="markdown-container ltr"><div id="readme"><article class="container-lg"><img src="icon/icon-readme.png" alt="icon" style="float: left; padding-right: 20px; margin-top: -24px;">
 <h1 id="xamidipmgenerator">@xamidi/pmGenerator</h1>
-<p><a href="https://doi.org/10.5281/zenodo.10931360"><img src="svg/zenodo.10931360.svg" alt="DOI"></a></p>
+<p><a href="https://doi.org/10.5281/zenodo.10931360"><img src="svg/zenodo.10931360.svg" alt="DOI zenodo.10931360"></a></p>
 <p>This tool can collect exhaustive sets of <a href="https://en.wikipedia.org/wiki/Condensed_detachment">condensed detachment</a> proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”</a> collection.<br>The D-rule combines <a href="https://en.wikipedia.org/wiki/Unification_(computer_science)">unification</a> with <a href="https://en.wikipedia.org/wiki/Modus_ponens">modus ponens</a> (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus <em>pmGenerator</em> covers all <a href="https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence">syntactic consequences</a> within <a href="https://en.wikipedia.org/wiki/Hilbert_system">Hilbert systems</a> based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.<br>There is a <a href="https://github.com/xamidi/pmGenerator/discussions">discussion forum</a> for questions, ideas, challenges, and related information.</p>
 <p>Eligible for high-performance computing. If you have access to a powerful computer, you may use <em>pmGenerator</em> to further contribute to our knowledge regarding the <a href="https://en.wikipedia.org/wiki/Proof_complexity">complexity of proof systems</a>. Progress that has already been made is exemplarily shown below.</p>
 <h6 id="freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info">Frege's calculus simplified by Łukasiewicz (<a href="svg/frege-1.svg">CpCqp</a>,<a href="svg/frege-2.svg">CCpCqrCCpqCpr</a>,<a href="svg/lukasiewicz-3.svg">CCNpNqCqp</a>) &nbsp;<small>[<a href="data/top1000SmallestConclusions_1to39Steps.txt">top1000</a>] [<a href="data/cardinalities.txt">cardinalities</a>] [<a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">db</a>] [<a href="data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def">customization info</a>]</small></h6>
@@ -458,28 +458,33 @@ Composable:
        -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -o: redirect the result's output to the specified file
        -d: print debug information
-  --transform &lt;string&gt; [-s &lt;string&gt;] [-j &lt;limit or -1&gt;] [-p &lt;limit or -1&gt;] [-n] [-u] [-t &lt;string&gt;] [-e] [-i &lt;limit or -1&gt;] [-l &lt;limit or -1&gt;] [-b] [-w] [-z] [-y] [-f] [-o &lt;output file&gt;] [-d]
+  --transform &lt;string&gt; [-s &lt;string&gt;] [-j &lt;limit or -1&gt;] [-p &lt;limit or -1&gt;] [-n] [-u] [-t &lt;string&gt;] [-e] [-i &lt;limit or -1&gt;] [-l &lt;limit or -1&gt;] [-b] [-w] [-z] [-x &lt;limit&gt;] [-y] [-k] [-v &lt;file&gt;] [-h] [-q] [-f] [-o &lt;output file&gt;] [-d]
      Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
        -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
        -j: join common subproofs together when they are used at least a given amount of times ; default: 2
        -p: only keep subproofs with primitive lengths not exceeding the given limit ; default: -1
        -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
        -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)
-       -t: only transform proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to keep all conclusions ; default: final theorem only
+       -t: only transform proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; '-t .': all given conclusions ; '-t _': all used conclusions ; default: final theorem only
        -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references
        -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
        -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
        -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-z'
        -w: read input without conclusions given
        -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions
-       -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic solution procedure)
+       -x: proof compression with extended modification range; before each round generate relative abstract proofs (D-rules only) with up to &lt;range&gt; steps, potentially improving rules with new formulas ; default: 0
+       -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic procedure) ; not affecting exhaustive generations via '-x', which remain nondeterministic
+       -k: store maximum-size proofs generated via 'x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly
+       -v: coordinate iteration phases for maximum-size proofs generated via 'x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified
+       -h: save raw intermediate results in files before each proof compression round (and after productive rounds) ; after each preparation phase (exhaustive generation) in case '-x' is specified
+       -q: skip first round preparation for '-x' ; useful to continue working on intermediate results produced by an aborted computation using '-h'
        -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
        -o: redirect the result's output to the specified file
        -d: print debug information
   --unfold &lt;string&gt; [-n] [-t &lt;string&gt;] [-i &lt;limit or -1&gt;] [-l &lt;limit or -1&gt;] [-w] [-v] [-f] [-o &lt;output file&gt;] [-d]
      Break down proof summary (as by '--parse [...] -s') into primitive steps ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
        -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
-       -t: obtain proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; "." to obtain a proof for each conclusion ; default: final theorem only
+       -t: obtain proofs of specified theorems (proven by subsequences of the input), given by a comma-separated string ; '-t .': all given conclusions ; '-t _': all used conclusions ; default: final theorem only
        -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
        -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
        -w: wrap results
@@ -492,8 +497,8 @@ Composable:
        -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
        -s: search for schemas of the given formulas
        -w: search whole collections of schemas (i.e. enable multiple results per term) ; entails '-s'
-       -t: search for formulas of the given schemas (allows multiple results per term) ; used only when '-s' unspecified
-       -p: search proofs (rather than conclusions) ; used only when '-n', '-s' and '-t' unspecified
+       -t: search for formulas of the given schemas (allows multiple results per term) ; used only when '-s' and '-w' unspecified
+       -p: search proofs (rather than conclusions) ; used only when '-n', '-s', '-w' and '-t' unspecified
        -f: search terms are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
        -d: print debug information
   --extract [-t &lt;limit or -1&gt;] [-o &lt;output file&gt;] [-s] [-z] [-# &lt;amount up to 35&gt;] [-h &lt;string&gt;] [-l &lt;limit or -1&gt;] [-k &lt;limit or -1&gt;] [-f] [-d]
@@ -551,6 +556,7 @@ pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLN
 pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d
 pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
 pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
+pmGenerator --transform "CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111" -n -w -t _
 pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt
 pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n
 pmGenerator --variate 1 -s --extract -t 1000 -s -d
