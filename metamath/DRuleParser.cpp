@@ -2999,10 +2999,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 
 			// 6.1 Obtain axiom instances.
 			map<size_t, size_t> axiomInstances;
+			mutex mtx_axiomInstances;
 			tbb::parallel_for(size_t(0), axioms.size(), [&](size_t i) {
 				for (size_t j = 0; j < numRules; j++)
-					if (DlCore::isSchemaOf(axioms[i].refinedAxiom, j < retractedDProof.size() ? abstractDProofConclusions[j] : helperRulesConclusions[j - retractedDProof.size()]))
+					if (DlCore::isSchemaOf(axioms[i].refinedAxiom, j < retractedDProof.size() ? abstractDProofConclusions[j] : helperRulesConclusions[j - retractedDProof.size()])) {
+						lock_guard<mutex> lock(mtx_axiomInstances);
 						axiomInstances.emplace(j, i + 1);
+					}
 			});
 			if (!axiomInstances.empty()) {
 				foundImprovements = true;
