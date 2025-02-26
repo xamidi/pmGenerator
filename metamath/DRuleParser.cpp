@@ -1844,7 +1844,6 @@ vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractD
 }
 
 void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, vector<size_t>& targetIndices, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, bool concurrentDRuleSearch, size_t modificationRange, bool keepMaxRules, const string* vaultFile, bool sureSaves, bool skipFirstPrep) {
-	constexpr bool lowMemoryCollection = true; //### TODO
 	if (modificationRange >= 3 && UINT16_MAX < modificationRange) {
 		cerr << "[Proof compression] ERROR Requested D-proofs of lengths up to " << modificationRange << " (exceeding 2^16 = " << UINT16_MAX + 1 << " required indices). Aborting." << endl;
 		exit(0);
@@ -1970,8 +1969,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			const vector<tbb::concurrent_vector<AbstractDProof>>& extraData;
 			atomic<bool> active = true;
 			array<int64_t, 2> dRule; // i >= 0: proofElements[i], -1 <= i <= -35: axioms[-i - 1], i <= -64 && (-i & 64): extraData[(-i >> 7) & UINT16_MAX][-i >> 23] (i.e. up to 2^(64-1-23)-1 = 2^40-1 = 1099511627775 entries for D-proofs of each length)
-			string sResult; // used in case lowMemoryCollection
-			shared_ptr<DlFormula> tResult; // used in case !lowMemoryCollection
+			string sResult;
 			size_t fundamentalLength;
 			int64_t improvedOriginal = -1;
 			int64_t improvedByExtra = 0;
@@ -1981,40 +1979,19 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				sResult = f;
 				fundamentalLength = funLen;
 			}
-			AbstractDProof(const vector<tbb::concurrent_vector<AbstractDProof>>& extraData, const array<int64_t, 2>& r, const shared_ptr<DlFormula>& f, size_t funLen) :
-					extraData(extraData) {
-				dRule = r;
-				tResult = f;
-				fundamentalLength = funLen;
-			}
 			bool clearIfInactive() { // to free memory without removing the element in order to not touch indices
-				if (!active) {
-					tResult.reset();
-					return true;
-				}
-				return false;
-			}
-			bool clearIfInactive_lowMem() { // to free memory without removing the element in order to not touch indices
 				if (!active) {
 					sResult.clear();
 					return true;
 				}
 				return false;
 			}
-			string formulaString_numVars(bool lowMemoryCollection) const {
+			string formulaString() const {
 				if (!active)
 					return "[inactive]";
-				return lowMemoryCollection ? sResult : DlCore::toPolishNotation_numVars(tResult);
-			}
-			string formulaString(bool lowMemoryCollection) const {
-				if (!active)
-					return "[inactive]";
-				if (lowMemoryCollection) {
-					shared_ptr<DlFormula> _f;
-					DlCore::fromPolishNotation_noRename(_f, sResult);
-					return DlCore::toPolishNotation(_f);
-				} else
-					return DlCore::toPolishNotation(tResult);
+				shared_ptr<DlFormula> _f;
+				DlCore::fromPolishNotation_noRename(_f, sResult);
+				return DlCore::toPolishNotation(_f);
 			}
 			string toString() const override {
 				stringstream ss;
@@ -2031,11 +2008,11 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 				return ss.str();
 			}
-			string toConclusionString(bool lowMemoryCollection) const {
-				return toString() + (active ? " = " + formulaString(lowMemoryCollection) : " (inactive)");
+			string toConclusionString() const {
+				return toString() + (active ? " = " + formulaString() : " (inactive)");
 			}
-			string toDetailedString(bool lowMemoryCollection) const {
-				return toString() + (active ? " = " + formulaString(lowMemoryCollection) + " (" : " (inactive; ") + "fundamental length " + to_string(fundamentalLength) + ")";
+			string toDetailedString() const {
+				return toString() + (active ? " = " + formulaString() + " (" : " (inactive; ") + "fundamental length " + to_string(fundamentalLength) + ")";
 			}
 		};
 		vector<tbb::concurrent_vector<AbstractDProof>> extraData; // relative abstract D-proofs of length index
@@ -2393,17 +2370,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				map<string, shared_ptr<DlFormula>> substitutions;
 				if (DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
 					consequent = DlCore::substitute(conditional_children[1], substitutions);
-					if (lowMemoryCollection)
-						consequent_isomorph = DlCore::toPolishNotation_numVars(consequent);
-					else { // Obtain unique variables.
-						DlCore::fromPolishNotation_noRename(consequent, consequent_isomorph = DlCore::toPolishNotation_numVars(consequent));
-						vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
-						map<string, shared_ptr<DlFormula>> substitutions;
-						string varId = to_string(lenA) + "_" + to_string(iA) + "_" + to_string(lenB) + "_" + to_string(iB) + "_";
-						for (const string& v : vars)
-							substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(varId + v)));
-						consequent = DlCore::substitute(consequent, substitutions);
-					}
+					consequent_isomorph = DlCore::toPolishNotation_numVars(consequent);
 					// NOTE: In the final iteration, the only potentially useful new proofs (which thus shall be memorized) are those towards known intermediate conclusions, except in
 					//       cases where a longer relative abstract proof with lower fundamental length could later be used as an improving replacement for a subproof towards a new formula.
 					//       However, only storing proofs towards known intermediate conclusions here effectively enables the user to run with the next higher modification range (i.e. increased by two)
@@ -2458,10 +2425,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					obtainedConclusions.find(wAcc, consequent_isomorph);
 					wAcc->second = obtainedConclusionVal; // update 'obtainedConclusions'
 				}
-				if (lowMemoryCollection)
-					output.emplace_back(extraData, dRule, consequent_isomorph, funLen);
-				else
-					output.emplace_back(extraData, dRule, consequent, funLen);
+				output.emplace_back(extraData, dRule, consequent_isomorph, funLen);
 				if (improvedFor >= 0) {
 					output.back().improvedOriginal = improvedFor;
 					stringstream ss;
@@ -2495,7 +2459,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									if (l < 0 && (-l & 64)) {
 										const AbstractDProof& proof = extraData[(-l >> 7) & UINT16_MAX][-l >> 23];
 										fL = proof.fundamentalLength;
-										return lowMemoryCollection ? [&]() { shared_ptr<DlFormula> f; DlCore::fromPolishNotation_noRename(f, proof.sResult); return f; }() : proof.tResult;
+										return [&]() { shared_ptr<DlFormula> f; DlCore::fromPolishNotation_noRename(f, proof.sResult); return f; }();
 									} else {
 										fL = i < numRules ? fundamentalLengths[i] : 1;
 										return proofElements[i].result;
@@ -2544,8 +2508,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 								shared_ptr<DlFormula> consequent;
 								string consequent_isomorph;
 								if (isCandidate(antecedent, conditional_children, lenA, iA, lenB, iB, funLen, consequent, consequent_isomorph, finalLoop)) {
-									if (vault.at(p.first)[i].second != (lowMemoryCollection ? consequent_isomorph : DlCore::toPolishNotation_numVars(consequent))) {
-										cerr << "[Proof compression] ERROR Mismatching stored vault entry " << vault.at(p.first)[i].first << " = " << vault.at(p.first)[i].second << " != " << (lowMemoryCollection ? consequent_isomorph : DlCore::toPolishNotation_numVars(consequent)) << " = D(" << conditional_str << ")(" << antecedent_str << "). Aborting." << endl;
+									if (vault.at(p.first)[i].second != consequent_isomorph) {
+										cerr << "[Proof compression] ERROR Mismatching stored vault entry " << vault.at(p.first)[i].first << " = " << vault.at(p.first)[i].second << " != " << consequent_isomorph << " = D(" << conditional_str << ")(" << antecedent_str << "). Aborting." << endl;
 										exit(0);
 									}
 									array<int64_t, 2> dRule { conditional_loc, antecedent_loc };
@@ -2622,7 +2586,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									if (!eB.active)
 										return;
 									shared_ptr<DlFormula> _f;
-									const shared_ptr<DlFormula>& conditional = lowMemoryCollection ? [&]() { DlCore::fromPolishNotation_noRename(_f, eB.sResult); return _f; }() : eB.tResult;
+									const shared_ptr<DlFormula>& conditional = [&]() { DlCore::fromPolishNotation_noRename(_f, eB.sResult); return _f; }();
 									const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
 									if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
 										return; // 'conditional' is no conditional => skip already
@@ -2659,7 +2623,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 										if (addFunLen_overflow(eA.fundamentalLength, funLen_known(eB, iB), &funLen))
 											continue; // skip results with fundamental lengths above SIZE_MAX
 										shared_ptr<DlFormula> _f;
-										const shared_ptr<DlFormula>& antecedent = lowMemoryCollection ? [&]() { DlCore::fromPolishNotation_noRename(_f, eA.sResult); return _f; }() : eA.tResult;
+										const shared_ptr<DlFormula>& antecedent = [&]() { DlCore::fromPolishNotation_noRename(_f, eA.sResult); return _f; }();
 										shared_ptr<DlFormula> consequent;
 										string consequent_isomorph;
 										if (isCandidate(antecedent, conditional_children, lenA, iA, lenB, iB, funLen, consequent, consequent_isomorph, finalLoop)) {
@@ -2679,7 +2643,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									if (!eB.active)
 										return;
 									shared_ptr<DlFormula> _f;
-									const shared_ptr<DlFormula>& conditional = lowMemoryCollection ? [&]() { DlCore::fromPolishNotation_noRename(_f, eB.sResult); return _f; }() : eB.tResult;
+									const shared_ptr<DlFormula>& conditional = [&]() { DlCore::fromPolishNotation_noRename(_f, eB.sResult); return _f; }();
 									const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
 									if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
 										return; // 'conditional' is no conditional => skip already
@@ -2701,7 +2665,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 											_distinguishedFormula = DlCore::substitute(f, substitutions);
 											return _distinguishedFormula;
 										};
-										const shared_ptr<DlFormula>& antecedent = lowMemoryCollection ? distinguishVariables([&]() { DlCore::fromPolishNotation_noRename(_distinguishedFormula, eA.sResult); return _distinguishedFormula; }()) : (lenA == lenB && iA == iB ? distinguishVariables(eA.tResult) : eA.tResult);
+										const shared_ptr<DlFormula>& antecedent = distinguishVariables([&]() { DlCore::fromPolishNotation_noRename(_distinguishedFormula, eA.sResult); return _distinguishedFormula; }());
 										shared_ptr<DlFormula> consequent;
 										string consequent_isomorph;
 										if (isCandidate(antecedent, conditional_children, lenA, iA, lenB, iB, funLen, consequent, consequent_isomorph, finalLoop)) {
@@ -2724,22 +2688,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						if (!output.empty()) {
 							chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 							atomic<size_t> c = 0, d = 0;
-							if (lowMemoryCollection)
-								tbb::parallel_for_each(output.begin(), output.end(), [&](AbstractDProof& proof) {
-									if (!proof.sResult.empty()) {
-										if (proof.clearIfInactive_lowMem())
-											c++;
-									} else
-										d++;
-								});
-							else
-								tbb::parallel_for_each(output.begin(), output.end(), [&](AbstractDProof& proof) {
-									if (proof.tResult.get()) {
-										if (proof.clearIfInactive())
-											c++;
-									} else
-										d++;
-								});
+							tbb::parallel_for_each(output.begin(), output.end(), [&](AbstractDProof& proof) {
+								if (!proof.sResult.empty()) {
+									if (proof.clearIfInactive())
+										c++;
+								} else
+									d++;
+							});
 							cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to clear " << c << " of " << output.size() << " proof" << (output.size() == 1 ? "" : "s") << " from extraData[" << len << "], " << output.size() - c - d << " remain active. (" << d << " already clear and skipped)" << endl;
 						}
 					}
@@ -2779,7 +2734,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						}
 						improvements.emplace(i, location);
 						const AbstractDProof& proof = extraData[(-location >> 7) & UINT16_MAX][-location >> 23];
-						cout << "[Summary] Rule [" << i << "] (fundamental length " << fundamentalLengths[i] << ") improved by: " << proof.toDetailedString(lowMemoryCollection) << endl;
+						cout << "[Summary] Rule [" << i << "] (fundamental length " << fundamentalLengths[i] << ") improved by: " << proof.toDetailedString() << endl;
 						auto obtainBestVariantString = [&](const AbstractDProof& proof, const auto& me) -> string {
 							stringstream ss;
 							ss << "D";
@@ -2808,8 +2763,6 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 							size_t optimizedFunLen = measure(optimizedRule);
 							cout << "[Summary] Rule [" << i << "] " << string(24 + FctHelper::digitsNum_uint64(fundamentalLengths[i]), ' ') << "optimized: " << optimizedRule << " (fundamental length " << optimizedFunLen << ")" << endl;
 						}
-						if (proof.improvedByExtra)
-							cout << "[WARNING] Rule [" << i << "] improvement has proof.improvedByExtra = " << proof.improvedByExtra << endl; //### TODO Remove after testing.
 					}
 				}
 
@@ -2837,13 +2790,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									const AbstractDProof& current = extraData[(e >> 7) & UINT16_MAX][e >> 23];
 									int64_t best = e; // already negated
 									size_t minFunLen = measure(current.toString());
-									//#cout << "> Found funLen: " << minFunLen << " (of " << current.toConclusionString(lowMemoryCollection) << ") <initial>" << endl;
+									//#cout << "> Found funLen: " << minFunLen << " (of " << current.toConclusionString() << ") <initial>" << endl;
 									auto iterateImprovingExtras = [&](const AbstractDProof& p, const auto& me) -> const AbstractDProof& {
 										int64_t l = -p.improvedByExtra;
 										if (l) {
 											const AbstractDProof& next = extraData[(l >> 7) & UINT16_MAX][l >> 23];
 											size_t funLen = measure(next.toString());
-											//#cout << "> Found funLen: " << funLen << " (of " << next.toConclusionString(lowMemoryCollection) << ") <subsequent>" << endl;
+											//#cout << "> Found funLen: " << funLen << " (of " << next.toConclusionString() << ") <subsequent>" << endl;
 											if (funLen < minFunLen) {
 												best = l;
 												minFunLen = funLen;
@@ -2874,7 +2827,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						const AbstractDProof& candidate = extraData[(location >> 7) & UINT16_MAX][location >> 23];
 						size_t funLen_candidate = measure(candidate.toString());
 						stringstream ss1;
-						ss1 << "[Summary] Step: (" << index << ", " << dProof << " -> " << candidate.toConclusionString(lowMemoryCollection) << "), fundamental lengths (" << funLen << ", " << funLen_candidate << ")" << endl;
+						ss1 << "[Summary] Step: (" << index << ", " << dProof << " -> " << candidate.toConclusionString() << "), fundamental lengths (" << funLen << ", " << funLen_candidate << ")" << endl;
 						cout << ss1.str() << flush;
 						if (vaultOutput)
 							ss << ss1.str();
