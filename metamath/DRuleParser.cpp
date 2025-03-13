@@ -11,8 +11,6 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
 
-#include <cmath>
-#include <iostream>
 #include <numeric>
 
 using namespace std;

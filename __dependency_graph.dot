@@ -2,7 +2,7 @@ digraph {
 	sha2 -> "(iomanip)" [color=blue]
 	sha2 -> "(iostream)" [color=blue]
 	sha2 -> "(sstream)" [color=blue]
-	sha2 -> string [color=blue]
+	sha2 -> "(cstring)" [color=blue]
 	sha2 -> "(cstdint)" [color=red]
 	sha2 -> "(string)" [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\cryptography" {
@@ -20,7 +20,7 @@ digraph {
 		CfgGrammar
 	}
 	FctHelper -> "(iostream)" [color=blue]
-	FctHelper -> math [color=blue]
+	FctHelper -> "(cmath)" [color=blue]
 	FctHelper -> "(algorithm)" [color=red]
 	FctHelper -> "(array)" [color=red]
 	FctHelper -> "(charconv)" [color=red]
@@ -117,6 +117,7 @@ digraph {
 	DlProofEnumerator -> concurrent_vector [color=blue]
 	DlProofEnumerator -> parallel_for [color=blue]
 	DlProofEnumerator -> parallel_sort [color=blue]
+	DlProofEnumerator -> "(cmath)" [color=blue]
 	DlProofEnumerator -> "(cstdlib)" [color=blue]
 	DlProofEnumerator -> "(cstring)" [color=blue]
 	DlProofEnumerator -> "(numeric)" [color=blue]
@@ -159,9 +160,10 @@ digraph {
 	DRuleParser -> TreeNode [color=blue]
 	DRuleParser -> DlCore [color=blue]
 	DRuleParser -> DlFormula [color=blue]
+	DRuleParser -> DlProofEnumerator [color=blue]
 	DRuleParser -> "boost/algorithm/string" [color=blue]
+	DRuleParser -> concurrent_vector [color=blue]
 	DRuleParser -> parallel_for_each [color=blue]
-	DRuleParser -> "(iostream)" [color=blue]
 	DRuleParser -> "(numeric)" [color=blue]
 	DRuleParser -> "(cstddef)" [color=red]
 	DRuleParser -> "(map)" [color=red]

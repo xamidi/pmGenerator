@@ -15,6 +15,7 @@
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
 
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <numeric>
