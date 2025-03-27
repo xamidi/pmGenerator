@@ -59,7 +59,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -i: specify axioms by input file path (where a LF-separated string of axioms is stored), ignoring lines that are empty or starting with '%'\n"
 				"         -s: specify axioms by comma-separated string ; used only when '-i' unspecified ; default: \"C0C1.0,CC0C1.2CC0.1C0.2,CCN0N1C1.0\"\n"
 				"         -n: specify formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
-				"         -N: enable necessitation rule \"N\" for the given system with unlimited (-N 0) or limited (-N <positive amount>) consecutive necessitation steps allowed\n"
+				"         -N: enable necessitation rule \"N\" for the given system with unlimited (-N -1) or limited (-N <positive amount>) consecutive necessitation steps allowed\n"
 				"         -l: disable lazy N-rule parsing ; parse proofs Nα:Lβ despite knowing α:β (requires more time but less memory)\n"
 				"         -e: specify extracted system with the given identifier\n"
 				"         -d: default system ; ignore all other arguments except '-e'\n";
