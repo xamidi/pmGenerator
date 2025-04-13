@@ -1,8 +1,31 @@
-<img align="left" src="icon/icon-readme.png">
+<img align="left" src="icon/icon-readme.png" alt="icon">
 
 # @xamidi/pmGenerator
-[![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360)
+[![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
 
+<details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
+
+1. [Introduction](#introduction)
+   1. [Frege's calculus simplified by Łukasiewicz `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp)`](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info)
+2. [Navigation](#navigation)
+3. [Usage](#usage)
+   1. [Commands](#commands)
+   2. [Examples](#examples)
+4. [Multi-node Computing](#multi-node-computing)
+5. [Custom Proof Systems](#custom-proof-systems)
+   1. [Meredith's Axiom; 1-basis `(CCCCCpqCNrNsrtCCtpCsp)`](#merediths-axiom-1-basis-cccccpqcnrnsrtcctpcsp-top1000-cardinalities-sample-info)
+   2. [Walsh's 1st Axiom; 1-basis `(CCpCCNpqrCsCCNtCrtCpt)`](#walshs-1st-axiom-1-basis-ccpccnpqrcsccntcrtcpt-top1000-cardinalities-sample-info)
+   3. [Walsh's 2nd Axiom; 1-basis `(CpCCqCprCCNrCCNstqCsr)`](#walshs-2nd-axiom-1-basis-cpccqcprccnrccnstqcsr-top1000-cardinalities-sample-info)
+   4. [Walsh's 3rd Axiom; 1-basis `(CpCCNqCCNrsCptCCtqCrq)`](#walshs-3rd-axiom-1-basis-cpccnqccnrscptcctqcrq-top1000-cardinalities-sample-info)
+   5. [Walsh's 4th Axiom; 1-basis `(CpCCNqCCNrsCtqCCrtCrq)`](#walshs-4th-axiom-1-basis-cpccnqccnrsctqccrtcrq-top1000-cardinalities-sample-info)
+   6. [Walsh's 5th Axiom; 1-basis `(CCpqCCCrCstCqCNsNpCps)`](#walshs-5th-axiom-1-basis-ccpqcccrcstcqcnsnpcps-top1000-cardinalities-sample-info)
+   7. [Walsh's 6th Axiom; 1-basis `(CCCpqCCCNrNsrtCCtpCsp)`](#walshs-6th-axiom-1-basis-cccpqcccnrnsrtcctpcsp-top1000-cardinalities-sample-info)
+   8. [S5 `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp)`](#s5-cpcqpccpcqrccpqcprccnpnqcqpclppclcpqclplqcnlnplnlnp-top1000-cardinalities-db-sample-info)
+6. [Footnotes](#footnotes)
+
+</details>
+
+#### Introduction
 This tool can collect exhaustive sets of [condensed detachment](https://en.wikipedia.org/wiki/Condensed_detachment) proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's [“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") collection.  
 The D-rule combines [unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) with [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens) (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) within [Hilbert systems](https://en.wikipedia.org/wiki/Hilbert_system) based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
 There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions) for questions, ideas, challenges, and related information.
@@ -10,9 +33,9 @@ There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions)
 Eligible for high-performance computing. If you have access to a powerful computer, you may use *pmGenerator* to further contribute to our knowledge regarding the [complexity of proof systems](https://en.wikipedia.org/wiki/Proof_complexity). Progress that has already been made is exemplarily shown below.
 
 ###### Frege's calculus simplified by Łukasiewicz ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg)) &nbsp;<sup><sub>[[top1000](data/top1000SmallestConclusions_1to39Steps.txt)] [[cardinalities](data/cardinalities.txt)] [[db](https://us.metamath.org/mmsolitaire/pmproofs.txt)] [[customization info](data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/default-plot_data_x500.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/default-plot_data_x500.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/default-bgraph.svg"><img src="svg/plot/default-bgraph.svg" alt="default-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                              |           Paths           | &nbsp; Size of Files   <br>[B]         &nbsp; |       +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]        |  RAM&nbsp;(load)<br>[≈GiB]   &nbsp;  |  RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;  |                                                                Recent&nbsp;<br>Growth                                                                |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------:| ---------------------------------------------:| ---------------------------------------------------:| ------------------------------------:| ------------------------------------:| ----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -36,9 +59,15 @@ Measured RAM requirements correspond to the maximum resident set size according 
 Required resources vary based on implementation and environment; numbers are to illustrate orders of magnitude.  
 Some more – and very special – proof systems are illustrated [further down below](#custom-proof-systems).
 
+#### Navigation
+- [C++20 branch](https://github.com/xamidi/pmGenerator/tree/master) (master)
+- [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11) (version 1.2.0, discontinued)
+- [Mirror repository](https://codeberg.org/xamidi/pmGenerator) (on Codeberg.org)
+
 #### Usage
     pmGenerator ( <configuring command> | <composable command> )+ | <configuring command>* <standalone command>
 
+###### Commands
     Configuring:
       -c [-i <file>] [-s <string>] [-n] [-N <limit or -1>] [-l] [-e <id>] [-d]
          Proof system customization ; Generates a SHA-512/224 hash to identify the system, sets the effective data location to "<data location>/<hash>", and (if nonexisting) creates the !.def file.
@@ -171,7 +200,7 @@ Some more – and very special – proof systems are illustrated [further down b
          MPI-based multi-node filtering (-m <n>) of a first unfiltered proof file (with conclusions) at ./data/[<hash>/]dProofs-withConclusions/dProofs<n>-unfiltered<n>+.txt. Creates dProofs<n>.txt.
            -s: disable smooth progress mode (lowers memory requirements, but makes terrible progress predictions)
 
-#### Examples
+###### Examples
     pmGenerator -g -1 -q 50
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator --variate 0 -l data/ -o "dProofs-withoutConclusions (all)/dProofs" -d
@@ -215,11 +244,6 @@ A subsequent query with [squeue](https://slurm.schedmd.com/squeue.html) would th
 
 You may have a look at the [log file](log/dProofs31_6node_288cpu.log) generated by that computation.
 
-#### Navigation
-- [C++20 branch](https://github.com/xamidi/pmGenerator/tree/master) (master)
-- [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11) (version 1.2.0, discontinued)
-- [Mirror repository](https://codeberg.org/xamidi/pmGenerator) (on Codeberg.org)
-
 #### Custom Proof Systems
 There are illustrated seven proof systems in the following which according to [M. Walsh and B. Fitelson](http://fitelson.org/walsh.pdf) are minimal 1-bases (i.e. generators consisting of shortest single axioms) for propositional logic.
 Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since `pmGenerator -c -n -s CCCpqCCrNsCtNtCCtpCrp -g -1` produces only 9 more representatives (1.`D11:CCpCNpqCrCNpq`, 2.`D1D11:CCNppCqp`, 3.`D1D1D11:CCpNCpNpCqNCpNp`, 4.`DD11D11:CpCNCqCNqrCNqr`, 5.`DD11D1D11:CpCNCNqqq`, 6.`DDD11D111:CNCpCNpqCNpq`, 7.`DD11D1D1D11:CpCNCqNCqNqNCqNq`, 8.`DDD11D1D111:CNCNppp`, 9.`DDD11D1D1D111:CNCpNCpNpNCpNp`).  
@@ -231,9 +255,9 @@ For user identification of hash folders, I recommend to use custom icons, such a
 For this purpose, a favicon database (`ico.dll`) is included in the release files, as well as an archive (`ico.7z`) with all the `.ico` files for usability with non-Windows operating systems.
 
 ###### Meredith's Axiom; 1-basis ([CCCCCpqCNrNsrtCCtpCsp](svg/meredith.svg)) &nbsp;<sup><sub>[[top1000](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt)] [[cardinalities](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt)] [[sample](data/m.txt)] [[info](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/m-plot_data_x200.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/m-plot_data_x200.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/m-bgraph.svg"><img src="svg/plot/m-bgraph.svg" alt="m-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                             | &nbsp; Size of Files   <br>[B]         &nbsp; |                         +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                          |                     RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                     |                    RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                    |                                                                Recent&nbsp;<br>Growth                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| ---------------------------------------------------------------------------------------:| --------------------------------------------------------------------------:| ------------------------------------------------------------------------:| -----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -250,9 +274,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 1st Axiom; 1-basis ([CCpCCNpqrCsCCNtCrtCpt](svg/walsh1st.svg)) &nbsp;<sup><sub>[[top1000](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt)] [[cardinalities](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt)] [[sample](data/w1.txt)] [[info](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w1-plot_data_x400.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w1-plot_data_x400.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w1-bgraph.svg"><img src="svg/plot/w1-bgraph.svg" alt="w1-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                              Files up to..                                                                                                              | &nbsp; Size of Files   <br>[B]         &nbsp; |                         +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                          |                     RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                     |                    RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                    |                                                                  Recent&nbsp;<br>Growth                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| ---------------------------------------------------------------------------------------:| --------------------------------------------------------------------------:| ------------------------------------------------------------------------:| --------------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -273,9 +297,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 2nd Axiom; 1-basis ([CpCCqCprCCNrCCNstqCsr](svg/walsh2nd.svg)) &nbsp;<sup><sub>[[top1000](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt)] [[cardinalities](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt)] [[sample](data/w2.txt)] [[info](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w2-plot_data_x6000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w2-plot_data_x6000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w2-bgraph.svg"><img src="svg/plot/w2-bgraph.svg" alt="w2-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                              | &nbsp; Size of Files   <br>[B]         &nbsp; |                        +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                         |                   RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                    |                  RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                   |                                                                Recent&nbsp;<br>Growth                                                                |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| -------------------------------------------------------------------------------------:| -----------------------------------------------------------------------:| ---------------------------------------------------------------------:| ----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -288,9 +312,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 3rd Axiom; 1-basis ([CpCCNqCCNrsCptCCtqCrq](svg/walsh3rd.svg)) &nbsp;<sup><sub>[[top1000](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt)] [[cardinalities](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt)] [[sample](data/w3.txt)] [[info](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w3-plot_data_x1000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w3-plot_data_x1000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w3-bgraph.svg"><img src="svg/plot/w3-bgraph.svg" alt="w3-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                             | &nbsp; Size of Files   <br>[B]         &nbsp; |                        +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                         |                   RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                    |                   RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                   |                                                                Recent&nbsp;<br>Growth                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| -------------------------------------------------------------------------------------:| -----------------------------------------------------------------------:| ----------------------------------------------------------------------:| -----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -305,9 +329,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 4th Axiom; 1-basis ([CpCCNqCCNrsCtqCCrtCrq](svg/walsh4th.svg)) &nbsp;<sup><sub>[[top1000](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt)] [[cardinalities](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt)] [[sample](data/w4.txt)] [[info](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w4-plot_data_x1250.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w4-plot_data_x1250.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w4-bgraph.svg"><img src="svg/plot/w4-bgraph.svg" alt="w4-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                              Files up to..                                                                                                              | &nbsp; Size of Files   <br>[B]         &nbsp; |                         +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                          |                     RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                     |                   RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                    |                                                                  Recent&nbsp;<br>Growth                                                                   |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| ---------------------------------------------------------------------------------------:| --------------------------------------------------------------------------:| -----------------------------------------------------------------------:| ---------------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -326,9 +350,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 5th Axiom; 1-basis ([CCpqCCCrCstCqCNsNpCps](svg/walsh5th.svg)) &nbsp;<sup><sub>[[top1000](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt)] [[cardinalities](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt)] [[sample](data/w5.txt)] [[info](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w5-plot_data_x30000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w5-plot_data_x30000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w5-bgraph.svg"><img src="svg/plot/w5-bgraph.svg" alt="w5-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                            Files up to..                                                                                                             | &nbsp; Size of Files   <br>[B]         &nbsp; |                        +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                         |                   RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                    |                  RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                   |                                                                Recent&nbsp;<br>Growth                                                                |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------:| -------------------------------------------------------------------------------------:| -----------------------------------------------------------------------:| ---------------------------------------------------------------------:| ----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -340,9 +364,9 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 6th Axiom; 1-basis ([CCCpqCCCNrNsrtCCtpCsp](svg/walsh6th.svg)) &nbsp;<sup><sub>[[top1000](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt)] [[cardinalities](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt)] [[sample](data/w6.txt)] [[info](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w6-plot_data_x800.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w6-plot_data_x800.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w6-bgraph.svg"><img src="svg/plot/w6-bgraph.svg" alt="w6-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                             | &nbsp; Size of Files   <br>[B]         &nbsp; |                        +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                         |                    RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                    |                   RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                   |                                                                Recent&nbsp;<br>Growth                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| -------------------------------------------------------------------------------------:| ------------------------------------------------------------------------:| ----------------------------------------------------------------------:| -----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -364,9 +388,9 @@ Only systems with an odd-ary rule such as necessitation can have condensed detac
 The system of modal logic illustrated below extends [Frege's calculus simplified by Łukasiewicz](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info). It can be covered by enabling the N-rule without limiting the number of its consecutive applications via `-c -N -1`.
 
 ###### S5 ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg),[CLpp](svg/truth-4.svg),[CLCpqCLpLq](svg/kripke-5.svg),[CNLNpLNLNp](svg/lewis-6.svg)) &nbsp;<sup><sub>[[top1000](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt)] [[cardinalities](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt)] [[db](data/s5proofs.txt)] [[sample](data/s5.txt)] [[info](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def)]</sub></sup>
-<details open><summary>Behavioral Graph<sup>✻</sup> &nbsp;<sup><sub>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/S5-plot_data_x150.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/S5-plot_data_x150.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/S5-bgraph.svg"><img src="svg/plot/S5-bgraph.svg" alt="S5-bgraph.svg" width="700"></a></details>
-<details open><summary>Data</summary>
+<details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 |                                                                                                             Files up to..                                                                                                             | &nbsp; Size of Files   <br>[B]         &nbsp; |                                                                                                             +Costs&nbsp;&nbsp;<br>[≈core&#x2011;h]                                                                                                              |                                   RAM&nbsp;(load)<br>[≈GiB]   &nbsp;                                   |                                                                                                RAM&nbsp;(gen.)<br>[≈GiB]   &nbsp;                                                                                                |                                                                Recent&nbsp;<br>Growth                                                                |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------:| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:| ------------------------------------------------------------------------------------------------------:| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:| ----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -380,6 +404,7 @@ The system of modal logic illustrated below extends [Frege's calculus simplified
 | <sup><sub>[dProofs30&#x2011;unfiltered25+.txt](https://rwth-aachen.sciebo.de/s/h0ipKwDK8xwU9ce                           "118'130'673'527 bytes compressed into 4'950'709'496 bytes (ratio approx. 23.8614)")</sub></sup><sup>❈</sup> |                               218 246 046 918 |                                                                                                                          <sup>`-q 50`</sup>[4774.60](log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/dProofs30-unfiltered25+_64cpu.log)  | [870.21](log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/utilization/30-25.log) |                                                                                                          <sup>`-q 50`</sup>[1563.51](log/custom/s5-CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp/jobsRSS.txt#L75-L82) | [2.1601...](https://www.wolframalpha.com/input?i=118130673527%2F54687281728 "size(dProofs30-unfiltered25+.txt) / size(dProofs29-unfiltered25+.txt)") |
 
 </details>
+<a name="footnotes"></a>
 
 <sup>✻</sup><sub>A proof is *minimal* in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a *shortest* proof (also “minimal”, but referring to length) — not “*the* minimal proof” as in this context.</sub>  
 <sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project [rwth1392](pdf/rwth1392_extension_2025.pdf "View rwth1392_extension_2025.pdf").</sub>
