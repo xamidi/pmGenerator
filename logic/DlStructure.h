@@ -5,7 +5,7 @@
 
 namespace xamidi {
 namespace tree { template<typename T> class TreeNode; }
-namespace grammar { struct CfgGrammar; struct CfgParserState; }
+namespace grammar { class CfgGrammar; class CfgParserState; }
 
 namespace logic {
 

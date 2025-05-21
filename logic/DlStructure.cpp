@@ -13,11 +13,11 @@ namespace logic {
 CfgGrammar& DlStructure::dlEvaluationGrammar() {
 	// Unambiguous context-free grammar for DL such that variables are natural numbers.
 	static CfgGrammar g("S",
-			"S -> S \\and ( S ) | S \\and A | S \\or ( S ) | S \\or A | S \\nand ( S ) | S \\nand A | S \\nor ( S ) | S \\nor A | S \\imply ( S ) | S \\imply A | S \\implied ( S ) | S \\implied A | S \\nimply ( S ) | S \\nimply A | S \\nimplied ( S ) | S \\nimplied A | S \\equiv ( S ) | S \\equiv A | S \\xor ( S ) | S \\xor A | ( S ) | A\n"
-			"A -> A \\com ( S ) | A \\com B | A \\app ( S ) | A \\app B | ( S ) | B\n"
-			"B -> \\not B | \\nece B | \\poss B | \\obli B | \\perm B | ( S ) | \\top | \\bot | X\n"
-			"X -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Y 0 | Y 1 | Y 2 | Y 3 | Y 4 | Y 5 | Y 6 | Y 7 | Y 8 | Y 9\n"
-			"Y -> 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Y 0 | Y 1 | Y 2 | Y 3 | Y 4 | Y 5 | Y 6 | Y 7 | Y 8 | Y 9");
+			"S ::= S \\and ( S ) | S \\and A | S \\or ( S ) | S \\or A | S \\nand ( S ) | S \\nand A | S \\nor ( S ) | S \\nor A | S \\imply ( S ) | S \\imply A | S \\implied ( S ) | S \\implied A | S \\nimply ( S ) | S \\nimply A | S \\nimplied ( S ) | S \\nimplied A | S \\equiv ( S ) | S \\equiv A | S \\xor ( S ) | S \\xor A | ( S ) | A\n"
+			"A ::= A \\com ( S ) | A \\com B | A \\app ( S ) | A \\app B | ( S ) | B\n"
+			"B ::= \\not B | \\nece B | \\poss B | \\obli B | \\perm B | ( S ) | \\top | \\bot | X\n"
+			"X ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Y 0 | Y 1 | Y 2 | Y 3 | Y 4 | Y 5 | Y 6 | Y 7 | Y 8 | Y 9\n"
+			"Y ::= 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Y 0 | Y 1 | Y 2 | Y 3 | Y 4 | Y 5 | Y 6 | Y 7 | Y 8 | Y 9");
 	return g;
 }
 const uint32_t& DlStructure::nonterminal_at() {

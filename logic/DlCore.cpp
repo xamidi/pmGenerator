@@ -1352,7 +1352,7 @@ string::size_type DlCore::traverseFormulas_polishNotation_noRename_numVars(const
 }
 
 string DlCore::substitutionRepresentation_traverse(const map<string, shared_ptr<DlFormula>>& substitutions) {
-	return FctHelper::mapStringF(substitutions, [](const pair<string, shared_ptr<DlFormula>>& pair) { return "\u3008" + pair.first + ", " + formulaRepresentation_traverse(pair.second) + "\u3009"; }, { }, { });
+	return FctHelper::mapStringF(substitutions, [](const pair<const string, shared_ptr<DlFormula>>& pair) { return "\u3008" + pair.first + ", " + formulaRepresentation_traverse(pair.second) + "\u3009"; }, { }, { });
 }
 
 shared_ptr<DlFormula> DlCore::substitute(const shared_ptr<DlFormula>& formula, const map<string, shared_ptr<DlFormula>>& substitutions) {

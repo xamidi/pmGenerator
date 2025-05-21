@@ -761,7 +761,7 @@ void DlProofEnumerator::sampleCombinations() {
 		cerr << "Some tests failed." << endl;
 }
 
-void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyle outputNotation, bool conclusionsOnly, bool summaryMode, unsigned minUseAmountToCreateHelperProof, bool abstractProofStrings, const string* inputFile, const string* outputFile, bool debug) {
+void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyle outputNotation, bool conclusionsOnly, bool summaryMode, unsigned minUseAmountToCreateHelperProof, bool abstractProofStrings, const string* inputFile, const string* outputFile, bool debug, string* optOut_result, unordered_map<size_t, size_t>* optOut_indexOrigins) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<string> dProofsFromFile;
 	if (inputFile) {
@@ -869,18 +869,38 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 			}
 		}
 	}
-	if (!outputFile)
-		cout << ss.str() << flush;
-	else {
+	if (optOut_result)
+		*optOut_result = ss.str();
+	if (optOut_indexOrigins)
+		*optOut_indexOrigins = indexOrigins;
+	if (outputFile) {
 		if (debug)
 			startTime = chrono::steady_clock::now();
 		if (!FctHelper::writeToFile(*outputFile, ss.str()))
 			throw runtime_error("Failed to write to file at \"" + *outputFile + "\".");
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to save " << ss.str().length() << " bytes to \"" << *outputFile << "\"." << endl;
-	}
-	if (!conclusionsOnly && (_dProofs.size() != rawParseData.size() || !duplicates.empty()))
+	} else if (!optOut_result)
+		cout << ss.str() << flush;
+	if (!conclusionsOnly && (_dProofs.size() != rawParseData.size() || !duplicates.empty() || any_of(indexOrigins.begin(), indexOrigins.end(), [](const pair<const size_t, size_t>& p) { return p.first != p.second; })))
 		cout << "Index correspondences (out,in) are " << FctHelper::mapString(map<size_t, size_t>(indexOrigins.begin(), indexOrigins.end())) << "." << endl;
+}
+
+string::size_type DlProofEnumerator::printProofSummary(ostream& mout, const vector<DRuleParser::AxiomInfo>& axioms, const vector<string>& abstractDProof, const vector<shared_ptr<DlFormula>>& conclusions, bool normalPolishNotation, bool printInfixUnicode) {
+	auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
+	string::size_type bytes = 0;
+	for (const DRuleParser::AxiomInfo& ax : axioms) {
+		string f = printInfixUnicode ? infixUnicode(ax.refinedAxiom) : normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
+		mout << "    " << f << " = " << ax.name << "\n";
+		bytes += 9 + f.length();
+	}
+	for (size_t i = 0; i < abstractDProof.size(); i++) {
+		string f = printInfixUnicode ? infixUnicode(conclusions[i]) : normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
+		const string& p = abstractDProof[i];
+		mout << "[" << i << "] " << f << " = " << p << "\n";
+		bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
+	}
+	return bytes;
 }
 
 void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input, vector<DRuleParser::AxiomInfo>* optOut_customAxioms, vector<string>* optOut_abstractDProof, vector<DRuleParser::AxiomInfo>* optOut_requiredIntermediateResults, bool useInputFile, bool normalPolishNotation, bool noInputConclusions, bool debug) {
@@ -942,7 +962,7 @@ void DlProofEnumerator::convertProofSummaryToAbstractDProof(const string& input,
 				throw invalid_argument("Missing axiom name in \"" + line + "\".");
 			string axName = line.substr(pos);
 			if (axName.length() != 1 || ((axName[0] < '1' || axName[0] > '9') && (axName[0] < 'a' || axName[0] > 'z')))
-				throw invalid_argument("Invalid axiom name in \"" + line + "\".");
+				throw invalid_argument("Invalid axiom name (\"" + axName + "\") in \"" + line + "\".");
 			size_t num = axName[0] >= '1' && axName[0] <= '9' ? axName[0] - '1' : 10 + axName[0] - 'a' - 1;
 			if (num != axiomIndex++)
 				throw invalid_argument("[axiomIndex = " + to_string(axiomIndex - 1) + ", char = " + to_string(axiomIndex - 10 + 'a') + "] Invalid axiom number in \"" + line + "\". Should be " + (axiomIndex <= 9 ? string { char(axiomIndex + '0') } : string { char(axiomIndex - 10 + 'a') }) + ".");
@@ -1013,22 +1033,6 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 	vector<shared_ptr<DlFormula>> conclusions;
 	const vector<string> abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof_input, conclusions, &customAxioms, targetEverything, filterForTheorems && !targetEverything ? *filterForTheorems != "." || noInputConclusions ? &filterForTheorems_axInfo : &requiredIntermediateResults : nullptr, conclusionsWithHelperProofs ? &conclusionsWithHelperProofs_axInfo : nullptr, minUseAmountToCreateHelperProof, noInputConclusions ? nullptr : &requiredIntermediateResults, debug, maxLengthToKeepProof, abstractProofStrings, storeIntermediateUnfoldingLimit, maxLengthToComputeDProof, removeDuplicateConclusions, compress, compress_concurrentDRuleSearch, compress_modificationRange, compress_keepMaxRules, compress_vaultFile, compress_sureSaves, compress_skipFirstPrep);
 
-	auto print = [&](ostream& mout) -> string::size_type {
-		auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
-		string::size_type bytes = 0;
-		for (const DRuleParser::AxiomInfo& ax : customAxioms) {
-			string f = printInfixUnicode ? infixUnicode(ax.refinedAxiom) : normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom);
-			mout << "    " << f << " = " << ax.name << "\n";
-			bytes += 9 + f.length();
-		}
-		for (size_t i = 0; i < abstractDProof.size(); i++) {
-			string f = printInfixUnicode ? infixUnicode(conclusions[i]) : normalPolishNotation ? DlCore::toPolishNotation(conclusions[i]) : DlCore::toPolishNotation_noRename(conclusions[i]);
-			const string& p = abstractDProof[i];
-			mout << "[" << i << "] " << f << " = " << p << "\n";
-			bytes += 7 + FctHelper::digitsNum_uint64(i) + f.length() + p.length();
-		}
-		return bytes;
-	};
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
 		startTime = chrono::steady_clock::now();
@@ -1039,12 +1043,12 @@ void DlProofEnumerator::recombineProofSummary(const string& input, bool useInput
 		string::size_type bytes;
 		{
 			ofstream fout(file, fstream::out | fstream::binary);
-			bytes = print(fout);
+			bytes = printProofSummary(fout, customAxioms, abstractDProof, conclusions, normalPolishNotation, printInfixUnicode);
 		}
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
 	} else {
-		string::size_type bytes = print(cout);
+		string::size_type bytes = printProofSummary(cout, customAxioms, abstractDProof, conclusions, normalPolishNotation, printInfixUnicode);
 		cout << flush;
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
@@ -4063,9 +4067,9 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 								++it;
 						}
 					if (table)
-						ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + "\t" + to_string(p.second); }, { }, "\n", "\n") << "\n";
+						ss << FctHelper::mapStringF(allAmounts, [](const pair<const size_t, size_t>& p) { return to_string(p.first) + "\t" + to_string(p.second); }, { }, "\n", "\n") << "\n";
 					else
-						ss << FctHelper::mapStringF(allAmounts, [](const pair<size_t, size_t>& p) { return to_string(p.first) + " " + to_string(p.second); }, { }, "\n", " ") << "\n";
+						ss << FctHelper::mapStringF(allAmounts, [](const pair<const size_t, size_t>& p) { return to_string(p.first) + " " + to_string(p.second); }, { }, "\n", " ") << "\n";
 				} else
 					ss << "\n";
 				// formula representation lengths: ([1,1000] data) [x <= 500] https://www.desmos.com/calculator/b9qvvkinal, https://i.imgur.com/IMFY84S.png ; [x,y <= 1000] https://www.desmos.com/calculator/tjej0cpyju, https://i.imgur.com/1Z4WjJa.png ; [x <= 1000, y <= 100] https://www.desmos.com/calculator/zpe5zw41cm, https://i.imgur.com/6aCR6iq.png

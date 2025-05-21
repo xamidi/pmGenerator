@@ -25,7 +25,7 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 		const vector<string>& ruleElements = FctHelper::stringSplit(grammarLine, " ");
 		if (!FctHelper::vectorContains(nonterminals, ruleElements[0]))
 			nonterminals.push_back(ruleElements[0]);
-		const vector<string>& splitGrammarLine = FctHelper::stringSplit(grammarLine, " -> ");
+		const vector<string>& splitGrammarLine = FctHelper::stringSplit(grammarLine, " ::= ");
 
 		vector<string> grammarRule;
 		if (splitGrammarLine[1].find('|') != string::npos) { // multiple rules
@@ -59,7 +59,7 @@ CfgGrammar::CfgGrammar(const string& startSymbolString, const string& grammarStr
 	while (getline(reader2, grammarLine)) {
 		const vector<string>& ruleElements = FctHelper::stringSplit(grammarLine, " ");
 		for (size_t i = 1; i < ruleElements.size(); i++)
-			if (!FctHelper::vectorContains(nonterminals, ruleElements[i]) && !FctHelper::vectorContains(terminals, ruleElements[i]) && (ruleElements[i] != "->") && (ruleElements[i] != "|"))
+			if (!FctHelper::vectorContains(nonterminals, ruleElements[i]) && !FctHelper::vectorContains(terminals, ruleElements[i]) && (ruleElements[i] != "::=") && (ruleElements[i] != "|"))
 				terminals.push_back(ruleElements[i]);
 	}
 

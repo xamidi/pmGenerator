@@ -1344,7 +1344,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	//#cout << "\n[AFTER]\n" << FctHelper::vectorString(inOut_abstractDProof, { }, { }, "\n") << endl;
 
 	// 2. Obtain the minimal set of referencing proofs that would be required to accomplish that each given proof can be retracted to a single rule with inputs.
-	//    Note: Similar to (3.) in parseDProofs_raw(), but without concrete proofs.
+	//    NOTE: Similar to (3.) in parseDProofs_raw(), but without concrete proofs.
 	chrono::time_point<chrono::steady_clock> startTime;
 	if (debug)
 		startTime = chrono::steady_clock::now();

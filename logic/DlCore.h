@@ -15,7 +15,7 @@
 namespace xamidi {
 namespace helper { struct String; }
 namespace tree { template<typename T> class TreeNode; }
-namespace grammar { struct CfgGrammar; }
+namespace grammar { class CfgGrammar; }
 
 namespace logic {
 
@@ -138,7 +138,7 @@ struct DlCore {
 	// Note that the unifier for trees can be exponential in size w.r.t. the input, e.g. formulas { a\orz\ory\orx\orw, w\or(x\or(y\or(z\ora))) } [n := 5 variables each] result in
 	// unifier 〈w, a\ora\or(a\ora)\or(a\ora\or(a\ora))〉, 〈x, a\ora\or(a\ora)〉, 〈y, a\ora〉, 〈z, a〉 [15 variables, generally 2^(n-2) + ... + 2^1 + 2^0 = sum_(k=0)^(n-2)2^k = 2^(n-1)-1].
 	// Their unified formula is thereby a\ora\or(a\ora)\or(a\ora\or(a\ora))\or(a\ora\or(a\ora)\or(a\ora\or(a\ora))) [16 variables, generally 2^(n-1)].
-	static bool tryUnifyTrees(const std::shared_ptr<logic::DlFormula>& formulaA, const std::shared_ptr<logic::DlFormula>& formulaB, std::map<std::string, std::shared_ptr<logic::DlFormula>>* optOut_substitutions = nullptr, bool debug = false);
+	static bool tryUnifyTrees(const std::shared_ptr<DlFormula>& formulaA, const std::shared_ptr<DlFormula>& formulaB, std::map<std::string, std::shared_ptr<DlFormula>>* optOut_substitutions = nullptr, bool debug = false);
 
 	// A standard formula representation, except that topmost binary operators are not surrounded by parentheses.
 	static std::string formulaRepresentation_traverse(const std::shared_ptr<DlFormula>& formula);
@@ -203,7 +203,7 @@ struct DlCore {
 private:
 	// Helper functions
 	static bool _isSchemaOf(const std::shared_ptr<DlFormula>& potentialSchema, const std::shared_ptr<DlFormula>& formula, std::map<std::string, std::shared_ptr<DlFormula>>& substitutions);
-	static bool _tryUnifyTrees(const std::shared_ptr<logic::DlFormula>& formulaA, const std::shared_ptr<logic::DlFormula>& formulaB, std::map<std::string, std::shared_ptr<logic::DlFormula>>& substitutions, bool debug);
+	static bool _tryUnifyTrees(const std::shared_ptr<DlFormula>& formulaA, const std::shared_ptr<DlFormula>& formulaB, std::map<std::string, std::shared_ptr<DlFormula>>& substitutions, bool debug);
 	static void _toBasicDlFormula(const std::shared_ptr<DlFormula>& destinationNode, const std::shared_ptr<DlFormula>& formula, std::unordered_map<std::shared_ptr<DlFormula>, std::shared_ptr<DlFormula>>* optOut_originals, bool calculateMeanings);
 	static void _substitute(const std::shared_ptr<DlFormula>& destinationNode, const std::shared_ptr<DlFormula>& formula, const std::map<std::string, std::shared_ptr<DlFormula>>& substitutions);
 };

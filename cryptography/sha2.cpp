@@ -1,9 +1,9 @@
 #include "sha2.h"
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <cstring>
 
 using namespace std;
 

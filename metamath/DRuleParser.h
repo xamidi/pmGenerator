@@ -24,7 +24,7 @@ namespace metamath {
 typedef std::pair<std::string, std::tuple<std::vector<std::shared_ptr<logic::DlFormula>>, std::vector<std::string>, std::map<std::size_t, std::vector<unsigned>>>> DProofInfo;
 
 class DRuleParser {
-	friend struct logic::DlCore;
+	friend logic::DlCore;
 
 	// Unique pointer for each operator terminal. Accessible via DlCore::obtainDefiniteOpSymbol().
 	static const std::shared_ptr<helper::String>& _and();
