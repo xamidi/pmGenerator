@@ -1,6 +1,7 @@
 #include "helper/FctHelper.h"
 #include "helper/Version.h"
 #include "metamath/DRuleReducer.h"
+#include "nd/NdConverter.h"
 #include "logic/DlProofEnumerator.h"
 
 #include <boost/algorithm/string.hpp>
@@ -16,6 +17,7 @@
 using namespace std;
 using namespace xamidi::helper;
 using namespace xamidi::metamath;
+using namespace xamidi::nd;
 using namespace xamidi::logic;
 
 struct A {
@@ -34,20 +36,21 @@ struct A {
 
 enum class Task {
 	Invalid,
-	Customize, //              -c
-	Generate, //               -g
-	CreateReplacements, //     -r
-	ApplyReplacements, //      -a
-	ParseAndPrintProofs, //    --parse
-	TransformProofSummary, //  --transform
-	UnfoldProofSummary, //     --unfold
-	SearchProofFiles, //       --search
-	ExtractFromProofFiles, //  --extract
-	AssessGeneration, //       --assess
-	IterateProofCandidates, // --iterate
-	FileConversion, //         --variate
-	ConclusionLengthPlot, //   --plot
-	MpiFilter //               -m
+	Customize, //               -c
+	Generate, //                -g
+	CreateReplacements, //      -r
+	ApplyReplacements, //       -a
+	ParseAndPrintProofs, //     --parse
+	TransformProofSummary, //   --transform
+	UnfoldProofSummary, //      --unfold
+	ConvertNaturalDeduction, // --ndconvert
+	SearchProofFiles, //        --search
+	ExtractFromProofFiles, //   --extract
+	AssessGeneration, //        --assess
+	IterateProofCandidates, //  --iterate
+	FileConversion, //          --variate
+	ConclusionLengthPlot, //    --plot
+	MpiFilter //                -m
 };
 
 static const map<Task, string>& cmdInfo() {
@@ -133,6 +136,17 @@ static const map<Task, string>& cmdInfo() {
 				"         -w: wrap results\n"
 				"         -v: read input without conclusions given\n"
 				"         -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'\n"
+				"         -o: redirect the result's output to the specified file\n"
+				"         -d: print debug information\n";
+		_[Task::ConvertNaturalDeduction] =
+				"    --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]\n"
+				"       Convert proof from Fitch-style natural deduction to condensed detachment in a user-definable Hilbert system and print its proof summary (usable via '--transform' and '--unfold') ; ignores configured system\n"
+				"       Input file must contain propositional FitchFX proof without premises, as exportable from https://mrieppel.github.io/FitchFX/ ; supported rules: 'Assumption','IP','~I','~E','>I','>E','&I','&E','vI','vE','<>I','<>E','Reit'\n"
+				"         -b: provide target system with translation-assisting proofs via input file path of a proof summary ; proofs of (A1),(A2) are minimally required ; details: https://github.com/xamidi/pmGenerator/blob/master/nd/NdConverter.h\n"
+				"         -n: specify and print formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
+				"         -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)\n"
+				"         -h: use heterogeneous language ; do not consider all formulas to use only connectives in {C,N} (aliased by Kpq:=NCpNq, Apq:=CNpq, Epq:=NCCpqNCqp, and O:=NCpp)\n"
+				"         -k: keep proofs for all theorems (not only those which are used to derive the target theorem)\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::SearchProofFiles] =
@@ -411,6 +425,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			cout << cmdInfo().at(Task::ParseAndPrintProofs);
 			cout << cmdInfo().at(Task::TransformProofSummary);
 			cout << cmdInfo().at(Task::UnfoldProofSummary);
+			cout << cmdInfo().at(Task::ConvertNaturalDeduction);
 			cout << cmdInfo().at(Task::SearchProofFiles);
 			cout << cmdInfo().at(Task::ExtractFromProofFiles);
 			cout << cmdInfo().at(Task::AssessGeneration);
@@ -431,6 +446,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					"    pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq\n"
 					"    pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d\n"
 					"    pmGenerator --transform \"CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111\" -n -w -t _\n"
+					"    pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -u\n"
 					"    pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt\n"
 					"    pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n\n"
 					"    pmGenerator --variate 1 -s --extract -t 1000 -s -d\n"
@@ -575,6 +591,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
 				tasks.emplace_back(Task::UnfoldProofSummary, map<string, string> { { "string", argv[++i] }, { "filterForTheorems", "" }, { "outputFile", "" } }, map<string, int64_t> { { "storeIntermediateUnfoldingLimit", -1 }, { "maxLengthToComputeDProof", 134217728 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "wrap", false }, { "noInputConclusions", false }, { "debug", false }, { "whether -t was called", false } });
+			} else if (command == "ndconvert") { // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
+				tasks.emplace_back(Task::ConvertNaturalDeduction, map<string, string> { { "inputFile", argv[++i] }, { "baseFile", "" }, { "outputFile", "" } }, map<string, int64_t> { }, map<string, bool> { { "useBaseFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "printInfixUnicode", false }, { "pure", true }, { "keepAllTheorems", false }, { "debug", false } });
 			} else if (command == "search") { // --search <string> [-n] [-s] [-w] [-t] [-p] [-f] [-d]
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
@@ -637,6 +657,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: // --transform -b (duplicate conclusion removal)
 				tasks.back().bln["removeDuplicateConclusions"] = true;
 				break;
+			case Task::ConvertNaturalDeduction: // --ndconvert -b <base file> (provide target system with translation-assisting proofs via input file path of a proof summary)
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
+				tasks.back().str["baseFile"] = argv[++i];
+				tasks.back().bln["useBaseFile"] = true;
+				break;
 			}
 			break;
 		case 'd':
@@ -646,16 +672,17 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::Customize: // -c -d (default system)
 				tasks.back().bln["defaultSystem"] = true;
 				break;
-			case Task::CreateReplacements: //             -r -d (print debug information)
-			case Task::ApplyReplacements: //              -a -d (print debug information)
-			case Task::ParseAndPrintProofs: //       --parse -d (print debug information)
-			case Task::TransformProofSummary: // --transform -d (print debug information)
-			case Task::UnfoldProofSummary: //       --unfold -d (print debug information)
-			case Task::SearchProofFiles: //         --search -d (print debug information)
-			case Task::ExtractFromProofFiles: //   --extract -d (print debug information)
-			case Task::AssessGeneration: //         --assess -d (print debug information)
-			case Task::FileConversion: //          --variate -d (print debug information)
-			case Task::ConclusionLengthPlot: //       --plot -d (print debug information)
+			case Task::CreateReplacements: //               -r -d (print debug information)
+			case Task::ApplyReplacements: //                -a -d (print debug information)
+			case Task::ParseAndPrintProofs: //         --parse -d (print debug information)
+			case Task::TransformProofSummary: //   --transform -d (print debug information)
+			case Task::UnfoldProofSummary: //         --unfold -d (print debug information)
+			case Task::ConvertNaturalDeduction: // --ndconvert -d (print debug information)
+			case Task::SearchProofFiles: //           --search -d (print debug information)
+			case Task::ExtractFromProofFiles: //     --extract -d (print debug information)
+			case Task::AssessGeneration: //           --assess -d (print debug information)
+			case Task::FileConversion: //            --variate -d (print debug information)
+			case Task::ConclusionLengthPlot: //         --plot -d (print debug information)
 				tasks.back().bln["debug"] = true;
 				break;
 			}
@@ -699,6 +726,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
 			case Task::TransformProofSummary: // --transform -h (save raw intermediate results in files before each proof compression round)
 				tasks.back().bln["compress_sureSaves"] = true;
+				break;
+			case Task::ConvertNaturalDeduction: // --ndconvert -h (use heterogeneous language)
+				tasks.back().bln["pure"] = false;
 				break;
 			case Task::ExtractFromProofFiles: // --extract -h <string> (similar to '-#' ; hand-pick conclusions with a comma-separated string of proofs)
 				if (i + 1 >= argc)
@@ -785,6 +815,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: // --transform -k (store maximum-size proofs generated via 'x' also when they do not prove known intermediate theorems)
 				tasks.back().bln["compress_keep"] = true;
 				break;
+			case Task::ConvertNaturalDeduction: // --ndconvert -k (keep proofs for all theorems)
+				tasks.back().bln["keepAllTheorems"] = true;
+				break;
 			case Task::ExtractFromProofFiles: // --extract -k <limit or -1> (similar to '-l' ; copy proofs with conclusions that have consequents or are non-conditionals of symbolic lengths of at most the given number)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -851,11 +884,12 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::Customize: //                      -c -n (specify formulas in normal Polish notation)
-			case Task::ParseAndPrintProofs: //       --parse -n (print formulas in normal Polish notation)
-			case Task::TransformProofSummary: // --transform -n (specify and print formulas in normal Polish notation)
-			case Task::UnfoldProofSummary: //       --unfold -n (specify formulas in normal Polish notation)
-			case Task::SearchProofFiles: //         --search -n (specify formulas in normal Polish notation)
+			case Task::Customize: //                        -c -n (specify formulas in normal Polish notation)
+			case Task::ParseAndPrintProofs: //         --parse -n (print formulas in normal Polish notation)
+			case Task::TransformProofSummary: //   --transform -n (specify and print formulas in normal Polish notation)
+			case Task::UnfoldProofSummary: //         --unfold -n (specify formulas in normal Polish notation)
+			case Task::ConvertNaturalDeduction: // --ndconvert -n (specify and print formulas in normal Polish notation)
+			case Task::SearchProofFiles: //           --search -n (specify formulas in normal Polish notation)
 				tasks.back().bln["normalPolishNotation"] = true;
 				break;
 			}
@@ -879,10 +913,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::ParseAndPrintProofs: //       --parse -o <output file> (redirect the result's output to the specified file)
-			case Task::TransformProofSummary: // --transform -o <output file> (redirect the result's output to the specified file)
-			case Task::UnfoldProofSummary: //       --unfold -o <output file> (redirect the result's output to the specified file)
-			case Task::ExtractFromProofFiles: //   --extract -o <output file> (specify output file path for '-t')
+			case Task::ParseAndPrintProofs: //         --parse -o <output file> (redirect the result's output to the specified file)
+			case Task::TransformProofSummary: //   --transform -o <output file> (redirect the result's output to the specified file)
+			case Task::UnfoldProofSummary: //         --unfold -o <output file> (redirect the result's output to the specified file)
+			case Task::ConvertNaturalDeduction: // --ndconvert -o <output file> (redirect the result's output to the specified file)
+			case Task::ExtractFromProofFiles: //     --extract -o <output file> (specify output file path for '-t')
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 				tasks.back().str["outputFile"] = argv[++i];
@@ -1026,7 +1061,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::ParseAndPrintProofs: // --parse -u (print formulas in infix notation with operators as Unicode characters)
 				tasks.back().bln["unicodeInfixNotation"] = true;
 				break;
-			case Task::TransformProofSummary: // --transform -u (print formulas in infix notation with operators as Unicode characters)
+			case Task::TransformProofSummary: //   --transform -u (print formulas in infix notation with operators as Unicode characters)
+			case Task::ConvertNaturalDeduction: // --ndconvert -u (print formulas in infix notation with operators as Unicode characters)
 				tasks.back().bln["printInfixUnicode"] = true;
 				break;
 			case Task::ConclusionLengthPlot: // --plot -u (include unfiltered proof files)
@@ -1174,6 +1210,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				case Task::UnfoldProofSummary: // --unfold
 					ss << ++index << ". unfoldProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["wrap"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
+				case Task::ConvertNaturalDeduction: // --ndconvert
+					ss << ++index << ". convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")\n";
+					break;
 				case Task::SearchProofFiles: // --search
 					ss << ++index << ". searchProofFiles(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["searchProofs"]) << ", " << (t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : t.bln["abstractSearch"] ? 3 : 0) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
@@ -1280,6 +1319,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (!t.bln["useInputFile"])
 					boost::replace_all(t.str["string"], ",", "\n");
 				DlProofEnumerator::unfoldProofSummary(t.str["string"], t.bln["useInputFile"], t.bln["normalPolishNotation"], t.bln["whether -t was called"] ? &t.str["filterForTheorems"] : nullptr, t.num["storeIntermediateUnfoldingLimit"], t.num["maxLengthToComputeDProof"], t.bln["wrap"], t.bln["noInputConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"]);
+				break;
+			case Task::ConvertNaturalDeduction: // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
+				cout << "[Main] Calling convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")." << endl;
+				NdConverter::convertFitchFxFileToDProofSummary(t.str["inputFile"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["useBaseFile"] ? &t.str["baseFile"] : nullptr, t.bln["normalPolishNotation"], t.bln["printInfixUnicode"], t.bln["pure"], t.bln["keepAllTheorems"], t.bln["debug"]);
 				break;
 			case Task::SearchProofFiles: // --search <string> [-n] [-s] [-w] [-t] [-p] [-f] [-d]
 				cout << "[Main] Calling searchProofFiles(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : t.bln["abstractSearch"] ? 3 : 0) << ", " << bstr(t.bln["schemaSearch"]) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;

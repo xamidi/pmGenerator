@@ -32,6 +32,7 @@ data/*
 !data/pmproofs.txt
 !data/pmproofs-old.txt
 !data/cardinalities.txt
+!data/*_ffx.txt
 !data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/
 data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/*
 !data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/\!.def

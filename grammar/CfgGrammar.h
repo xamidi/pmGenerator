@@ -47,6 +47,7 @@ public:
 	std::string symbolSequenceOf(const std::vector<std::uint32_t>& ids) const;
 
 	const std::unordered_map<std::uint32_t, std::vector<std::vector<std::uint32_t>>>& productionRules() const;
+	const std::vector<std::vector<std::uint32_t>>& productionRuleOf(std::uint32_t) const;
 
 	std::uint32_t maybeStoreNonterminal(const std::string&);
 	std::uint32_t maybeStoreTerminal(const std::string&);
@@ -55,6 +56,9 @@ public:
 
 	std::string productionString() const;
 	virtual std::string toString() const override;
+
+	// Lexer which works for grammars whose symbol strings are never prefixes of other symbol strings.
+	std::vector<std::uint32_t> firstFitLex(const std::string& s, bool utf8 = true);
 };
 
 }

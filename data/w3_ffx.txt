@@ -1,0 +1,30 @@
+% Walsh's 3rd Axiom (CpCCNqCCNrsCptCCtqCrq), i.e. 0→((¬1→((¬2→3)→(0→4)))→((4→1)→(2→1)))
+% Fitch-style natural deduction proof constructor: https://mrieppel.github.io/FitchFX/
+%
+% Related Hilbert system: https://xamidi.github.io/pmGenerator/data/w3.txt
+% Conversion to Hilbert-style condensed detachment proof summary:
+% - [base:CpCqp,CCpCqrCCpqCpr,CCNpNqCqp]: pmGenerator --ndconvert data/w3_ffx.txt -n
+% - [<proof summary of base system>.txt]: pmGenerator --ndconvert data/w3_ffx.txt -n -b <proof summary of base system>.txt
+
+Problem:  |- (A > ((~B > ((~C > D) > (A > E))) > ((E > B) > (C > B))))
+
+1   | |_  A                                                          Assumption
+2   | | |_  (~B > ((~C > D) > (A > E)))                              Assumption
+3   | | | |_  (E > B)                                                Assumption
+4   | | | | |_  C                                                    Assumption
+5   | | | | | |_  ~B                                                 Assumption
+6   | | | | | | |_  ~C                                               Assumption
+7   | | | | | | | |_  ~D                                             Assumption
+8   | | | | | | | |   #                                              ~E  4,6
+9   | | | | | | |   D                                                IP  7-8
+10  | | | | | |   (~C > D)                                           >I  6-9
+11  | | | | | |   ((~C > D) > (A > E))                               >E  2,5
+12  | | | | | |   (A > E)                                            >E  10,11
+13  | | | | | |   E                                                  >E  1,12
+14  | | | | | |   B                                                  >E  3,13
+15  | | | | | |   #                                                  ~E  5,14
+16  | | | | |   B                                                    IP  5-15
+17  | | | |   (C > B)                                                >I  4-16
+18  | | |   ((E > B) > (C > B))                                      >I  3-17
+19  | |   ((~B > ((~C > D) > (A > E))) > ((E > B) > (C > B)))        >I  2-18
+20  |   (A > ((~B > ((~C > D) > (A > E))) > ((E > B) > (C > B))))    >I  1-19

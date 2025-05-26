@@ -853,7 +853,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 				}
 			}
 			size_t i = 0;
-			ss << FctHelper::vectorStringF(axioms, [&](const shared_ptr<DlFormula>& f) { return "    " + toString(f) + " = " + to_string(++i); }, { }, "\n", "\n");
+			ss << FctHelper::vectorStringF(axioms, [&](const shared_ptr<DlFormula>& f) { string id = i < 9 ? to_string(i + 1) : string { char('a' + i - 9) }; i++; return "    " + toString(f) + " = " + id; }, { }, "\n", "\n");
 		}
 		for (DProofInfo& p : rawParseData) {
 			const tuple<vector<shared_ptr<DlFormula>>, vector<string>, map<size_t, vector<unsigned>>>& t = p.second;

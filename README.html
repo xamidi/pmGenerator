@@ -514,6 +514,16 @@ Composable:
        -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
        -o: redirect the result's output to the specified file
        -d: print debug information
+  --ndconvert &lt;input file&gt; [-b &lt;base file&gt;] [-n] [-u] [-h] [-k] [-o &lt;output file&gt;] [-d]
+     Convert proof from Fitch-style natural deduction to condensed detachment in a user-definable Hilbert system and print its proof summary (usable via '--transform' and '--unfold') ; ignores configured system
+     Input file must contain propositional FitchFX proof without premises, as exportable from https://mrieppel.github.io/FitchFX/ ; supported rules: 'Assumption','IP','~I','~E','&gt;I','&gt;E','&I','&E','vI','vE','&lt;&gt;I','&lt;&gt;E','Reit'
+       -b: provide target system with translation-assisting proofs via input file path of a proof summary ; proofs of (A1),(A2) are minimally required ; details: https://github.com/xamidi/pmGenerator/blob/master/nd/NdConverter.h
+       -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+       -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)
+       -h: use heterogeneous language ; do not consider all formulas to use only connectives in {C,N} (aliased by Kpq:=NCpNq, Apq:=CNpq, Epq:=NCCpqNCqp, and O:=NCpp)
+       -k: keep proofs for all theorems (not only those which are used to derive the target theorem)
+       -o: redirect the result's output to the specified file
+       -d: print debug information
   --search &lt;string&gt; [-n] [-s] [-w] [-t] [-p] [-f] [-d]
      Search in proof files at ./data/[&lt;hash&gt;/]/dProofs-withConclusions/ via comma-separated string of full formulas or full proofs ; [Hint: Generate missing files with '--variate 1 -s'.]
        -n: specify formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
@@ -579,6 +589,7 @@ pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCr
 pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
 pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
 pmGenerator --transform "CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111" -n -w -t _
+pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -u
 pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt
 pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n
 pmGenerator --variate 1 -s --extract -t 1000 -s -d

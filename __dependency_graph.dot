@@ -15,9 +15,14 @@ digraph {
 	CfgGrammar -> "(cstdint)" [color=red]
 	CfgGrammar -> "(unordered_map)" [color=red]
 	CfgGrammar -> "(vector)" [color=red]
+	CfgParser -> FctHelper [color=blue]
+	CfgParser -> CfgGrammar [color=blue]
+	CfgParser -> TreeNode [color=red]
 	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\grammar" {
 		CfgGrammar
 		CfgGrammar
+		CfgParser
+		CfgParser
 	}
 	FctHelper -> "(cmath)" [color=blue]
 	FctHelper -> "(iostream)" [color=blue]
@@ -147,6 +152,7 @@ digraph {
 	main -> FctHelper [color=blue]
 	main -> Version [color=blue]
 	main -> DRuleReducer [color=blue]
+	main -> NdConverter [color=blue]
 	main -> DlProofEnumerator [color=blue]
 	main -> "boost/algorithm/string" [color=blue]
 	main -> "(cstring)" [color=blue]
@@ -190,6 +196,33 @@ digraph {
 		DRuleParser
 		DRuleReducer
 		DRuleReducer
+	}
+	NdConverter -> FctHelper [color=blue]
+	NdConverter -> TreeNode [color=blue]
+	NdConverter -> DlCore [color=blue]
+	NdConverter -> DlProofEnumerator [color=blue]
+	NdConverter -> NdParser [color=blue]
+	NdConverter -> "boost/algorithm/string" [color=blue]
+	NdConverter -> "(numeric)" [color=blue]
+	NdConverter -> "(string)" [color=red]
+	NdParser -> FctHelper [color=blue]
+	NdParser -> CfgGrammar [color=blue]
+	NdParser -> CfgParser [color=blue]
+	NdParser -> DlCore [color=blue]
+	NdParser -> "boost/algorithm/string" [color=blue]
+	NdParser -> "(iostream)" [color=blue]
+	NdParser -> "(array)" [color=red]
+	NdParser -> "(cstddef)" [color=red]
+	NdParser -> "(cstdint)" [color=red]
+	NdParser -> "(map)" [color=red]
+	NdParser -> "(memory)" [color=red]
+	NdParser -> "(string)" [color=red]
+	NdParser -> "(vector)" [color=red]
+	subgraph "cluster_D:/Dropbox/eclipse/pmGenerator\nd" {
+		NdConverter
+		NdConverter
+		NdParser
+		NdParser
 	}
 	TreeNode -> ICloneable [color=red]
 	TreeNode -> IPrintable [color=red]

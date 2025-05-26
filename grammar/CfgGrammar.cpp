@@ -146,6 +146,10 @@ const unordered_map<uint32_t, vector<vector<uint32_t>>>& CfgGrammar::productionR
 	return _productionRules;
 }
 
+const vector<vector<uint32_t>>& CfgGrammar::productionRuleOf(uint32_t nonterminalId) const {
+	return _productionRules.at(nonterminalId);
+}
+
 uint32_t CfgGrammar::maybeStoreNonterminal(const string& nonterminalString) {
 	unordered_map<string, uint32_t>::const_iterator search = _idLookup.find(nonterminalString);
 	if (search == _idLookup.end()) { // if the string is not yet part of the grammar
@@ -198,6 +202,58 @@ string CfgGrammar::toString() const {
 	stringstream ss;
 	ss << string("(") << FctHelper::vectorString(_nonterminalStrings) << string(", ") << FctHelper::vectorString(_terminalStrings) << string(", ") << productionString() << string(", ") << _startSymbolString << string(")");
 	return ss.str();
+}
+
+vector<uint32_t> CfgGrammar::firstFitLex(const string& s, bool utf8) {
+	vector<uint32_t> refinedSymbolSequence;
+	if (s.empty())
+		return {};
+	string::size_type sStartIndex = 0;
+	for (string::size_type sEndIndex = 1; sEndIndex <= s.length(); sEndIndex++) {
+		unordered_map<string, uint32_t>::const_iterator it = _idLookup.find(s.substr(sStartIndex, sEndIndex - sStartIndex));
+		if (it != _idLookup.end()) { // match
+			refinedSymbolSequence.push_back(it->second);
+			sStartIndex = sEndIndex;
+		}
+		if (sEndIndex == s.length() && sStartIndex < sEndIndex) {
+			string::size_type skips = 0;
+			if (utf8) {
+				auto utf8Skips = [](const string& s) -> string::size_type {
+					string::const_iterator begin = s.begin(), end = s.end();
+					string::size_type skips = 0;
+					while (begin != end) {
+						unsigned char c = *begin;
+						string::size_type skip;
+						if ((c & 0x80) == 0)
+							skip = 0;
+						else if ((c & 0xE0) == 0xC0)
+							skip = 1;
+						else if ((c & 0xF0) == 0xE0)
+							skip = 2;
+						else if ((c & 0xF8) == 0xF0)
+							skip = 3;
+						else
+							throw invalid_argument("CfgGrammar::firstFitLex(): Invalid char for UTF-8.");
+						string::size_type n = skip + 1;
+						if (end < begin + n)
+							throw invalid_argument("CfgGrammar::firstFitLex(): String too short for UTF-8.");
+						for (unsigned i = 1; i < n; i++)
+							if ((begin[i] & 0xC0) != 0x80)
+								throw invalid_argument("CfgGrammar::firstFitLex(): Missing continuation byte for UTF-8.");
+						begin += n;
+						skips += skip;
+					}
+					return skips;
+				};
+				skips = utf8Skips(s.substr(0, sStartIndex));
+			}
+			stringstream ss_err;
+			ss_err << "CfgGrammar::firstFitLex(): The expression could not be lexed successfully: Symbol at index " << sStartIndex << " not found.";
+			ss_err << "\nExpression:  " << s << "\nUnlexed:     " << string(sStartIndex - skips, ' ') << s.substr(sStartIndex, sEndIndex - sStartIndex) << flush;
+			throw domain_error(ss_err.str());
+		}
+	}
+	return refinedSymbolSequence;
 }
 
 }

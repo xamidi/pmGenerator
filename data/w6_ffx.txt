@@ -1,0 +1,33 @@
+% Walsh's 6th Axiom (CCCpqCCCNrNsrtCCtpCsp), i.e. ((0→1)→(((¬2→¬3)→2)→4))→((4→0)→(3→0))
+% Fitch-style natural deduction proof constructor: https://mrieppel.github.io/FitchFX/
+%
+% Related Hilbert system: https://xamidi.github.io/pmGenerator/data/w6.txt
+% Conversion to Hilbert-style condensed detachment proof summary:
+% - [base:CpCqp,CCpCqrCCpqCpr,CCNpNqCqp]: pmGenerator --ndconvert data/w6_ffx.txt -n
+% - [<proof summary of base system>.txt]: pmGenerator --ndconvert data/w6_ffx.txt -n -b <proof summary of base system>.txt
+
+Problem:  |- (((A > B) > (((~C > ~D) > C) > E)) > ((E > A) > (D > A)))
+
+1   | |_  ((A > B) > (((~C > ~D) > C) > E))                          Assumption
+2   | | |_  (E > A)                                                  Assumption
+3   | | | |_  D                                                      Assumption
+4   | | | | |_  ~A                                                   Assumption
+5   | | | | | |_  A                                                  Assumption
+6   | | | | | | |_  ~B                                               Assumption
+7   | | | | | | |   #                                                ~E  4,5
+8   | | | | | |   B                                                  IP  6-7
+9   | | | | |   (A > B)                                              >I  5-8
+10  | | | | | |_  (~C > ~D)                                          Assumption
+11  | | | | | | |_  ~C                                               Assumption
+12  | | | | | | |   ~D                                               >E  10,11
+13  | | | | | | |   #                                                ~E  3,12
+14  | | | | | |   C                                                  IP  11-13
+15  | | | | |   ((~C > ~D) > C)                                      >I  10-14
+16  | | | | |   (((~C > ~D) > C) > E)                                >E  1,9
+17  | | | | |   E                                                    >E  15,16
+18  | | | | |   A                                                    >E  2,17
+19  | | | | |   #                                                    ~E  4,18
+20  | | | |   A                                                      IP  4-19
+21  | | |   (D > A)                                                  >I  3-20
+22  | |   ((E > A) > (D > A))                                        >I  2-21
+23  |   (((A > B) > (((~C > ~D) > C) > E)) > ((E > A) > (D > A)))    >I  1-22

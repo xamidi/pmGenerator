@@ -214,6 +214,19 @@ public:
 		return ss.str();
 	}
 
+	template<typename T, typename U, typename V>
+	static std::string setStringF(const std::set<T, U, V>& v, const auto& f, const std::string& leftDelimiter = "{", const std::string& rightDelimiter = "}", const std::string& sep = ", ") {
+		std::stringstream ss;
+		ss << leftDelimiter;
+		for (typename std::set<T, U, V>::const_iterator it = v.begin(); it != v.end(); ++it) {
+			if (it != v.begin())
+				ss << sep;
+			ss << f(*it);
+		}
+		ss << rightDelimiter;
+		return ss.str();
+	}
+
 	template<typename T, typename U>
 	static std::string dequeString(const std::deque<T, U>& v, const std::string& leftDelimiter = "(", const std::string& rightDelimiter = ")", const std::string& sep = ", ") {
 		std::stringstream ss;
