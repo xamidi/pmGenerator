@@ -15,7 +15,6 @@
 
 using namespace std;
 using namespace xamidi::helper;
-using namespace xamidi::tree;
 using namespace xamidi::logic;
 
 namespace xamidi {
@@ -460,7 +459,7 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 				return false;
 			// Since references may increase string length (but not proof length), it is fastest to look for a second rule occurrence.
 			bool first = true;
-			for (char c : s) {
+			for (char c : s)
 				switch (c) {
 				case 'D':
 				case 'N':
@@ -470,7 +469,6 @@ vector<DProofInfo> DRuleParser::parseDProofs_raw(const vector<string>& dProofs, 
 						return true;
 					break;
 				}
-			}
 			return false;
 		};
 		for (const pair<string, string>& p : referencingDProofs) {
@@ -1161,9 +1159,9 @@ void DRuleParser::reverseAbstractProofString(string& abstractDProof) {
 		if ((b = abstractDProof.find('[', a + 2)) == string::npos) {
 			reverse(abstractDProof.begin() + a, abstractDProof.end());
 			break;
-		} else if (b - a > 2) {
+		} else if (b - a > 2)
 			reverse(abstractDProof.begin() + a, abstractDProof.begin() + b + 1);
-		} else {
+		else {
 			abstractDProof[a] = '[';
 			abstractDProof[b] = ']';
 		}
@@ -1359,7 +1357,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				return false;
 			// Since references may increase string length (but not proof length), it is fastest to look for a second rule occurrence.
 			bool first = true;
-			for (char c : s) {
+			for (char c : s)
 				switch (c) {
 				case 'D':
 				case 'N':
@@ -1369,10 +1367,9 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 						return true;
 					break;
 				}
-			}
 			return false;
 		};
-		for (const string& abstractDProofEntry : inOut_abstractDProof) {
+		for (const string& abstractDProofEntry : inOut_abstractDProof)
 			if (sufficientLen(abstractDProofEntry)) {
 				if (abstractDProofEntry[0] != 'D' && abstractDProofEntry[0] != 'N')
 					throw invalid_argument("DRuleParser::parseAbstractDProof(): A D-N-proof of length greater 1 must start with 'D' or 'N'.");
@@ -1483,7 +1480,6 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 					}
 				}
 			}
-		}
 		size_t proofIndex = helperRules.size() + inOut_abstractDProof.size(); // starting index of the new stuff
 		for (const string& recentExtraProof : recentDRules) {
 			// Replacements in existing basic proofs
@@ -1506,8 +1502,8 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	//          However, there now might be cross-references back and forth between proofs of both sets.
 	size_t extraIndex;
 	string extraId;
-	vector<AxiomInfo> axBase; // for use as (1, ..., n, extra) in case there are below 35 axioms, and as (1, ..., n-1, extra) in case there are 35 axioms.
-	vector<AxiomInfo> axBaseN; // for use as (1, ..., n-2, extra, n) with n, in case there are 35 axioms.
+	vector<AxiomInfo> axBase; // for use as (1, ..., n, extra) in case there are below 35 axioms, and as (1, ..., n-1, extra) in case there are 35 axioms
+	vector<AxiomInfo> axBaseN; // for use as (1, ..., n-2, extra, n) with n, in case there are 35 axioms
 	if (customAxioms) {
 		size_t n = customAxioms->size();
 		axBase = *customAxioms;
@@ -1551,7 +1547,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				if (posEnd != rule.size() - 1)
 					throw logic_error("First ']' should be final character in \"" + rule + "\".");
 				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-				if (!f) // still need to parse rule at 'num'?
+				if (!f) // Still need to parse rule at 'num'?
 					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
 				if (optOut_indexEvalSequence && !registered.count(i)) {
 					indexEvalSequence.push_back(i);
@@ -1562,7 +1558,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				if (posEnd != rule.size() - 1)
 					throw logic_error("First ']' should be final character in \"" + rule + "\".");
 				shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-				if (!f) // still need to parse rule at 'num'?
+				if (!f) // Still need to parse rule at 'num'?
 					f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
 				if (optOut_indexEvalSequence && !registered.count(i)) {
 					indexEvalSequence.push_back(i);
@@ -1574,7 +1570,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 				pos = rule.find('[', posEnd + 1);
 				if (pos == string::npos) { // D-rule with one axiom, one reference => use axBase or axBaseN
 					shared_ptr<DlFormula>& f = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-					if (!f) // still need to parse rule at 'num'?
+					if (!f) // Still need to parse rule at 'num'?
 						f = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
 					char axSym = refLhs ? rule[posEnd + 1] : rule[1];
 					if ((axSym < '1' || axSym > '9') && (axSym < 'a' || axSym > 'z'))
@@ -1603,10 +1599,10 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 					if (posEnd != rule.size() - 1)
 						throw logic_error("Second ']' should be final character in \"" + rule + "\".");
 					shared_ptr<DlFormula>& f1 = num < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num] : helperRulesConclusions[num - inOut_abstractDProof.size()];
-					if (!f1) // still need to parse rule at 'num'?
+					if (!f1) // Still need to parse rule at 'num'?
 						f1 = me(num < inOut_abstractDProof.size() ? inOut_abstractDProof[num] : helperRules[num - inOut_abstractDProof.size()], num, me);
 					shared_ptr<DlFormula>& f2 = num2 < inOut_abstractDProof.size() ? out_abstractDProofConclusions[num2] : helperRulesConclusions[num2 - inOut_abstractDProof.size()];
-					if (!f2) // still need to parse rule at 'num2'?
+					if (!f2) // Still need to parse rule at 'num2'?
 						f2 = me(num2 < inOut_abstractDProof.size() ? inOut_abstractDProof[num2] : helperRules[num2 - inOut_abstractDProof.size()], num2, me);
 					refBase[0] = AxiomInfo("", f1);
 					refBase[1] = AxiomInfo("", f2);
@@ -1645,7 +1641,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 		*optOut_indexEvalSequence = indexEvalSequence;
 }
 
-vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, vector<string>& out_helperRules, vector<shared_ptr<DlFormula>>& out_helperRulesConclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, vector<size_t>* optOut_indexEvalSequence, bool debug) {
+vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, vector<string>& out_helperRules, vector<shared_ptr<DlFormula>>& out_helperRulesConclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, vector<size_t>* optOut_indexEvalSequence, bool debug, bool silent) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	parseAbstractDProof(inOut_abstractDProof, out_abstractDProofConclusions, customAxioms, &out_helperRules, &out_helperRulesConclusions, optOut_indexEvalSequence, debug);
 	if (requiredIntermediateResults) {
@@ -1667,7 +1663,8 @@ vector<size_t> DRuleParser::parseValidateAndFilterAbstractDProof(vector<string>&
 								break;
 							}
 						if (targetIndex < SIZE_MAX) {
-							cout << "[NOTE] Requested target theorem " << (*requiredIntermediateResults)[i].name << " updated to its proper schema " << properSchemaStr << "." << endl;
+							if (!silent)
+								cout << "[NOTE] Requested target theorem " << (*requiredIntermediateResults)[i].name << " updated to its proper schema " << properSchemaStr << "." << endl;
 							(*filterForTheorems)[targetIndex] = AxiomInfo(properSchemaStr, out_abstractDProofConclusions[i]);
 						}
 					}
@@ -1963,7 +1960,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		//#cout << "fundamentalLengths = " << FctHelper::vectorString(fundamentalLengths) << endl;
 
 		// 3. Prepare container for exhaustive generation data (if requested).
-		struct AbstractDProof: public helper::IPrintable {
+		struct AbstractDProof: public IPrintable {
 			const vector<tbb::concurrent_vector<AbstractDProof>>& extraData;
 			atomic<bool> active = true;
 			array<int64_t, 2> dRule; // i >= 0: proofElements[i], -1 <= i <= -35: axioms[-i - 1], i <= -64 && (-i & 64): extraData[(-i >> 7) & UINT16_MAX][-i >> 23] (i.e. up to 2^(64-1-23)-1 = 2^40-1 = 1099511627775 entries for D-proofs of each length)
@@ -2213,12 +2210,11 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					extendedAbstractDProof = retractedDProof;
 					extendedAbstractDProof.insert(extendedAbstractDProof.end(), helperRules.begin(), helperRules.end());
 					index = extendedAbstractDProof.size();
-					for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault) {
+					for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault)
 						for (const pair<string, string>& q : p.second) {
 							checks.emplace(extendedAbstractDProof.size(), q);
 							extendedAbstractDProof.push_back(q.first);
 						}
-					}
 					//#size_t c = 0; cout << "extendedAbstractDProof:\n" << FctHelper::vectorStringF(extendedAbstractDProof, [&](const string& s) { return "[" + to_string(c++) + "] " + s; }, { }, { }, "\n") << endl;
 					vector<string> extendedHelperRules;
 					cout << "[Proof compression] Going to parse rules from vault." << endl;
@@ -2919,14 +2915,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			auto removeIndices = [&](const map<size_t, size_t>& fromIndices) {
 				map<size_t, size_t> indexTranslation;
 				size_t targetIndex = 0;
-				for (size_t i = 0; i < numRules; i++) {
+				for (size_t i = 0; i < numRules; i++)
 					if (!fromIndices.count(i)) {
 						if (i == targetIndex)
 							targetIndex++;
 						else
 							indexTranslation.emplace(i, targetIndex++);
 					}
-				}
 				applyIndexTranslation(indexTranslation);
 				for (map<size_t, size_t>::const_reverse_iterator it = fromIndices.rbegin(); it != fromIndices.rend(); ++it) {
 					size_t indexToRemove = it->first;
@@ -3158,7 +3153,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 									for (const string& v : vars)
 										substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
 									consequent = DlCore::substitute(consequent, substitutions);
-									cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
+									cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl;
 									e.result = consequent;
 								}
 								string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
@@ -3229,7 +3224,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 													for (const string& v : vars)
 														substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
 													consequent = DlCore::substitute(consequent, substitutions);
-													cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl; //DlCore::formulaRepresentation_traverse(e.result)
+													cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl;
 													e.result = consequent;
 												}
 												string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
@@ -3380,7 +3375,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 	}
 }
 
-void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, vector<size_t>& targetIndices, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, bool debug) {
+void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, vector<size_t>& targetIndices, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, vector<AxiomInfo>* requiredIntermediateResults, bool debug, bool silent) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Remove duplicates from target theorem list (if available).
@@ -3520,12 +3515,13 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 		}
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to morph proof summary such that subproofs with redundant conclusions (except first shortest subproofs) are removed." << endl;
-		cout << "Going to parse modified proof summary with " << obsoleteIndices.size() << " removed duplicate conclusion" << (obsoleteIndices.size() == 1 ? "" : "s") << "." << endl;
+		if (!silent)
+			cout << "Going to parse modified proof summary with " << obsoleteIndices.size() << " removed duplicate conclusion" << (obsoleteIndices.size() == 1 ? "" : "s") << "." << endl;
 
 		// 4.3 Parse and verify new abstract proof (and update all the extra information).
 		// NOTE: Essentially parseAbstractDProof(retractedDProof, abstractDProofConclusions, customAxioms, &helperRules, &helperRulesConclusions, &indexEvalSequence, debug)
 		//                   with validation, target theorem checks and index updates.
-		targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, newFilterForTheorems, newRequiredIntermediateResults, &indexEvalSequence, debug);
+		targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, newFilterForTheorems, newRequiredIntermediateResults, &indexEvalSequence, debug, silent);
 		{
 			// Order of 'newFilterForTheorems' is irrelevant for recombination => Order indices and remove duplicates.
 			set<size_t> targetIndices_noDuplicates(targetIndices.begin(), targetIndices.end());
@@ -3534,7 +3530,7 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 	}
 }
 
-vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool removeDuplicateConclusions, bool compress, bool compress_concurrentDRuleSearch, size_t compress_modificationRange, bool compress_keepMaxRules, const string* compress_vaultFile, bool compress_sureSaves, bool compress_skipFirstPrep) {
+vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool removeDuplicateConclusions, bool compress, bool compress_concurrentDRuleSearch, size_t compress_modificationRange, bool compress_keepMaxRules, const string* compress_vaultFile, bool compress_sureSaves, bool compress_skipFirstPrep, bool silent) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
@@ -3543,7 +3539,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 	vector<string> helperRules;
 	vector<shared_ptr<DlFormula>> helperRulesConclusions;
 	vector<size_t> indexEvalSequence;
-	vector<size_t> targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, filterForTheorems, requiredIntermediateResults, &indexEvalSequence, debug);
+	vector<size_t> targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, filterForTheorems, requiredIntermediateResults, &indexEvalSequence, debug, silent);
 	{
 		// Duplicates in and order of 'filterForTheorems' are irrelevant for recombination => Order indices and remove duplicates.
 		set<size_t> targetIndices_noDuplicates(targetIndices.begin(), targetIndices.end());
@@ -3565,7 +3561,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 
 	// 2. Remove duplicate conclusions from the input (if requested).
 	if (removeDuplicateConclusions) {
-		removeDuplicateConclusionsFromAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, targetIndices, customAxioms, targetEverything, filterForTheorems, requiredIntermediateResults, debug);
+		removeDuplicateConclusionsFromAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, targetIndices, customAxioms, targetEverything, filterForTheorems, requiredIntermediateResults, debug, silent);
 
 #if 0 //###
 		size_t index = 0;
@@ -3645,7 +3641,7 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 
 			// 4.3.1 Add 'targetIndices' (i.e. according to 'filterForTheorems' if requested, final conclusion otherwise) and indices according to 'conclusionsWithHelperProofs' (if requested).
 			dedicatedIndices = set<size_t>(targetIndices.begin(), targetIndices.end());
-			if (conclusionsWithHelperProofs) {
+			if (conclusionsWithHelperProofs)
 				for (size_t i : referencedIndices) {
 					const shared_ptr<DlFormula>& f = i < retractedDProof.size() ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()];
 					for (const AxiomInfo& info : *conclusionsWithHelperProofs)
@@ -3654,7 +3650,6 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 							break;
 						}
 				}
-			}
 
 			// 4.3.2 Add indices which are referenced at least 'minUseAmountToCreateHelperProof' times.
 			if (minUseAmountToCreateHelperProof != UINT_MAX) {

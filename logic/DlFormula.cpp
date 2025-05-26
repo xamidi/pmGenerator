@@ -4,7 +4,6 @@
 #include "DlCore.h"
 
 using namespace std;
-using namespace xamidi::helper;
 
 namespace xamidi {
 namespace logic {

@@ -16,7 +16,6 @@
 
 using namespace std;
 using namespace xamidi::helper;
-using namespace xamidi::tree;
 using namespace xamidi::grammar;
 using namespace xamidi::metamath;
 
@@ -523,7 +522,7 @@ void DlCore::_toBasicDlFormula(const shared_ptr<DlFormula>& destinationNode, con
 		}
 		}
 	} else { // not at an operator, i.e. at a variable
-		*destinationNode = *formula; // copy original variable (includes meaning) // NOTE: Meanings of variables are copied regardless of 'calculateMeanings'.
+		*destinationNode = *formula; // copy original variable (includes meaning) ; NOTE: Meanings of variables are copied regardless of 'calculateMeanings'.
 		if (optOut_originals)
 			optOut_originals->insert(make_pair(destinationNode, formula));
 	}

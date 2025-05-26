@@ -132,14 +132,12 @@ bool DlProofEnumerator::resetRepresentativesFor(const vector<string>* customAxio
 		for (size_t i = 0; i < customAxiomFormulas.size(); i++)
 			representativeProofs.emplace(customAxiomFormulas[i], customAxiomNames[i]);
 		_removeRedundantConclusionsForProofsOfMaxLength(1, representativeProofs, nullptr, representativeCounter, redundantCounter);
-		if (redundantCounter)
-			if (errOut)
-				*errOut << "Warning: Detected " << redundantCounter << (redundantCounter == 1 ? " axiom which is a specification of another axiom." : " axioms which are specifications of other axioms.") << endl;
+		if (redundantCounter && errOut)
+			*errOut << "Warning: Detected " << redundantCounter << (redundantCounter == 1 ? " axiom which is a specification of another axiom." : " axioms which are specifications of other axioms.") << endl;
 		if (representativeProofs.size() < customAxiomFormulas.size()) { // some axioms are redundant
 			uint64_t numDuplicates = customAxiomFormulas.size() - representativeProofs.size() - redundantCounter;
-			if (numDuplicates)
-				if (errOut)
-					*errOut << "Warning: There " << (numDuplicates == 1 ? "is " : "are ") << numDuplicates << " axiom" << (numDuplicates == 1 ? " which is a duplicate." : "s which are duplicates.") << endl;
+			if (numDuplicates && errOut)
+				*errOut << "Warning: There " << (numDuplicates == 1 ? "is " : "are ") << numDuplicates << " axiom" << (numDuplicates == 1 ? " which is a duplicate." : "s which are duplicates.") << endl;
 			vector<pair<string, string>> redundancies;
 			for (size_t i = 0; i < customAxiomFormulas.size(); i++) {
 				tbb::concurrent_hash_map<string, string>::const_accessor rAcc;
@@ -579,7 +577,7 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 			else {
 				bool startedNext = false;
 				while (!startedNext && !abortAll) {
-					for (unsigned t = 0; t < concurrencyCount; t++) {
+					for (unsigned t = 0; t < concurrencyCount; t++)
 						if (threadComplete[t]) {
 							threadComplete[t] = 0;
 							threads[t].join();
@@ -595,7 +593,6 @@ bool DlProofEnumerator::readRepresentativesLookupVectorFromFiles_par(vector<vect
 							startedNext = true;
 							break;
 						}
-					}
 					this_thread::yield(); // avoid deadlock ; put current thread at the back of the queue of threads that are ready to execute => allow other threads to run before this thread is scheduled again
 				}
 			}
@@ -761,7 +758,7 @@ void DlProofEnumerator::sampleCombinations() {
 		cerr << "Some tests failed." << endl;
 }
 
-void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyle outputNotation, bool conclusionsOnly, bool summaryMode, unsigned minUseAmountToCreateHelperProof, bool abstractProofStrings, const string* inputFile, const string* outputFile, bool debug, string* optOut_result, unordered_map<size_t, size_t>* optOut_indexOrigins) {
+void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyle outputNotation, bool conclusionsOnly, bool summaryMode, unsigned minUseAmountToCreateHelperProof, bool abstractProofStrings, const string* inputFile, const string* outputFile, bool debug, string* optOut_result, unordered_map<size_t, size_t>* optOut_indexOrigins, bool silent) {
 	chrono::time_point<chrono::steady_clock> startTime;
 	vector<string> dProofsFromFile;
 	if (inputFile) {
@@ -819,7 +816,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 	}
 	if (debug)
 		cout << "Resulted in " << rawParseData.size() << " proof" << (rawParseData.size() == 1 ? "" : "s") << " after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-	if (!duplicates.empty())
+	if (!silent && !duplicates.empty())
 		cout << "The input contains duplicates at indices " << FctHelper::mapString(duplicates) << "." << endl;
 	auto polish = [](const shared_ptr<DlFormula>& f) { return DlCore::toPolishNotation_noRename(f); };
 	auto polishStd = [](const shared_ptr<DlFormula>& f) { const map<string, string> customVariableTranslation = { { "0", "p" }, { "1", "q" }, { "2", "r" }, { "3", "s" }, { "4", "t" }, { "5", "u" }, { "6", "v" }, { "7", "w" }, { "8", "x" }, { "9", "y" }, { "10", "z" }, { "11", "a" }, { "12", "b" }, { "13", "c" }, { "14", "d" }, { "15", "e" }, { "16", "f" }, { "17", "g" }, { "18", "h" }, { "19", "i" }, { "20", "j" }, { "21", "k" }, { "22", "l" }, { "23", "m" }, { "24", "n" }, { "25", "o" } }; return DlCore::toPolishNotation(f, false, nullptr, &customVariableTranslation, { }); };
@@ -882,7 +879,7 @@ void DlProofEnumerator::printProofs(const vector<string>& dProofs, DlFormulaStyl
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to save " << ss.str().length() << " bytes to \"" << *outputFile << "\"." << endl;
 	} else if (!optOut_result)
 		cout << ss.str() << flush;
-	if (!conclusionsOnly && (_dProofs.size() != rawParseData.size() || !duplicates.empty() || any_of(indexOrigins.begin(), indexOrigins.end(), [](const pair<const size_t, size_t>& p) { return p.first != p.second; })))
+	if (!silent && !conclusionsOnly && (_dProofs.size() != rawParseData.size() || !duplicates.empty() || any_of(indexOrigins.begin(), indexOrigins.end(), [](const pair<const size_t, size_t>& p) { return p.first != p.second; })))
 		cout << "Index correspondences (out,in) are " << FctHelper::mapString(map<size_t, size_t>(indexOrigins.begin(), indexOrigins.end())) << "." << endl;
 }
 
@@ -1113,7 +1110,7 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 					bytes += len;
 				}
 			}
-		else {
+		else
 			for (size_t i = 0; i < dProofs.size(); i++) {
 				if (i) {
 					mout << ",\n";
@@ -1123,7 +1120,6 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 				mout << dProof;
 				bytes += dProof.length();
 			}
-		}
 		mout << "\n";
 		bytes++;
 		return bytes;
@@ -2052,7 +2048,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 			cout << "\n[REMOVAL COUNT ESTIMATION] counts = " << FctHelper::mapString(counts) << endl;
 			map<uint32_t, uint64_t> myCounts;
 			vector<pair<const uint32_t, uint64_t>> pairs;
-			for (const pair<const uint32_t, uint64_t>& p : counts) {
+			for (const pair<const uint32_t, uint64_t>& p : counts)
 				if (counts.count(p.first + c)) {
 					myCounts.insert(p);
 #if 1				//### simulate we're in a hole of the data
@@ -2090,7 +2086,6 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 					else
 						cout << endl;
 				}
-			}
 		};
 		estimationSummary(_customAxiomsPtr ? removalCounts_custom : removalCounts());
 		exit(0);
@@ -2226,7 +2221,7 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 				cout << " -> diffs:" << FctHelper::mapStringF(diffAB, [](const pair<const string::size_type, pair<size_t, size_t>>& p) { return "(" + to_string(p.first) + ": " + to_string(p.second.first) + "|" + to_string(p.second.second) + ")"; }) << endl;
 				cout << " -> missing from " << nameA << ":" << FctHelper::mapString(missingA) << endl;
 				cout << " -> missing from " << nameB << ":" << FctHelper::mapString(missingB) << endl;
-				if (!diffAB.empty()) {
+				if (!diffAB.empty())
 					for (map<string::size_type, pair<size_t, size_t>>::const_iterator it = diffAB.begin(); it != diffAB.end(); ++it) {
 						string::size_type proofLen = it->first;
 						vector<string>& representatives = allRepresentatives[proofLen];
@@ -2240,10 +2235,9 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 						}
 						set<string> conclusionsSet(conclusions.begin(), conclusions.end());
 						vector<string> conclusionsOfProofLen;
-						for (tbb::concurrent_hash_map<string, string>::const_iterator itR = representativeProofs.begin(); itR != representativeProofs.end(); ++itR) {
+						for (tbb::concurrent_hash_map<string, string>::const_iterator itR = representativeProofs.begin(); itR != representativeProofs.end(); ++itR)
 							if (itR->second.length() == proofLen)
 								conclusionsOfProofLen.push_back(itR->first);
-						}
 						cout << "[NOTE] For proof length " << proofLen << ": |representatives| = " << representatives.size() << ", |conclusions| = " << conclusions.size() << ", |conclusionsSet| = " << conclusionsSet.size() << ", |conclusionsOfProofLen| = " << conclusionsOfProofLen.size() << endl;
 						set<string> conclusionsOfProofLenSet(conclusionsOfProofLen.begin(), conclusionsOfProofLen.end());
 						for (size_t i = 0; i < conclusions.size(); i++) {
@@ -2267,7 +2261,6 @@ void DlProofEnumerator::generateDProofRepresentativeFiles(uint32_t limit, bool r
 								cout << "Missing from 'allRepresentatives' and 'allConclusions' at [" << proofLen << "]: " << rAcc->second << ":" << conclusion << endl;
 							}
 					}
-				}
 			};
 			if (diff12) {
 				cout << "amountPerLength: 'representativeProofs' != 'allRepresentatives'" << endl;
@@ -2921,7 +2914,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 		// 4. List missing entries.
 		bool first = true;
 		stringstream ss;
-		for (size_t i = 0; i < _searchTerms.size(); i++) {
+		for (size_t i = 0; i < _searchTerms.size(); i++)
 			if (!found[i]) {
 				if (first)
 					first = false;
@@ -2929,7 +2922,6 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 					ss << ", ";
 				ss << "[" << i << "] : \"" << terms[i] << "\"" << (modified[i] ? " (originally \"" + _searchTerms[i] + "\")" : "");
 			}
-		}
 		if (!first)
 			cout << "Missing " << ss.str() << "." << endl;
 		break;
@@ -3087,7 +3079,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 		// 5. List missing entries.
 		bool first = true;
 		stringstream ss;
-		for (size_t i = 0; i < _searchTerms.size(); i++) {
+		for (size_t i = 0; i < _searchTerms.size(); i++)
 			if (lowestLimitsWithResults[i] == UINT32_MAX) {
 				if (first)
 					first = false;
@@ -3095,7 +3087,6 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 					ss << ", ";
 				ss << "[" << i << "] : \"" << terms[i] << "\"" << (modified[i] ? " (originally \"" + _searchTerms[i] + "\")" : "");
 			}
-		}
 		if (!first)
 			cout << "Missing " << ss.str() << "." << endl;
 		break;
@@ -3175,7 +3166,7 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 		// 3. List missing entries.
 		bool first = true;
 		stringstream ss;
-		for (size_t i = 0; i < _searchTerms.size(); i++) {
+		for (size_t i = 0; i < _searchTerms.size(); i++)
 			if (!results.count(i)) {
 				if (first)
 					first = false;
@@ -3183,7 +3174,6 @@ map<string, string> DlProofEnumerator::searchProofFiles(const vector<string>& se
 					ss << ", ";
 				ss << "[" << i << "] : \"" << terms[i] << "\"" << (modified[i] ? " (originally \"" + _searchTerms[i] + "\")" : "");
 			}
-		}
 		if (!first)
 			cout << "Missing " << ss.str() << "." << endl;
 		break;
@@ -4256,10 +4246,10 @@ void DlProofEnumerator::_collectProvenFormulas(tbb::concurrent_hash_map<string, 
 				const string& fB = allConclusions[lenB][iB];
 				shared_ptr<DlFormula> tA;
 				shared_ptr<DlFormula> tB;
-				if(!DlCore::fromPolishNotation_noRename(tA, fA))
+				if (!DlCore::fromPolishNotation_noRename(tA, fA))
 					throw domain_error("Could not parse \"" + fA + "\" as a formula in dotted Polish notation.");
 				distinguishVariables(tA);
-				if(!DlCore::fromPolishNotation_noRename(tB, fB))
+				if (!DlCore::fromPolishNotation_noRename(tB, fB))
 					throw domain_error("Could not parse \"" + fB + "\" as a formula in dotted Polish notation.");
 				shared_ptr<DlFormula> conclusionVariant;
 				string conclusion;
@@ -4906,7 +4896,7 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 						const string& fA = conclusionsA[iA];
 						lock_guard<mutex> lock(mtx);
 						if (!tA_init) { // parse fA, store in tA
-							if(!DlCore::fromPolishNotation_noRename(tA, fA))
+							if (!DlCore::fromPolishNotation_noRename(tA, fA))
 								throw domain_error("Could not parse \"" + fA + "\" as a formula in dotted Polish notation.");
 							distinguishVariables(tA, lenA, iA);
 							tA_init = true;
@@ -4916,7 +4906,7 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 						const string& fB = conclusionsB[iB];
 						lock_guard<mutex> lock(mtx);
 						if (!tB_init) { // parse fB, store in tB
-							if(!DlCore::fromPolishNotation_noRename(tB, fB))
+							if (!DlCore::fromPolishNotation_noRename(tB, fB))
 								throw domain_error("Could not parse \"" + fB + "\" as a formula in dotted Polish notation.");
 							distinguishVariables(tB, lenB, iB);
 							tB_init = true;
@@ -4926,7 +4916,7 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 				}
 			});
 		}
-	} else { // NOTE: Sequences are processed at 'auto process_useConclusionStrings'.
+	} else // NOTE: Sequences are processed at 'auto process_useConclusionStrings'.
 		for (const pair<array<uint32_t, 2>, unsigned>& p : combinations) {
 			size_t lenA = p.first[0];
 			size_t lenB = p.first[1];
@@ -4937,7 +4927,6 @@ void DlProofEnumerator::_loadCondensedDetachmentProofs_useConclusions(uint32_t k
 					registerD(lenA, lenB, iA, iB);
 			});
 		}
-	}
 
 	// 2. Build & register N-rules (if applicable).
 	if (necessitationLimit) {

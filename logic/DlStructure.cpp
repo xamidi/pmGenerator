@@ -3,9 +3,7 @@
 #include "../grammar/CfgGrammar.h"
 
 using namespace std;
-using namespace xamidi::helper;
 using namespace xamidi::grammar;
-using namespace xamidi::tree;
 
 namespace xamidi {
 namespace logic {
