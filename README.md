@@ -123,7 +123,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references
            -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1
            -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)
-           -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-z'
+           -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-x' or '-z'
            -w: read input without conclusions given
            -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions
            -x: proof compression with extended modification range; before each round generate relative abstract proofs (D-rules only) with up to <range> steps, potentially improving rules with new formulas ; default: 0
@@ -144,6 +144,12 @@ Some more – and very special – proof systems are illustrated [further down b
            -w: wrap results
            -v: read input without conclusions given
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
+           -o: redirect the result's output to the specified file
+           -d: print debug information
+      --unite <input files> [-n] [-b] [-o <output file>] [-d]
+         Unite proof summary files of the same system which are given by a comma-separated list of paths ; targets and prints all used conclusions ; ignores configured system (proof summaries provide their own axioms)
+           -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+           -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates
            -o: redirect the result's output to the specified file
            -d: print debug information
       --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
@@ -222,6 +228,8 @@ Some more – and very special – proof systems are illustrated [further down b
     pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
     pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
     pmGenerator --transform "CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111" -n -w -t _
+    pmGenerator --unite data/w1.txt,data/w1-m.txt,data/w1-w2.txt,data/w1-w3.txt,data/w1-w4.txt,data/w1-w5.txt,data/w1-w6.txt -n -b -o data/w1-minax-full.txt
+    pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -o data/w1-m.txt
     pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -u
     pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt
     pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n

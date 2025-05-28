@@ -33,6 +33,52 @@ inline string myTime() {
 	time_t time = chrono::system_clock::to_time_t(chrono::system_clock::now());
 	return strtok(ctime(&time), "\n");
 }
+inline void switchRefs(char& c, bool& inReference, unsigned& refIndex, const auto& inRefAction, const auto& outRefAction) {
+	if (inReference)
+		switch (c) {
+		case '0':
+			refIndex = 10 * refIndex;
+			break;
+		case '1':
+			refIndex = 10 * refIndex + 1;
+			break;
+		case '2':
+			refIndex = 10 * refIndex + 2;
+			break;
+		case '3':
+			refIndex = 10 * refIndex + 3;
+			break;
+		case '4':
+			refIndex = 10 * refIndex + 4;
+			break;
+		case '5':
+			refIndex = 10 * refIndex + 5;
+			break;
+		case '6':
+			refIndex = 10 * refIndex + 6;
+			break;
+		case '7':
+			refIndex = 10 * refIndex + 7;
+			break;
+		case '8':
+			refIndex = 10 * refIndex + 8;
+			break;
+		case '9':
+			refIndex = 10 * refIndex + 9;
+			break;
+		case ']':
+			inRefAction();
+			refIndex = 0;
+			inReference = false;
+			break;
+		default:
+			throw invalid_argument("DlProofEnumerator::switchRefs(): Invalid character '" + string { c } + "': Not part of a proof reference.");
+		}
+	else if (c == '[')
+		inReference = true;
+	else
+		outRefAction();
+}
 }
 
 const vector<const vector<string>*>& DlProofEnumerator::builtinRepresentatives() {
@@ -1140,6 +1186,67 @@ void DlProofEnumerator::unfoldProofSummary(const string& input, bool useInputFil
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
 	} else {
 		string::size_type bytes = print(cout);
+		cout << flush;
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+	}
+}
+
+void DlProofEnumerator::uniteProofSummary(const string& input, bool normalPolishNotation, bool removeDuplicateConclusions, const string* outputFile, bool debug) {
+	chrono::time_point<chrono::steady_clock> startTime;
+	vector<string> paths = FctHelper::stringSplit(input, ",");
+	vector<DRuleParser::AxiomInfo> targetAxioms;
+	vector<string> abstractDProof;
+	vector<shared_ptr<DlFormula>> conclusions;
+	for (const string& path : paths) {
+		vector<DRuleParser::AxiomInfo> targetAxioms_part;
+		vector<string> abstractDProof_part;
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(path, &targetAxioms_part, &abstractDProof_part, nullptr, true, normalPolishNotation, false, debug);
+		size_t shift = abstractDProof.size();
+		if (targetAxioms.empty()) {
+			targetAxioms = targetAxioms_part;
+			abstractDProof = abstractDProof_part;
+		} else if (targetAxioms.size() != targetAxioms_part.size())
+			throw invalid_argument("Cannot unite proof summaries with different axioms.");
+		else {
+			for (size_t i = 0; i < targetAxioms.size(); i++)
+				if (*targetAxioms[i].refinedAxiom != *targetAxioms_part[i].refinedAxiom)
+					throw invalid_argument("Cannot unite proof summaries with different axioms.");
+			auto translate = [&](const string& s) -> string {
+				string result;
+				bool inReference = false;
+				unsigned refIndex = 0;
+				for (char c : s) {
+					switchRefs(c, inReference, refIndex, [&]() {
+						result += "[" + to_string(refIndex + shift) + "]";
+					}, [&]() { result += string { c }; });
+				}
+				if (inReference)
+					throw invalid_argument("DlProofEnumerator::uniteProofSummary(): Missing character ']' after '['.");
+				return result;
+			};
+			for (const string& s : abstractDProof_part)
+				abstractDProof.push_back(translate(s));
+		}
+		if (debug)
+			cout << "Appended " << abstractDProof.size() << " abstract D-proofs from \"" << path << "\"." << endl;
+	}
+	abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, removeDuplicateConclusions);
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	if (outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		filesystem::path file = filesystem::u8path(*outputFile);
+		while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+			cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+		string::size_type bytes;
+		{
+			ofstream fout(file, fstream::out | fstream::binary);
+			bytes = DlProofEnumerator::printProofSummary(fout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
+		}
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
+	} else {
+		string::size_type bytes = DlProofEnumerator::printProofSummary(cout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
 		cout << flush;
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;

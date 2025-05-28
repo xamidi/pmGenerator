@@ -43,6 +43,7 @@ enum class Task {
 	ParseAndPrintProofs, //     --parse
 	TransformProofSummary, //   --transform
 	UnfoldProofSummary, //      --unfold
+	UniteProofSummaries, //     --unite
 	ConvertNaturalDeduction, // --ndconvert
 	SearchProofFiles, //        --search
 	ExtractFromProofFiles, //   --extract
@@ -114,7 +115,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -e: keep expanded proof strings ; show fully detailed condensed detachment proofs rather than allowing them to contain references\n"
 				"         -i: decrease memory requirements but increase time consumption by not storing intermediate unfoldings that exceed a certain length ; default: -1\n"
 				"         -l: abort computation when combined requested proof sequences exceed the given limit in bytes ; default: 134217728 (i.e. 128 MiB)\n"
-				"         -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-z'\n"
+				"         -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-x' or '-z'\n"
 				"         -w: read input without conclusions given\n"
 				"         -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions\n"
 				"         -x: proof compression with extended modification range; before each round generate relative abstract proofs (D-rules only) with up to <range> steps, potentially improving rules with new formulas ; default: 0\n"
@@ -136,6 +137,13 @@ static const map<Task, string>& cmdInfo() {
 				"         -w: wrap results\n"
 				"         -v: read input without conclusions given\n"
 				"         -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'\n"
+				"         -o: redirect the result's output to the specified file\n"
+				"         -d: print debug information\n";
+		_[Task::UniteProofSummaries] =
+				"    --unite <input files> [-n] [-b] [-o <output file>] [-d]\n"
+				"       Unite proof summary files of the same system which are given by a comma-separated list of paths ; targets and prints all used conclusions ; ignores configured system (proof summaries provide their own axioms)\n"
+				"         -n: specify and print formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
+				"         -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::ConvertNaturalDeduction] =
@@ -425,6 +433,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			cout << cmdInfo().at(Task::ParseAndPrintProofs);
 			cout << cmdInfo().at(Task::TransformProofSummary);
 			cout << cmdInfo().at(Task::UnfoldProofSummary);
+			cout << cmdInfo().at(Task::UniteProofSummaries);
 			cout << cmdInfo().at(Task::ConvertNaturalDeduction);
 			cout << cmdInfo().at(Task::SearchProofFiles);
 			cout << cmdInfo().at(Task::ExtractFromProofFiles);
@@ -446,6 +455,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					"    pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq\n"
 					"    pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d\n"
 					"    pmGenerator --transform \"CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111\" -n -w -t _\n"
+					"    pmGenerator --unite data/w1.txt,data/w1-m.txt,data/w1-w2.txt,data/w1-w3.txt,data/w1-w4.txt,data/w1-w5.txt,data/w1-w6.txt -n -b -o data/w1-minax-full.txt\n"
+					"    pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -o data/w1-m.txt\n"
 					"    pmGenerator --ndconvert data/m_ffx.txt -n -b data/w1.txt -u\n"
 					"    pmGenerator -c -s CCCCC0.1CN2N3.2.4CC4.0C3.0 -g 35 --plot -s -t -x 50 -y 100 -o data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/plot_data_x50_y100.txt\n"
 					"    pmGenerator -c -n -s CCCCCpqCNrNsrtCCtpCsp --search CpCqp,CCpCqrCCpqCpr,CCNpNqCqp -n\n"
@@ -591,6 +602,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
 				tasks.emplace_back(Task::UnfoldProofSummary, map<string, string> { { "string", argv[++i] }, { "filterForTheorems", "" }, { "outputFile", "" } }, map<string, int64_t> { { "storeIntermediateUnfoldingLimit", -1 }, { "maxLengthToComputeDProof", 134217728 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "wrap", false }, { "noInputConclusions", false }, { "debug", false }, { "whether -t was called", false } });
+			} else if (command == "unite") { // --unite <input files> [-n] [-b] [-o <output file>] [-d]
+				if (i + 1 >= argc)
+					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
+				tasks.emplace_back(Task::UniteProofSummaries, map<string, string> { { "string", argv[++i] }, { "outputFile", "" } }, map<string, int64_t> { }, map<string, bool> { { "useOutputFile", false }, { "normalPolishNotation", false }, { "removeDuplicateConclusions", false }, { "debug", false } });
 			} else if (command == "ndconvert") { // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
@@ -655,6 +670,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					tasks.back().num["minUseAmountToCreateHelperProof"] = 1;
 				break;
 			case Task::TransformProofSummary: // --transform -b (duplicate conclusion removal)
+			case Task::UniteProofSummaries: //       --unite -b (duplicate conclusion removal)
 				tasks.back().bln["removeDuplicateConclusions"] = true;
 				break;
 			case Task::ConvertNaturalDeduction: // --ndconvert -b <base file> (provide target system with translation-assisting proofs via input file path of a proof summary)
@@ -677,6 +693,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::ParseAndPrintProofs: //         --parse -d (print debug information)
 			case Task::TransformProofSummary: //   --transform -d (print debug information)
 			case Task::UnfoldProofSummary: //         --unfold -d (print debug information)
+			case Task::UniteProofSummaries: //         --unite -d (print debug information)
 			case Task::ConvertNaturalDeduction: // --ndconvert -d (print debug information)
 			case Task::SearchProofFiles: //           --search -d (print debug information)
 			case Task::ExtractFromProofFiles: //     --extract -d (print debug information)
@@ -888,6 +905,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::ParseAndPrintProofs: //         --parse -n (print formulas in normal Polish notation)
 			case Task::TransformProofSummary: //   --transform -n (specify and print formulas in normal Polish notation)
 			case Task::UnfoldProofSummary: //         --unfold -n (specify formulas in normal Polish notation)
+			case Task::UniteProofSummaries: //         --unite -n (specify and print formulas in normal Polish notation)
 			case Task::ConvertNaturalDeduction: // --ndconvert -n (specify and print formulas in normal Polish notation)
 			case Task::SearchProofFiles: //           --search -n (specify formulas in normal Polish notation)
 				tasks.back().bln["normalPolishNotation"] = true;
@@ -916,6 +934,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::ParseAndPrintProofs: //         --parse -o <output file> (redirect the result's output to the specified file)
 			case Task::TransformProofSummary: //   --transform -o <output file> (redirect the result's output to the specified file)
 			case Task::UnfoldProofSummary: //         --unfold -o <output file> (redirect the result's output to the specified file)
+			case Task::UniteProofSummaries: //         --unite -o <output file> (redirect the result's output to the specified file)
 			case Task::ConvertNaturalDeduction: // --ndconvert -o <output file> (redirect the result's output to the specified file)
 			case Task::ExtractFromProofFiles: //     --extract -o <output file> (specify output file path for '-t')
 				if (i + 1 >= argc)
@@ -1210,6 +1229,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				case Task::UnfoldProofSummary: // --unfold
 					ss << ++index << ". unfoldProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["wrap"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
+				case Task::UniteProofSummaries: // --unite
+					ss << ++index << ". uniteProofSummaries(\"" << t.str["string"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
+					break;
 				case Task::ConvertNaturalDeduction: // --ndconvert
 					ss << ++index << ". convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
@@ -1319,6 +1341,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (!t.bln["useInputFile"])
 					boost::replace_all(t.str["string"], ",", "\n");
 				DlProofEnumerator::unfoldProofSummary(t.str["string"], t.bln["useInputFile"], t.bln["normalPolishNotation"], t.bln["whether -t was called"] ? &t.str["filterForTheorems"] : nullptr, t.num["storeIntermediateUnfoldingLimit"], t.num["maxLengthToComputeDProof"], t.bln["wrap"], t.bln["noInputConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"]);
+				break;
+			case Task::UniteProofSummaries: // --unite <input files> [-n] [-b] [-o <output file>] [-d]
+				cout << "[Main] Calling uniteProofSummaries(\"" << t.str["string"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
+				DlProofEnumerator::uniteProofSummary(t.str["string"], t.bln["normalPolishNotation"], t.bln["removeDuplicateConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"]);
 				break;
 			case Task::ConvertNaturalDeduction: // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
 				cout << "[Main] Calling convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")." << endl;
