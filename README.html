@@ -567,7 +567,7 @@ Composable:
        -o: customize output file path prefix in data location ; default: "dProofs-withoutConclusions/dProofs" or "dProofs-withConclusions/dProofs"
        -s: only use data stored in-memory
        -d: print debug information
-  --plot [-l &lt;path&gt;] [-i &lt;prefix&gt;] [-s] [-t] [-x &lt;limit or -1&gt;] [-y &lt;limit or -1&gt;] [-o &lt;output file&gt;] [-d]
+  --plot [-l &lt;path&gt;] [-i &lt;prefix&gt;] [-s] [-u] [-t] [-x &lt;limit or -1&gt;] [-y &lt;limit or -1&gt;] [-o &lt;output file&gt;] [-d]
      Print conclusion length plot data
        -l: customize data location path ; default: "data"
        -i: customize input file path prefix in data location ; requires files with conclusions ; default: "dProofs-withConclusions/dProofs"
@@ -590,8 +590,8 @@ pmGenerator --variate 0 -l data/ -o "dProofs-withoutConclusions (all)/dProofs" -
 pmGenerator --variate 1 -s --search CNpCCNpqNp -n -d --search CNpCCNpqNp -n -s
 pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w -d
 pmGenerator --plot -s -d --plot -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
-pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2D1311D3DD2DD2D13DD2D1311 -j 2 -n
-pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d
+pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16D3DD2D14DD2DD2D13DD2D1311 -j 2 -n
+pmGenerator --parse DD2DD2D13DD2D1DD22D2DD2D13DD2D1311D1DD211 -n -s -o data/CCpNCqqNp.txt --transform data/CCpNCqqNp.txt -f -n -j 1 -e --transform data/CCpNCqqNp.txt -f -n -t CCpNqCqNp -d
 pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
 pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
 pmGenerator --transform "CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111" -n -w -t _
@@ -1032,7 +1032,7 @@ Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since <code>
 <td><small><a href="https://mega.nz/file/XxcFxSKQ#S7A_wpPAHPKUK56Sxsd6S3V8Kpxiga2VdPMVfvkqjr0" title="18'088'589'265 bytes compressed into 348'720'195 bytes (ratio approx. 51.8714)">dProofs155‑unfiltered153+.txt</a></small></td>
 <td style="text-align:right">42 872 023 548</td>
 <td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs155-unfiltered153+_48cpu.log">230.07</a></td>
-<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/155-153.log"> 95.18</a></td>
+<td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/155-153.log">95.18</a></td>
 <td style="text-align:right"><a href="log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L30-L37">137.85</a></td>
 <td style="text-align:right"><a href="https://www.wolframalpha.com/input?i=18088589265%2F13257500572" title="size(dProofs155-unfiltered153+.txt) / size(dProofs153-unfiltered153+.txt)">1.3644...</a></td>
 </tr>

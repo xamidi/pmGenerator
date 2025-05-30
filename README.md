@@ -1,6 +1,7 @@
 <img align="left" src="icon/icon-readme.png" alt="icon">
 
 # @xamidi/pmGenerator
+
 [![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
 
 <details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -26,6 +27,7 @@
 </details>
 
 #### Introduction
+
 This tool can collect exhaustive sets of [condensed detachment](https://en.wikipedia.org/wiki/Condensed_detachment) proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's [“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") collection.  
 The D-rule combines [unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) with [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens) (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) within [Hilbert systems](https://en.wikipedia.org/wiki/Hilbert_system) based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
 There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions) for questions, ideas, challenges, and related information. Numerous use cases of the tool are exemplified, for example *proof parsing* under the [Proof Notation](https://github.com/xamidi/pmGenerator/discussions/2#proof-notation) section of the [“Minimal 1-bases for C-N propositional calculus”](https://github.com/xamidi/pmGenerator/discussions/2) proof minimization challenge.
@@ -33,6 +35,7 @@ There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions)
 Eligible for high-performance computing. If you have access to a powerful computer, you may use *pmGenerator* to further contribute to our knowledge regarding the [complexity of proof systems](https://en.wikipedia.org/wiki/Proof_complexity). Progress that has already been made is exemplarily shown below.
 
 ###### Frege's calculus simplified by Łukasiewicz ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg)) &nbsp;<sup><sub>[[top1000](data/top1000SmallestConclusions_1to39Steps.txt)] [[cardinalities](data/cardinalities.txt)] [[db](https://us.metamath.org/mmsolitaire/pmproofs.txt)] [[customization info](data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/default-plot_data_x500.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/default-bgraph.svg"><img src="svg/plot/default-bgraph.svg" alt="default-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -60,14 +63,17 @@ Required resources vary based on implementation and environment; numbers are to 
 Some more – and very special – proof systems are illustrated [further down below](#custom-proof-systems).
 
 #### Navigation
+
 - [C++20 branch](https://github.com/xamidi/pmGenerator/tree/master) (master)
 - [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11) (version 1.2.0, discontinued)
 - [Mirror repository](https://codeberg.org/xamidi/pmGenerator) (on Codeberg.org)
 
 #### Usage
+
     pmGenerator ( <configuring command> | <composable command> )+ | <configuring command>* <standalone command>
 
 ###### Commands
+
     Configuring:
       -c [-i <file>] [-s <string>] [-n] [-N <limit or -1>] [-l] [-e <id>] [-d]
          Proof system customization ; Generates a SHA-512/224 hash to identify the system, sets the effective data location to "<data location>/<hash>", and (if nonexisting) creates the !.def file.
@@ -199,7 +205,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -o: customize output file path prefix in data location ; default: "dProofs-withoutConclusions/dProofs" or "dProofs-withConclusions/dProofs"
            -s: only use data stored in-memory
            -d: print debug information
-      --plot [-l <path>] [-i <prefix>] [-s] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
+      --plot [-l <path>] [-i <prefix>] [-s] [-u] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
          Print conclusion length plot data
            -l: customize data location path ; default: "data"
            -i: customize input file path prefix in data location ; requires files with conclusions ; default: "dProofs-withConclusions/dProofs"
@@ -217,14 +223,15 @@ Some more – and very special – proof systems are illustrated [further down b
            -s: disable smooth progress mode (lowers memory requirements, but makes terrible progress predictions)
 
 ###### Examples
+
     pmGenerator -g -1 -q 50
     pmGenerator -g 19 -g 21 -u -r data/pmproofs-old.txt data/pmproofs-reducer.txt -d -a SD data/pmproofs-reducer.txt data/pmproofs-old.txt data/pmproofs-result-styleAll-modifiedOnly.txt -s -w -d
     pmGenerator --variate 0 -l data/ -o "dProofs-withoutConclusions (all)/dProofs" -d
     pmGenerator --variate 1 -s --search CNpCCNpqNp -n -d --search CNpCCNpqNp -n -s
     pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w -d
     pmGenerator --plot -s -d --plot -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt
-    pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2D1311D3DD2DD2D13DD2D1311 -j 2 -n
-    pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d
+    pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16D3DD2D14DD2DD2D13DD2D1311 -j 2 -n
+    pmGenerator --parse DD2DD2D13DD2D1DD22D2DD2D13DD2D1311D1DD211 -n -s -o data/CCpNCqqNp.txt --transform data/CCpNCqqNp.txt -f -n -j 1 -e --transform data/CCpNCqqNp.txt -f -n -t CCpNqCqNp -d
     pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq
     pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d
     pmGenerator --transform "CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111" -n -w -t _
@@ -238,6 +245,7 @@ Some more – and very special – proof systems are illustrated [further down b
     pmGenerator -m 17 -s
 
 #### Multi-node Computing
+
 For MPI-based filtering, each spawned process is multi-threaded and attempts to use as many threads as the hardware specifies as concurrent. Therefore, it is ideal to spawn the same amount of processes and nodes.  
 The following exemplary [Slurm](https://slurm.schedmd.com/documentation.html) batch script has been used via [sbatch](https://slurm.schedmd.com/sbatch.html) in order to reduce `dProofs31‑unfiltered31+.txt` to `dProofs31.txt`.
 
@@ -264,6 +272,7 @@ A subsequent query with [squeue](https://slurm.schedmd.com/squeue.html) would th
 You may have a look at the [log file](log/dProofs31_6node_288cpu.log) generated by that computation.
 
 #### Custom Proof Systems
+
 There are illustrated seven proof systems in the following which according to [M. Walsh and B. Fitelson](http://fitelson.org/walsh.pdf) are minimal 1-bases (i.e. generators consisting of shortest single axioms) for propositional logic.
 Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since `pmGenerator -c -n -s CCCpqCCrNsCtNtCCtpCrp -g -1` produces only 9 more representatives (1.`D11:CCpCNpqCrCNpq`, 2.`D1D11:CCNppCqp`, 3.`D1D1D11:CCpNCpNpCqNCpNp`, 4.`DD11D11:CpCNCqCNqrCNqr`, 5.`DD11D1D11:CpCNCNqqq`, 6.`DDD11D111:CNCpCNpqCNpq`, 7.`DD11D1D1D11:CpCNCqNCqNqNCqNq`, 8.`DDD11D1D111:CNCNppp`, 9.`DDD11D1D1D111:CNCpNCpNpNCpNp`).  
 Therefore, these systems are implied to be the only minimal 1-bases for C-N propositional calculus.
@@ -274,6 +283,7 @@ For user identification of hash folders, I recommend to use custom icons, such a
 For this purpose, a favicon database (`ico.dll`) is included in the release files, as well as an archive (`ico.7z`) with all the `.ico` files for usability with non-Windows operating systems.
 
 ###### Meredith's Axiom; 1-basis ([CCCCCpqCNrNsrtCCtpCsp](svg/meredith.svg)) &nbsp;<sup><sub>[[top1000](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt)] [[cardinalities](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt)] [[sample](data/m.txt)] [[info](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/m-plot_data_x200.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/m-bgraph.svg"><img src="svg/plot/m-bgraph.svg" alt="m-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -293,6 +303,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 1st Axiom; 1-basis ([CCpCCNpqrCsCCNtCrtCpt](svg/walsh1st.svg)) &nbsp;<sup><sub>[[top1000](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt)] [[cardinalities](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt)] [[sample](data/w1.txt)] [[info](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w1-plot_data_x400.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w1-bgraph.svg"><img src="svg/plot/w1-bgraph.svg" alt="w1-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -316,6 +327,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 2nd Axiom; 1-basis ([CpCCqCprCCNrCCNstqCsr](svg/walsh2nd.svg)) &nbsp;<sup><sub>[[top1000](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt)] [[cardinalities](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt)] [[sample](data/w2.txt)] [[info](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w2-plot_data_x6000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w2-bgraph.svg"><img src="svg/plot/w2-bgraph.svg" alt="w2-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -331,6 +343,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 3rd Axiom; 1-basis ([CpCCNqCCNrsCptCCtqCrq](svg/walsh3rd.svg)) &nbsp;<sup><sub>[[top1000](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt)] [[cardinalities](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt)] [[sample](data/w3.txt)] [[info](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w3-plot_data_x1000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w3-bgraph.svg"><img src="svg/plot/w3-bgraph.svg" alt="w3-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -348,6 +361,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 4th Axiom; 1-basis ([CpCCNqCCNrsCtqCCrtCrq](svg/walsh4th.svg)) &nbsp;<sup><sub>[[top1000](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt)] [[cardinalities](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt)] [[sample](data/w4.txt)] [[info](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w4-plot_data_x1250.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w4-bgraph.svg"><img src="svg/plot/w4-bgraph.svg" alt="w4-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -357,7 +371,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 | <sup><sub>[dProofs149.txt](https://mega.nz/file/Wld2zSQJ#6teaby3Dz71_kEjVDGJR3DPq2aR0aERqzi9j0NKNsT0 "9'131'925'110 bytes compressed into 182'531'802 bytes (ratio approx. 50.0292)")</sub></sup><sup>❈</sup>                           |                                 9 131 925 110 |  [6302.40](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs149_24node_1152cpu.log)       |   [21.12](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/149.log)     |   [36.33](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L1-L9)    | [1.2621...](https://www.wolframalpha.com/input?i=1898469358%2F1504178093 "size(dProofs149.txt) / size(dProofs147.txt)")                                   |
 | <sup><sub>[dProofs151.txt](https://mega.nz/file/epNS1KJI#o546RRx4JG-pp5VxSCrp7P2ousuuy6SuLWMZ6wCB2Ok "2'394'008'601 bytes compressed into 43'962'661 bytes (ratio approx. 54.4555)")</sub></sup><sup>❈</sup>                            |                                11 525 933 711 | [10297.92](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs151_72node_3456cpu.log)       |   [26.43](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/151.log)     |   [45.07](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L11-L19)  | [1.2610...](https://www.wolframalpha.com/input?i=2394008601%2F1898469358 "size(dProofs151.txt) / size(dProofs149.txt)")                                   |
 | <sup><sub>[dProofs153&#x2011;unfiltered153+.txt](https://mega.nz/file/a9dG1TZK#ULVpQWaIMuhFkov8ozfyAscNEkSTQFeG4P8_4DUHpVU "13'257'500'572 bytes compressed into 259'889'811 bytes (ratio approx. 51.0120)")</sub></sup>                |                                24 783 434 283 |   [158.55](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs153-unfiltered153+_48cpu.log) |   [55.60](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/153-153.log) |   [86.32](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L21-L28)  | [5.5377...](https://www.wolframalpha.com/input?i=13257500572%2F2394008601 "size(dProofs153-unfiltered153+.txt) / size(dProofs151.txt)")                   |
-| <sup><sub>[dProofs155&#x2011;unfiltered153+.txt](https://mega.nz/file/XxcFxSKQ#S7A_wpPAHPKUK56Sxsd6S3V8Kpxiga2VdPMVfvkqjr0 "18'088'589'265 bytes compressed into 348'720'195 bytes (ratio approx. 51.8714)")</sub></sup>                |                                42 872 023 548 |   [230.07](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs155-unfiltered153+_48cpu.log) |  [ 95.18](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/155-153.log) |  [137.85](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L30-L37)  | [1.3644...](https://www.wolframalpha.com/input?i=18088589265%2F13257500572 "size(dProofs155-unfiltered153+.txt) / size(dProofs153-unfiltered153+.txt)")   |
+| <sup><sub>[dProofs155&#x2011;unfiltered153+.txt](https://mega.nz/file/XxcFxSKQ#S7A_wpPAHPKUK56Sxsd6S3V8Kpxiga2VdPMVfvkqjr0 "18'088'589'265 bytes compressed into 348'720'195 bytes (ratio approx. 51.8714)")</sub></sup>                |                                42 872 023 548 |   [230.07](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs155-unfiltered153+_48cpu.log) |   [95.18](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/155-153.log) |  [137.85](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L30-L37)  | [1.3644...](https://www.wolframalpha.com/input?i=18088589265%2F13257500572 "size(dProofs155-unfiltered153+.txt) / size(dProofs153-unfiltered153+.txt)")   |
 | <sup><sub>[dProofs157&#x2011;unfiltered153+.txt](https://mega.nz/file/zsUTEI7b#BOSxu1sy1SH8O_4ooXLauOyMgO0PoBKHff-GRu1dkOc "26'019'597'453 bytes compressed into 493'724'872 bytes (ratio approx. 52.7006)")</sub></sup><sup>❈</sup>    |                                68 891 621 001 |   [302.65](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs157-unfiltered153+_64cpu.log) |  [151.49](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/157-153.log) |  [199.75](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L39-L46)  | [1.4384...](https://www.wolframalpha.com/input?i=26019597453%2F18088589265 "size(dProofs157-unfiltered153+.txt) / size(dProofs155-unfiltered153+.txt)")   |
 | <sup><sub>[dProofs159&#x2011;unfiltered153+.txt](https://rwth-aachen.sciebo.de/s/sxQG1x4rWREeGt6                           "34'641'539'688 bytes compressed into 651'219'941 bytes (ratio approx. 53.1948)")</sub></sup><sup>❈</sup>    |                               103 533 160 689 |   [453.35](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs159-unfiltered153+_64cpu.log) |  [226.16](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/159-153.log) |  [293.63](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L48-L55)  | [1.3313...](https://www.wolframalpha.com/input?i=34641539688%2F26019597453 "size(dProofs159-unfiltered153+.txt) / size(dProofs157-unfiltered153+.txt)")   |
 | <sup><sub>[dProofs161&#x2011;unfiltered153+.txt](https://rwth-aachen.sciebo.de/s/BFnkL1fAj8Vi9Z9                           "55'681'200'733 bytes compressed into 1'040'015'069 bytes (ratio approx. 53.5388)")</sub></sup><sup>❈</sup>  |                               159 214 361 422 |   [644.41](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/dProofs161-unfiltered153+_64cpu.log) |  [345.00](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/utilization/161-153.log) |  [427.35](log/custom/walsh4-CpCCNqCCNrsCtqCCrtCrq/jobsRSS.txt#L57-L64)  | [1.6073...](https://www.wolframalpha.com/input?i=55681200733%2F34641539688 "size(dProofs161-unfiltered153+.txt) / size(dProofs159-unfiltered153+.txt)")   |
@@ -369,6 +383,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 5th Axiom; 1-basis ([CCpqCCCrCstCqCNsNpCps](svg/walsh5th.svg)) &nbsp;<sup><sub>[[top1000](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt)] [[cardinalities](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt)] [[sample](data/w5.txt)] [[info](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w5-plot_data_x30000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w5-bgraph.svg"><img src="svg/plot/w5-bgraph.svg" alt="w5-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -383,6 +398,7 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 </details>
 
 ###### Walsh's 6th Axiom; 1-basis ([CCCpqCCCNrNsrtCCtpCsp](svg/walsh6th.svg)) &nbsp;<sup><sub>[[top1000](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt)] [[cardinalities](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt)] [[sample](data/w6.txt)] [[info](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w6-plot_data_x800.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w6-bgraph.svg"><img src="svg/plot/w6-bgraph.svg" alt="w6-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
@@ -407,6 +423,7 @@ Only systems with an odd-ary rule such as necessitation can have condensed detac
 The system of modal logic illustrated below extends [Frege's calculus simplified by Łukasiewicz](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info). It can be covered by enabling the N-rule without limiting the number of its consecutive applications via `-c -N -1`.
 
 ###### S5 ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg),[CLpp](svg/truth-4.svg),[CLCpqCLpLq](svg/kripke-5.svg),[CNLNpLNLNp](svg/lewis-6.svg)) &nbsp;<sup><sub>[[top1000](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt)] [[cardinalities](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt)] [[db](data/s5proofs.txt)] [[sample](data/s5.txt)] [[info](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def)]</sub></sup>
+
 <details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/S5-plot_data_x150.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/S5-bgraph.svg"><img src="svg/plot/S5-bgraph.svg" alt="S5-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>

@@ -200,7 +200,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -s: only use data stored in-memory\n"
 				"         -d: print debug information\n";
 		_[Task::ConclusionLengthPlot] =
-				"    --plot [-l <path>] [-i <prefix>] [-s] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]\n"
+				"    --plot [-l <path>] [-i <prefix>] [-s] [-u] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]\n"
 				"       Print conclusion length plot data\n"
 				"         -l: customize data location path ; default: \"data\"\n"
 				"         -i: customize input file path prefix in data location ; requires files with conclusions ; default: \"dProofs-withConclusions/dProofs\"\n"
@@ -450,8 +450,8 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					"    pmGenerator --variate 1 -s --search CNpCCNpqNp -n -d --search CNpCCNpqNp -n -s\n"
 					"    pmGenerator --variate 1 -s --search CCNpCpqCNpCpq,CCCCppCppCCCppCppCNCCqqCqqCCCqqCqqCCqqCqqCCCppCppCNCCqqCqqCCCqqCqqCCqqCqq -n -w -d\n"
 					"    pmGenerator --plot -s -d --plot -s -t -x 50 -y 100 -o data/plot_data_x50_y100.txt\n"
-					"    pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16DD2DD2D13DD2D1D2DD2D1D2D1DD2DD2D13D1DD2DD2D13DD2D13114DD2D13DD2D1311D3DD2DD2D13DD2D1311 -j 2 -n\n"
-					"    pmGenerator --parse DD2D11DD2D13DD2D1DD22D11DD2D11DD2D131 -n -s -o data/CNCpNqCrCsq.txt --transform data/CNCpNqCrCsq.txt -f -n -j 1 -e --transform data/CNCpNqCrCsq.txt -f -n -t CNCpNqCrq -d\n"
+					"    pmGenerator -c -N -1 -n -s CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,CLpp,CLCpqCLpLq,CNLNpLNLNp --parse DD2D16D3DD2D14DD2DD2D13DD2D1311 -j 2 -n\n"
+					"    pmGenerator --parse DD2DD2D13DD2D1DD22D2DD2D13DD2D1311D1DD211 -n -s -o data/CCpNCqqNp.txt --transform data/CCpNCqqNp.txt -f -n -j 1 -e --transform data/CCpNCqqNp.txt -f -n -t CCpNqCqNp -d\n"
 					"    pmGenerator --unfold CpCqp=1,CCpCqrCCpqCpr=2,CCNpNqCqp=3,[0]CCpCNqNrCpCrq:D2D13,[1]Cpp:DD211,[2]NCCppNCqq:DD3DD2DD2D[0]D[0]11D1[1][1] -n -t CNNpp,NCCppNCqq\n"
 					"    pmGenerator --transform data/m.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -p -2 -d\n"
 					"    pmGenerator --transform \"CCCpqrCCrpCsp=1,[0]=DDDD1D1D1D1DDDD1D1D11111111,[1]=D1DD[0]1[0],[2]=DDDD1DD[1][1]1111\" -n -w -t _\n"
@@ -631,7 +631,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					tasks.emplace_back(Task::FileConversion, map<string, string> { { "dataLocation", "data" }, { "inputFilePrefix", with ? "dProofs-withoutConclusions/dProofs" : "dProofs-withConclusions/dProofs" }, { "outputFilePrefix", with ? "dProofs-withConclusions/dProofs" : "dProofs-withoutConclusions/dProofs" } }, map<string, int64_t> { }, map<string, bool> { { "memoryOnly", false }, { "debug", false }, { "with", with } });
 				}
 				break;
-			} else if (command == "plot") // --plot [-l <path>] [-i <prefix>] [-s] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
+			} else if (command == "plot") // --plot [-l <path>] [-i <prefix>] [-s] [-u] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
 				tasks.emplace_back(Task::ConclusionLengthPlot, map<string, string> { { "dataLocation", "data" }, { "inputFilePrefix", "dProofs-withConclusions/dProofs" }, { "mout", "" } }, map<string, int64_t> { { "cutX", -1 }, { "cutY", -1 } }, map<string, bool> { { "measureSymbolicLength", false }, { "table", false }, { "includeUnfiltered", false }, { "debug", false } });
 			else
 				return printUsage("Invalid argument \"--" + command + "\".", recent(command));
@@ -1351,7 +1351,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				NdConverter::convertFitchFxFileToDProofSummary(t.str["inputFile"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["useBaseFile"] ? &t.str["baseFile"] : nullptr, t.bln["normalPolishNotation"], t.bln["printInfixUnicode"], t.bln["pure"], t.bln["keepAllTheorems"], t.bln["debug"]);
 				break;
 			case Task::SearchProofFiles: // --search <string> [-n] [-s] [-w] [-t] [-p] [-f] [-d]
-				cout << "[Main] Calling searchProofFiles(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : t.bln["abstractSearch"] ? 3 : 0) << ", " << bstr(t.bln["schemaSearch"]) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
+				cout << "[Main] Calling searchProofFiles(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["searchProofs"]) << ", " << (t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : t.bln["abstractSearch"] ? 3 : 0) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 				DlProofEnumerator::searchProofFiles(t.bln["useInputFile"] ? vector<string> { } : FctHelper::stringSplit(t.str["string"], ","), t.bln["normalPolishNotation"], t.bln["searchProofs"], t.bln["multiSchemaSearch"] ? 2 : t.bln["schemaSearch"] ? 1 : t.bln["abstractSearch"] ? 3 : 0, t.bln["useInputFile"] ? &t.str["string"] : nullptr , t.bln["debug"]);
 				break;
 			case Task::ExtractFromProofFiles: // --extract [-t <limit or -1>] [-o <output file>] [-s] [-z] [-# <amount up to 35>] [-h <string>] [-l <limit or -1>] [-k <limit or -1>] [-f] [-d]
@@ -1389,7 +1389,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					DlProofEnumerator::createGeneratorFilesWithoutConclusions(t.str["dataLocation"], t.str["inputFilePrefix"], t.str["outputFilePrefix"], t.bln["memoryOnly"], t.bln["debug"]);
 				}
 				break;
-			case Task::ConclusionLengthPlot: // --plot [-l <path>] [-i <prefix>] [-s] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
+			case Task::ConclusionLengthPlot: // --plot [-l <path>] [-i <prefix>] [-s] [-u] [-t] [-x <limit or -1>] [-y <limit or -1>] [-o <output file>] [-d]
 				cout << "[Main] Calling printConclusionLengthPlotData(" << bstr(t.bln["measureSymbolicLength"]) << ", " << bstr(t.bln["table"]) << ", " << t.num["cutX"] << ", " << t.num["cutY"] << ", \"" << t.str["dataLocation"] << "\", \"" << t.str["inputFilePrefix"] << "\", " << bstr(t.bln["includeUnfiltered"]) << ", " << (t.str["mout"].empty() ? "null" : "\"" + t.str["mout"] + "\"") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 				if (t.str["mout"].empty())
 					DlProofEnumerator::printConclusionLengthPlotData(t.bln["measureSymbolicLength"], t.bln["table"], t.num["cutX"], t.num["cutY"], t.str["dataLocation"], t.str["inputFilePrefix"], t.bln["includeUnfiltered"], nullptr, t.bln["debug"]);
