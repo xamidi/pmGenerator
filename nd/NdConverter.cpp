@@ -553,7 +553,7 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 		ss << arg1;
 		return ss.str();
 	};
-	// (a1-0-a1i-<m>) := (D1)ⁿ<Cpp>:Ca1…CaₙCpp
+	// (a1-0-a1i-<m>) := (D1)^m<Cpp>:Ca1…CaₘCpp
 	// (a1-<n+1>-a1i-<m>) := (D1)^m(D<CCpqCpCrq>)ⁿ1:Ca₁…CaₘCpCq₀Cq₁…Cqₙp
 	auto a1_a1i = [&](size_t n, size_t m) -> string {
 		if (debug)
