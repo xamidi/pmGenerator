@@ -358,7 +358,7 @@ string FctHelper::durationYearsToMs(const chrono::microseconds& dur, bool innerA
 			empty = false;
 	} else
 		appendRequestedBlankIndent(2 + sId.length());
-	if (milliseconds || empty) {
+	if (durationUs || empty) {
 		string ms = FctHelper::round(milliseconds, round);
 		ss << spaceIfNonEmpty() << requestedIndent(round ? 4 + round : 3, ms) << ms << msId;
 	} else

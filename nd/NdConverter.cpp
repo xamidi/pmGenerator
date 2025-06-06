@@ -333,7 +333,7 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 			printTargetSystem();
 			if (debug)
 				cout << "Going to recombine abstract D-proof of " << abstractDProof.size() << " theorem" << (abstractDProof.size() == 1 ? "" : "s") << " from user-defined proof summary." << endl;
-			abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, true, 0, false, nullptr, false, false, !debug);
+			abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
 			vector<size_t> userIndices(abstractDProof.size());
 			iota(userIndices.begin(), userIndices.end(), 0);
 			fundamentalLengthsFromUser = DRuleParser::measureFundamentalLengthsInAbstractDProof(userIndices, abstractDProof, conclusions);
@@ -373,7 +373,7 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 		if (debug)
 			cout << "Going to enrich user-defined proof summary with internal proofs and filter out suboptimal variants." << endl;
 		mountTranslatedInternalProofSummary(abstractDProof, conclusions, axiomToUserAxiom, axiomToUserIndex, abstractDProof.size());
-		abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, true, 0, false, nullptr, false, false, !debug);
+		abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
 		vector<size_t> allIndices(abstractDProof.size());
 		iota(allIndices.begin(), allIndices.end(), 0);
 		fundamentalLengths = DRuleParser::measureFundamentalLengthsInAbstractDProof(allIndices, abstractDProof, conclusions);
@@ -391,7 +391,7 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 			printTargetSystem();
 			if (debug)
 				cout << "Going to recombine abstract D-proof of " << abstractDProof.size() << " theorem" << (abstractDProof.size() == 1 ? "" : "s") << " from internal proof summary." << endl;
-			abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, true, 0, false, nullptr, false, false, !debug);
+			abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
 			vector<size_t> allIndices(abstractDProof.size());
 			iota(allIndices.begin(), allIndices.end(), 0);
 			fundamentalLengths = DRuleParser::measureFundamentalLengthsInAbstractDProof(allIndices, abstractDProof, conclusions);
@@ -968,7 +968,7 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 	abstractDProof.push_back(translatedProof);
 	conclusions.push_back(conclusions_test.back());
 	vector<DRuleParser::AxiomInfo> filterForTheorems = { DRuleParser::AxiomInfo(resultingConclusion_PN, conclusions_test.back()) };
-	abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, targetEverything, targetEverything ? nullptr : &filterForTheorems, nullptr, targetEverything ? 1 : 2, nullptr, debug, SIZE_MAX - (targetEverything ? 0 : 1), true, SIZE_MAX, SIZE_MAX, true, false, true, 0, false, nullptr, false, false, !debug);
+	abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, targetEverything, targetEverything ? nullptr : &filterForTheorems, nullptr, targetEverything ? 1 : 2, nullptr, debug, SIZE_MAX - (targetEverything ? 0 : 1), true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
 	if (debug)
 		startTime = chrono::steady_clock::now();
 	if (optIn_outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.

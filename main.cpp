@@ -104,7 +104,7 @@ static const map<Task, string>& cmdInfo() {
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::TransformProofSummary] =
-				"    --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-y] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]\n"
+				"    --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-#] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]\n"
 				"       Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; \",\" represents LF\n"
 				"         -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions\n"
 				"         -j: join common subproofs together when they are used at least a given amount of times ; default: 2\n"
@@ -118,12 +118,12 @@ static const map<Task, string>& cmdInfo() {
 				"         -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-x' or '-z'\n"
 				"         -w: read input without conclusions given\n"
 				"         -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions\n"
-				"         -x: proof compression with extended modification range; before each round generate relative abstract proofs (D-rules only) with up to <range> steps, potentially improving rules with new formulas ; default: 0\n"
-				"         -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic procedure) ; not affecting exhaustive generations via '-x', which remain nondeterministic\n"
-				"         -k: store maximum-size proofs generated via 'x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly\n"
-				"         -v: coordinate iteration phases for maximum-size proofs generated via 'x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified\n"
-				"         -h: save raw intermediate results in files before each proof compression round (and after productive rounds) ; after each preparation phase (exhaustive generation) in case '-x' is specified\n"
-				"         -q: skip first round preparation for '-x' ; useful to continue working on intermediate results produced by an aborted computation using '-h'\n"
+				"         -x: proof compression with extended modification range; for '-x 5' or higher: prepare each round with relative abstract proofs (D-rules only) of up to <range> steps, potentially improving rules with new formulas ; default: 0\n"
+				"         -#: use smaller, less efficient proof compression steps ; increases the number of potential rounds and newly introduced intermediate conclusions, potentially leading to shorter proofs eventually\n"
+				"         -k: store maximum-size proofs prepared via '-x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly\n"
+				"         -v: coordinate preparation phases for maximum-size proofs generated via '-x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified\n"
+				"         -h: save raw intermediate results in files at the beginning of each proof compression round (and at the end of productive rounds) ; after each preparation phase in case '-x' is specified\n"
+				"         -q: skip first round preparation for '-x' ; useful to eliminate inefficiencies before extensive preparations, or to continue working on intermediate results produced by an aborted computation using '-h'\n"
 				"         -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
@@ -594,10 +594,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
 				tasks.emplace_back(Task::ParseAndPrintProofs, map<string, string> { { "string", argv[++i] }, { "outputFile", "" } }, map<string, int64_t> { { "minUseAmountToCreateHelperProof", 2 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "unicodeInfixNotation", false }, { "conclusionsOnly", false }, { "summaryMode", false }, { "abstractProofStrings", true }, { "debug", false }, { "whether -j was called", false } });
-			} else if (command == "transform") { // --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-y] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
+			} else if (command == "transform") { // --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-#] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
-				tasks.emplace_back(Task::TransformProofSummary, map<string, string> { { "string", argv[++i] }, { "conclusionsWithHelperProofs", "" }, { "filterForTheorems", "" }, { "outputFile", "" }, { "compress_vault", "" } }, map<string, int64_t> { { "minUseAmountToCreateHelperProof", 2 }, { "maxLengthToKeepProof", -1 }, { "storeIntermediateUnfoldingLimit", -1 }, { "maxLengthToComputeDProof", 134217728 }, { "compress_range", 0 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "printInfixUnicode", false }, { "abstractProofStrings", true }, { "removeDuplicateConclusions", false }, { "compress", false }, { "noInputConclusions", false }, { "debug", false }, { "compress_concurrent", true }, { "compress_keep", false }, { "compress_sureSaves", false }, { "compress_skip", false }, { "whether -s was called", false }, { "whether -t was called", false }, { "whether -v was called", false } });
+				tasks.emplace_back(Task::TransformProofSummary, map<string, string> { { "string", argv[++i] }, { "conclusionsWithHelperProofs", "" }, { "filterForTheorems", "" }, { "outputFile", "" }, { "compress_vault", "" } }, map<string, int64_t> { { "minUseAmountToCreateHelperProof", 2 }, { "maxLengthToKeepProof", -1 }, { "storeIntermediateUnfoldingLimit", -1 }, { "maxLengthToComputeDProof", 134217728 }, { "compress_range", 0 } }, map<string, bool> { { "useInputFile", false }, { "useOutputFile", false }, { "normalPolishNotation", false }, { "printInfixUnicode", false }, { "abstractProofStrings", true }, { "removeDuplicateConclusions", false }, { "compress", false }, { "noInputConclusions", false }, { "debug", false }, { "compress_keep", false }, { "compress_sureSaves", false }, { "compress_skip", false }, { "compress_babySteps", false }, { "whether -s was called", false }, { "whether -t was called", false }, { "whether -v was called", false } });
 			} else if (command == "unfold") { // --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-v] [-f] [-o <output file>] [-d]
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
@@ -642,6 +642,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
+			case Task::TransformProofSummary: // --transform -# (use smaller, less efficient proof compression steps)
+				tasks.back().bln["compress_babySteps"] = true;
+				break;
 			case Task::ExtractFromProofFiles: // --extract -# <amount up to 35> (initialize proof system at ./data/[<hash>/]/extraction-<id>/ with the given amount [...])
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -741,7 +744,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::TransformProofSummary: // --transform -h (save raw intermediate results in files before each proof compression round)
+			case Task::TransformProofSummary: // --transform -h (save raw intermediate results in files at the beginning of each proof compression round)
 				tasks.back().bln["compress_sureSaves"] = true;
 				break;
 			case Task::ConvertNaturalDeduction: // --ndconvert -h (use heterogeneous language)
@@ -829,7 +832,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					return printUsage("Invalid parameter \"" + string(argv[i]) + "\" for \"-" + string { c } + "\".", recent(string { c }));
 				}
 				break;
-			case Task::TransformProofSummary: // --transform -k (store maximum-size proofs generated via 'x' also when they do not prove known intermediate theorems)
+			case Task::TransformProofSummary: // --transform -k (store maximum-size proofs prepared via '-x' also when they do not prove known intermediate theorems)
 				tasks.back().bln["compress_keep"] = true;
 				break;
 			case Task::ConvertNaturalDeduction: // --ndconvert -k (keep proofs for all theorems)
@@ -1093,7 +1096,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::TransformProofSummary: // --transform -v (coordinate iteration phases for maximum-size proofs generated via 'x' with the specified vault file)
+			case Task::TransformProofSummary: // --transform -v (coordinate preparation phases for maximum-size proofs generated via '-x' with the specified vault file)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
 				tasks.back().str["compress_vault"] = argv[++i];
@@ -1149,9 +1152,6 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			switch (lastTask()) {
 			default:
 				return printUsage("Invalid argument \"-" + string { c } + "\".", recent());
-			case Task::TransformProofSummary: // --transform -y (disable multi-threaded D-rule replacement search in case proof compression is performed)
-				tasks.back().bln["compress_concurrent"] = false;
-				break;
 			case Task::ConclusionLengthPlot: // --plot -y <limit or -1> (upper vertical limit)
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"-" + string { c } + "\".", recent(string { c }));
@@ -1224,7 +1224,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 					ss << ++index << ". printProofs(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << (t.bln["normalPolishNotation"] ? "DlFormulaStyle::PolishStandard" : t.bln["unicodeInfixNotation"] ? "DlFormulaStyle::InfixUnicode" : "DlFormulaStyle::PolishNumeric") << ", " << bstr(t.bln["conclusionsOnly"]) << ", " << bstr(t.bln["summaryMode"]) << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
 				case Task::TransformProofSummary: // --transform
-					ss << ++index << ". recombineProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << (t.bln["whether -s was called"] ? "\"" + t.str["conclusionsWithHelperProofs"] + "\"" : "null") << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << (size_t) t.num["maxLengthToKeepProof"] << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << bstr(t.bln["compress"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ", " << bstr(t.bln["compress_concurrent"]) << ", " << t.num["compress_range"] << ", " << bstr(t.bln["compress_keep"]) << ", " << (t.bln["whether -v was called"] ? "\"" + t.str["compress_vault"] + "\"" : "null") << ", " << bstr(t.bln["compress_sureSaves"]) << ", " << bstr(t.bln["compress_skip"]) << ")\n";
+					ss << ++index << ". recombineProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << (t.bln["whether -s was called"] ? "\"" + t.str["conclusionsWithHelperProofs"] + "\"" : "null") << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << (size_t) t.num["maxLengthToKeepProof"] << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << bstr(t.bln["compress"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ", " << t.num["compress_range"] << ", " << bstr(t.bln["compress_keep"]) << ", " << (t.bln["whether -v was called"] ? "\"" + t.str["compress_vault"] + "\"" : "null") << ", " << bstr(t.bln["compress_sureSaves"]) << ", " << bstr(t.bln["compress_skip"]) << ", " << bstr(t.bln["compress_babySteps"]) << ")\n";
 					break;
 				case Task::UnfoldProofSummary: // --unfold
 					ss << ++index << ". unfoldProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["wrap"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
@@ -1330,11 +1330,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				cout << "[Main] Calling printProofs(" << (t.bln["useInputFile"] ? "{ }" : "\"" + t.str["string"] + "\"") << ", " << (t.bln["normalPolishNotation"] ? "DlFormulaStyle::PolishStandard" : t.bln["unicodeInfixNotation"] ? "DlFormulaStyle::InfixUnicode" : "DlFormulaStyle::PolishNumeric") << ", " << bstr(t.bln["conclusionsOnly"]) << ", " << bstr(t.bln["summaryMode"]) << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (t.bln["useInputFile"] ? "\"" + t.str["string"] + "\"" : "null") << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 				DlProofEnumerator::printProofs(t.bln["useInputFile"] ? vector<string> { } : FctHelper::stringSplit(t.str["string"], ","), t.bln["normalPolishNotation"] ? DlFormulaStyle::PolishStandard : t.bln["unicodeInfixNotation"] ? DlFormulaStyle::InfixUnicode : DlFormulaStyle::PolishNumeric, t.bln["conclusionsOnly"], t.bln["summaryMode"], (unsigned) t.num["minUseAmountToCreateHelperProof"], t.bln["abstractProofStrings"], t.bln["useInputFile"] ? &t.str["string"] : nullptr, t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"]);
 				break;
-			case Task::TransformProofSummary: // --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-y] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
-				cout << "[Main] Calling recombineProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << (t.bln["whether -s was called"] ? "\"" + t.str["conclusionsWithHelperProofs"] + "\"" : "null") << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << (size_t) t.num["maxLengthToKeepProof"] << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << bstr(t.bln["compress"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ", " << bstr(t.bln["compress_concurrent"]) << ", " << t.num["compress_range"] << ", " << bstr(t.bln["compress_keep"]) << ", " << (t.bln["whether -v was called"] ? "\"" + t.str["compress_vault"] + "\"" : "null") << ", " << bstr(t.bln["compress_sureSaves"]) << ", " << bstr(t.bln["compress_skip"]) << ")." << endl;
+			case Task::TransformProofSummary: // --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-#] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
+				cout << "[Main] Calling recombineProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << (t.bln["whether -s was called"] ? "\"" + t.str["conclusionsWithHelperProofs"] + "\"" : "null") << ", " << (unsigned) t.num["minUseAmountToCreateHelperProof"] << ", " << (size_t) t.num["maxLengthToKeepProof"] << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << bstr(t.bln["abstractProofStrings"]) << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << bstr(t.bln["compress"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ", " << t.num["compress_range"] << ", " << bstr(t.bln["compress_keep"]) << ", " << (t.bln["whether -v was called"] ? "\"" + t.str["compress_vault"] + "\"" : "null") << ", " << bstr(t.bln["compress_sureSaves"]) << ", " << bstr(t.bln["compress_skip"]) << ", " << bstr(t.bln["compress_babySteps"]) << ")." << endl;
 				if (!t.bln["useInputFile"])
 					boost::replace_all(t.str["string"], ",", "\n");
-				DlProofEnumerator::recombineProofSummary(t.str["string"], t.bln["useInputFile"], t.bln["whether -s was called"] ? &t.str["conclusionsWithHelperProofs"] : nullptr, (unsigned) t.num["minUseAmountToCreateHelperProof"], t.num["maxLengthToKeepProof"], t.bln["normalPolishNotation"], t.bln["printInfixUnicode"], t.bln["whether -t was called"] ? &t.str["filterForTheorems"] : nullptr, t.bln["abstractProofStrings"], t.num["storeIntermediateUnfoldingLimit"], t.num["maxLengthToComputeDProof"], t.bln["removeDuplicateConclusions"], t.bln["compress"], t.bln["noInputConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"], t.bln["compress_concurrent"], t.num["compress_range"], t.bln["compress_keep"], t.bln["whether -v was called"] ? &t.str["compress_vault"] : nullptr, t.bln["compress_sureSaves"], t.bln["compress_skip"]);
+				DlProofEnumerator::recombineProofSummary(t.str["string"], t.bln["useInputFile"], t.bln["whether -s was called"] ? &t.str["conclusionsWithHelperProofs"] : nullptr, (unsigned) t.num["minUseAmountToCreateHelperProof"], t.num["maxLengthToKeepProof"], t.bln["normalPolishNotation"], t.bln["printInfixUnicode"], t.bln["whether -t was called"] ? &t.str["filterForTheorems"] : nullptr, t.bln["abstractProofStrings"], t.num["storeIntermediateUnfoldingLimit"], t.num["maxLengthToComputeDProof"], t.bln["removeDuplicateConclusions"], t.bln["compress"], t.bln["noInputConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"], t.num["compress_range"], t.bln["compress_keep"], t.bln["whether -v was called"] ? &t.str["compress_vault"] : nullptr, t.bln["compress_sureSaves"], t.bln["compress_skip"], t.bln["compress_babySteps"]);
 				break;
 			case Task::UnfoldProofSummary: // --unfold <string> [-n] [-t <string>] [-i <limit or -1>] [-l <limit or -1>] [-w] [-v] [-f] [-o <output file>] [-d]
 				cout << "[Main] Calling unfoldProofSummary(\"" << t.str["string"] << "\", " << bstr(t.bln["useInputFile"]) << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << (t.bln["whether -t was called"] ? "\"" + t.str["filterForTheorems"] + "\"" : "null") << ", " << (size_t) t.num["storeIntermediateUnfoldingLimit"] << ", " << (size_t) t.num["maxLengthToComputeDProof"] << ", " << bstr(t.bln["wrap"]) << ", " << bstr(t.bln["noInputConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;

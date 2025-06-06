@@ -1838,14 +1838,26 @@ vector<string> DRuleParser::unfoldAbstractDProof(const vector<string>& abstractD
 	return unfoldRulesInAbstractDProof(targetIndices, abstractDProof, helperRules, debug, &storedFundamentalLengths, storeIntermediateUnfoldingLimit);
 }
 
-void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, vector<size_t>& targetIndices, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, bool concurrentDRuleSearch, size_t modificationRange, bool keepMaxRules, const string* vaultFile, bool sureSaves, bool skipFirstPrep) {
-	if (modificationRange >= 3 && UINT16_MAX < modificationRange) {
+void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector<shared_ptr<DlFormula>>& abstractDProofConclusions, vector<string>& helperRules, vector<shared_ptr<DlFormula>>& helperRulesConclusions, vector<size_t>& indexEvalSequence, vector<size_t>& targetIndices, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, size_t modificationRange, bool keepMaxRules, const string* vaultFile, bool sureSaves, bool skipFirstPrep, bool babySteps) {
+	if (modificationRange >= 5 && UINT16_MAX < modificationRange) {
 		cerr << "[Proof compression] ERROR Requested D-proofs of lengths up to " << modificationRange << " (exceeding 2^16 = " << UINT16_MAX + 1 << " required indices). Aborting." << endl;
 		exit(0);
-	} else if (keepMaxRules) // a vault is meant to store only useful rules, thus is insufficient (and to be ignored) in case all maximum-size proofs are to be kept
+	} else if (keepMaxRules) // a vault is meant to simulate a computation with less effort; this is impossible in case all maximum-size proofs are to be considered => vaults are to be ignored in this case
 		vaultFile = nullptr;
 
-	// 1. Parse and store axioms and elementary proof steps.
+	// 1. Prepare to filter for final theorem of initial input (if requested). ; NOTE: This is necessary since new entries may be added to 'retractedDProof'.
+	vector<AxiomInfo> _filterForTheorems;
+	if (!targetEverything && !filterForTheorems) {
+		if (targetIndices.empty())
+			throw logic_error("|targetIndices| = 0");
+		if (targetIndices[0] >= retractedDProof.size())
+			throw logic_error("targetIndices[0] = " + to_string(targetIndices[0]) + " >= " + to_string(retractedDProof.size()) + " = |retractedDProof|");
+		const shared_ptr<DlFormula>& targetTheorem = abstractDProofConclusions[targetIndices[0]];
+		_filterForTheorems.push_back(DRuleParser::AxiomInfo(DlCore::toPolishNotation_noRename(targetTheorem), targetTheorem));
+		filterForTheorems = &_filterForTheorems;
+	}
+
+	// 2. Parse and store axioms and elementary proof steps.
 	struct ProofElement {
 		char rule; // e.g. 'D' or 'N', but also 'A' for axiom number (which also have to be checked as potential replacements)
 		shared_ptr<DlFormula> result;
@@ -1953,13 +1965,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			needSkip = false;
 		}
 
-		// 2. Collect fundamental lengths.
+		// 3. Collect fundamental lengths.
 		vector<size_t> allIndices(numRules);
 		iota(allIndices.begin(), allIndices.end(), 0);
 		vector<size_t> fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions);
 		//#cout << "fundamentalLengths = " << FctHelper::vectorString(fundamentalLengths) << endl;
 
-		// 3. Prepare container for exhaustive generation data (if requested).
+		// 4. Prepare abstract proof container for exhaustive generation data.
 		struct AbstractDProof: public IPrintable {
 			const vector<tbb::concurrent_vector<AbstractDProof>>& extraData;
 			atomic<bool> active = true;
@@ -2011,6 +2023,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			}
 		};
 		vector<tbb::concurrent_vector<AbstractDProof>> extraData; // relative abstract D-proofs of length index
+
+		// 5. Prepare vault containers for exhaustive generation data.
 		string vault_str;
 		struct cmpComboGrow { // to sort like proof length combinations
 			bool operator()(const array<uint32_t, 2>& a, const array<uint32_t, 2>& b) const {
@@ -2039,12 +2053,11 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		};
 		vector<VaultSummaryEntry> vaultRoundResult; // used to reconstruct a complete round stored in vault
 		size_t vaultRoundResult_initialTotalFunLen = 0; // modified iff summary for complete round reconstruction is given
-		if (allowGeneration && modificationRange >= 3) {
-			extraData.resize(modificationRange + 1); // NOTE: The outer vector remains constant in size and inner vectors are tbb::concurrent_vector to avoid reallocations for parallel accessibility during growth.
-			string indent = "\n" + string(63 + FctHelper::digitsNum_uint64(modificationRange), ' ');
-			cout << "[Proof compression] Extended rule search configuration " << modificationRange << "-" << keepMaxRules << "-" << static_cast<bool>(vaultFile) << "-" << skipFirstPrep << ": Before each round generate relative abstract proofs (D-rules only) with up to " << (modificationRange % 2 == 0 ? modificationRange - 1 : modificationRange) << " steps and improve existing rules accordingly, potentially with new formulas." << (keepMaxRules ? indent + "Store maximum-size generated proofs also when they do not prove known intermediate theorems, so they remain potentially useful as replacements for subproofs." : "") << (vaultFile ? indent + "Use vault file at \"" + *vaultFile + "\" to coordinate iteration phases for maximum-size proofs, to avoid repeating these computations over multiple runs." : "") << (skipFirstPrep ? indent + "Skip preparation of the first round." : "") << endl;
 
-			// 4. Import vault (if requested).
+		// 6. Print extended configuration and import vault (if requested).
+		if (allowGeneration && modificationRange >= 5) {
+			string indent = "\n" + string(63 + FctHelper::digitsNum_uint64(modificationRange), ' ');
+			cout << "[Proof compression] Extended rule search configuration " << modificationRange << "-" << keepMaxRules << "-" << static_cast<bool>(vaultFile) << "-" << skipFirstPrep << ": Before each round generate relative abstract proofs (D-rules only) with up to " << (modificationRange % 2 == 0 ? modificationRange - 1 : modificationRange) << " steps and improve existing rules accordingly, potentially with new formulas." << (keepMaxRules ? indent + "Store maximum-size generated proofs also when they do not prove known intermediate theorems, so they remain potentially useful as replacements for subproofs." : "") << (vaultFile ? indent + "Use vault file at \"" + *vaultFile + "\" to coordinate preparation phases for maximum-size proofs, to avoid repeating these computations over multiple runs." : "") << (skipFirstPrep ? indent + "Skip preparation of the first round." : "") << endl;
 			if (vaultFile) {
 				bool fileExists = filesystem::exists(*vaultFile);
 				if (fileExists && !FctHelper::readFile(*vaultFile, vault_str)) {
@@ -2052,7 +2065,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					exit(0);
 				}
 
-				// 4.1 Parse entries from vault file.
+				// 6.1 Parse entries from vault file.
 				istringstream sr(vault_str);
 				string line;
 				size_t lineNo = 0;
@@ -2144,7 +2157,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 								if (elems.size() == 2) {
 									array<uint32_t, 2> phase = { 0, 0 };
 									if (FctHelper::toUInt(elems[0], phase[0]).ec == errc() && FctHelper::toUInt(elems[1], phase[1]).ec == errc() && phase[0] && phase[1]) {
-										currentPhase = phase; // next iteration phase
+										currentPhase = phase; // next preparation phase
 										vault[currentPhase];
 									}
 								}
@@ -2191,16 +2204,16 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						foundCurrentRound = true;
 				}
 				if (!fileExists)
-					cout << "[Proof compression] Storing all 'round " << compressionRound << "' results to a new vault file after each iteration phase for maximum-size proofs." << endl;
+					cout << "[Proof compression] Storing all 'round " << compressionRound << "' results to a new vault file after each preparation phase for maximum-size proofs." << endl;
 				else if (!foundCurrentRound)
-					cout << "[Proof compression] Found no \"[round " << compressionRound << "]\" in vault. Appending all 'round " << compressionRound << "' results to existing vault file after each iteration phase for maximum-size proofs." << endl;
+					cout << "[Proof compression] Found no \"[round " << compressionRound << "]\" in vault. Appending all 'round " << compressionRound << "' results to existing vault file after each preparation phase for maximum-size proofs." << endl;
 				vault_str += (vault_str.empty() || vault_str[vault_str.length() - 1] == '\n' ? "" : "\n");
 				if (!fileExists || !foundCurrentRound)
 					vault_str += "[round " + to_string(compressionRound) + "]\n";
 				//#cout << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return p.first + ":" + p.second; }); }, { }, { }, "\n") << endl;
 				//#cout << FctHelper::vectorStringF(vaultRoundResult, [](const VaultSummaryEntry& r) { return "[" + to_string(r.original) + "]: \"" + r.originalRule + "\" (" + to_string(r.originalFunLen) + ") -> \"" + r.newRule + "\" (" + to_string(r.newFunLen) + ") [" + to_string(r.totalProofStepsAfter) + "]"; }, { }, { }, "\n") << endl;
 
-				// 4.2 Check vault entries.
+				// 6.2 Check vault entries.
 				vector<string> extendedAbstractDProof;
 				vector<shared_ptr<DlFormula>> extendedAbstractDProofConclusions;
 				vector<shared_ptr<DlFormula>> extendedHelperRulesConclusions;
@@ -2228,8 +2241,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 					cout << "[Proof compression] Successfully parsed " << checks.size() << " rule" << (checks.size() == 1 ? "" : "s") << " from vault." << endl;
 				} else if (fileExists && foundCurrentRound)
-					cout << "[Proof compression] No relevant iteration phase was found in vault." << endl;
-				if (vaultRoundResult_initialTotalFunLen == vaultRoundResult.empty()) {
+					cout << "[Proof compression] No relevant preparation phase was found in vault." << endl;
+				if (static_cast<bool>(vaultRoundResult_initialTotalFunLen) == vaultRoundResult.empty()) {
 					cerr << "[Proof compression] ERROR Incomplete \"[Summary]\" specification in vault file ./" << *vaultFile << ". Aborting." << endl;
 					exit(0);
 				}
@@ -2246,7 +2259,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						exit(0);
 					}
 
-				// 4.3 Obtain input formulas for vault entries.
+				// 6.3 Obtain input formulas for vault entries.
 				for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault) {
 					vaultInputs[p.first];
 					for (const pair<string, string>& q : p.second) {
@@ -2301,18 +2314,25 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				}
 				//#cout << FctHelper::mapStringF(vaultInputs, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return "D(" + p.first + ")(" + p.second + ")"; }); }, { }, { }, "\n") << endl;
 				if (!vault.empty())
-					cout << "[Proof compression] Imported " << vault.size() << " relevant iteration phase" << (vault.size() == 1 ? "" : "s") << " with the following amounts of rules: " << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + to_string(p.second.size()); }) << endl;
+					cout << "[Proof compression] Imported " << vault.size() << " relevant preparation phase" << (vault.size() == 1 ? "" : "s") << " with the following amounts of rules: " << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + to_string(p.second.size()); }) << endl;
 			}
 		}
 
-		// 5. Perform an exhaustive generation to improve the proof summary (if requested).
-		chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
-		vector<string> originalConclusions(numRules);
-		tbb::concurrent_hash_map<string, pair<int64_t, size_t>> obtainedConclusions; // conclusion -> (location, fundamental length) ; NOTE: Synchronized insertions and modifications with concurrent read access are unsupported by std::map.
-		if (allowGeneration && modificationRange >= 3) {
+		// 7. Define lambda functions to
+		//    - exhaustively generate abstract D-proofs ('auto exhaustiveGen'),
+		//    - replace intermediate conclusions with shortest available proofs of schemas ('auto purify'), and
+		//    - save raw intermediate results in file ('auto saveRawIntermediateResults').
+		size_t subround = 0;
+		// X. Perform an exhaustive generation to improve the proof summary.
+		auto exhaustiveGen = [&](size_t modificationRange = 3, bool preparation = false, const string* vaultFile = nullptr, size_t vaultRoundResult_initialTotalFunLen = 0) {
+			chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+			extraData.clear();
+			extraData.resize(modificationRange + 1); // NOTE: The outer vector remains constant in size and inner vectors are tbb::concurrent_vector to avoid reallocations for parallel accessibility during growth.
+			vector<string> originalConclusions(numRules);
+			tbb::concurrent_hash_map<string, pair<int64_t, size_t>> obtainedConclusions; // conclusion -> (location, fundamental length) ; NOTE: Synchronized insertions and modifications with concurrent read access are unsupported by std::map.
 
-			// 5.1 Create links from conclusions to shortest known proofs.
-			cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Preparation started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total. Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for relative abstract D-proof generation." << endl;
+			// X.1 Create links from conclusions to shortest known proofs.
+			cout << "[Proof compression (rule search), round " << compressionRound << (preparation || babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": " << (preparation ? "Preparation" : "Generation") << " started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total. Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for relative abstract D-proof generation." << endl;
 			for (size_t a = 0; a < axioms.size(); a++)
 				obtainedConclusions.emplace(DlCore::toPolishNotation_numVars(axioms[a].refinedAxiom), pair<int64_t, size_t> { -static_cast<int64_t>(a + 1), 1 });
 			for (size_t i = 0; i < numRules; i++) {
@@ -2332,7 +2352,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			}
 			const unordered_set<string> originalConclusionsSet = keepMaxRules ? unordered_set<string> { } : unordered_set<string>(originalConclusions.begin(), originalConclusions.end());
 
-			// 5.2 Generate relative abstract D-proofs.
+			// X.2 Generate relative abstract D-proofs.
 			if (proofElements.size() != retractedDProof.size() + helperRules.size() + axioms.size())
 				throw logic_error("|proofElements| = " + to_string(proofElements.size()) + " != " + to_string(retractedDProof.size() + helperRules.size() + axioms.size()) + " = " + to_string(retractedDProof.size()) + " + " + to_string(helperRules.size()) + " + " + to_string(axioms.size()) + " = |retractedDProof| + |helperRules| + |axioms|");
 			//#else
@@ -2445,7 +2465,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						cout << "(" << lenB << ", " << lenA << ")" << endl;
 						tbb::concurrent_vector<AbstractDProof>& output = extraData[len]; // i.e. extraData[1 + lenA + lenB] = extraData[p.second]
 
-						// 5.2.1 Reconstruct relative abstract D-proofs from vault (if requested).
+						// X.2.1 Reconstruct relative abstract D-proofs from vault (if requested).
 						if (vaultFile && vaultInputs.count(p.first)) {
 							const vector<pair<string, string>>& relevantVaultInputs = vaultInputs.at(p.first);
 							for (size_t i = 0; i < relevantVaultInputs.size(); i++) {
@@ -2527,7 +2547,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 							cout << "Utilized " << relevantVaultInputs.size() << " rule" << (relevantVaultInputs.size() == 1 ? "" : "s") << " from vault" << (len < modificationRange ? " for reconstruction purposes. Vault contains no summary for this round, thus all remaining proofs will still be collected as potential subproof replacement candidates." : ".") << endl;
 						}
 
-						// 5.2.2 Exhaustively generate relative abstract D-proofs.
+						// X.2.2 Exhaustively generate relative abstract D-proofs.
 						if (!vaultFile || len < modificationRange || !vaultInputs.count(p.first)) { // need exhaustive generation when there is no vault with current proof length combination, but always for non-maximum-size proofs (since they must still be available as replacements for subproofs when combining results)
 							if (vaultOutput) {
 								if (lenReportedForVault < len) {
@@ -2678,7 +2698,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 							}
 						}
 
-						// 5.2.3 Free inactive entries from output without touching indices.
+						// X.2.3 Free inactive entries from output without touching indices.
 						if (!output.empty()) {
 							chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 							atomic<size_t> c = 0, d = 0;
@@ -2696,7 +2716,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				//#size_t index = 0;
 				//#cout << "extraData sizes: " << FctHelper::vectorStringF(extraData, [&](const tbb::concurrent_vector<AbstractDProof>& v) { return "[" + to_string(index++) + "]: " + to_string(v.size()); }, { }, { }) << endl;
 
-				// 5.3 Summarize generated improvements individually.
+				// X.3 Summarize generated improvements individually.
 				auto measure = [&](const string& s) -> size_t {
 					bool inReference = false;
 					size_t funLen = 0;
@@ -2760,7 +2780,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 				}
 
-				// 5.4 Combine and summarize improvements.
+				// X.4 Combine and summarize improvements.
 				if (foundImprovements) {
 					auto popNext = [&](map<size_t, int64_t>& locations, size_t& funLen) -> pair<const size_t, int64_t> { // obtain and remove entry with minimal fundamental length according to 'fundamentalLengths'
 						map<size_t, map<size_t, int64_t>> ordered; // fundamental length -> (index, location)
@@ -2860,7 +2880,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				cout << "[Summary] Applied " << vaultRoundResult.size() << " vault improvement" << (vaultRoundResult.size() == 1 ? "" : "s") << ". Reduced " << vaultRoundResult_initialTotalFunLen << " total proof steps down to " << totalProofSteps << "." << endl;
 			}
 
-			// 5.5 Make newly encoded intermediate conclusions explicit and filter out duplicates (in case they were introduced).
+			// X.5 Make newly encoded intermediate conclusions explicit and filter out duplicates (in case they were introduced).
 			// NOTE: Call without 'requiredIntermediateResults' since the list of conclusions changes after the first round and its
 			//       point is merely to check whether imported rules match their written conclusions (which were already validated).
 			if (foundImprovements) {
@@ -2888,13 +2908,12 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				proofElements.clear();
 				fillProofElements();
 			}
-			cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Preparation complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-		}
-
-		// 6. Immediately replace proper instances with a most general schema that has a proof of smaller or equal length. When there are multiple adequate schemas, choose the first with a shortest proof.
-		{
-			startTime = chrono::steady_clock::now();
-			cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Purifier started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total. Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for schema search and rule purification." << endl;
+			cout << "[Proof compression (rule search), round " << compressionRound << (preparation || babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": " << (preparation ? "Preparation" : "Generation") << " complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
+		};
+		// Y. Immediately replace proper instances with a most general schema that has a proof of smaller or equal length. When there are multiple adequate schemas, choose the first with a shortest proof.
+		auto purify = [&](bool initial = false) {
+			chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+			cout << "[Proof compression (rule search), round " << compressionRound << (initial || babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": Purifier started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total. Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for schema search and rule purification." << endl;
 			auto applyIndexTranslation = [&](const map<size_t, size_t>& translation) {
 				tbb::parallel_for(size_t(0), numRules, [&](size_t i) {
 					string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
@@ -2943,7 +2962,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				fillProofElements();
 			};
 
-			// 6.1 Obtain axiom instances.
+			// Y.1 Obtain axiom instances.
 			map<size_t, size_t> axiomInstances;
 			mutex mtx_axiomInstances;
 			tbb::parallel_for(size_t(0), axioms.size(), [&](size_t i) {
@@ -2957,7 +2976,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				foundImprovements = true;
 				cout << "Eliminating " << axiomInstances.size() << " axiom instance" << (axiomInstances.size() == 1 ? ": " : "s: ") << FctHelper::mapString(axiomInstances) << endl;
 
-				// 6.2 Apply axiom replacements.
+				// Y.2 Apply axiom replacements.
 				tbb::parallel_for(size_t(0), numRules, [&](size_t i) {
 					string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
 					bool inReference = false;
@@ -2974,11 +2993,11 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					dProof = result;
 				});
 
-				// 6.3 Remove overridden indices.
+				// Y.3 Remove overridden indices.
 				removeIndices(axiomInstances);
 			}
 
-			// 6.4 Obtain schema hierarchy between intermediate conclusions.
+			// Y.4 Obtain schema hierarchy between intermediate conclusions.
 			map<size_t, vector<size_t>> schemasOf;
 			{
 				map<size_t, vector<size_t>> indicesByLen;
@@ -3006,7 +3025,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				foundImprovements = true;
 				cout << "Eliminating " << schemasOf.size() << " rule instance" << (schemasOf.size() == 1 ? ": " : "s: ") << FctHelper::mapStringF(schemasOf, [](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorString(p.second, "{", "}"); }) << endl;
 
-				// 6.5 Apply best schema replacements.
+				// Y.5 Apply best schema replacements.
 				map<size_t, size_t> combinedTranslation;
 				map<size_t, size_t> indexTranslation;
 				do {
@@ -3059,10 +3078,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 				} while (!schemasOf.empty());
 
-				// 6.6 Remove overridden indices.
+				// Y.6 Remove overridden indices.
 				removeIndices(combinedTranslation);
 
-				// 6.7 Update conclusions.
+				// Y.7 Update conclusions.
 				for (size_t i = 0; i < helperRules.size(); i++) {
 					retractedDProof.push_back(helperRules[i]);
 					abstractDProofConclusions.push_back(helperRulesConclusions[i]);
@@ -3070,10 +3089,9 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				parseAbstractDProof(retractedDProof, abstractDProofConclusions, customAxioms, &helperRules, &helperRulesConclusions, &indexEvalSequence);
 				modified = false; // no need to rebuild 'indexEvalSequence', for now
 			}
-			cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Purifier complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
-		}
-
-		// 7. Save raw intermediate results in file (if requested).
+			cout << "[Proof compression (rule search), round " << compressionRound << (initial || babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": Purifier complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
+		};
+		// Z. Save raw intermediate results in file.
 		auto saveRawIntermediateResults = [&](bool fullRound) {
 			stringstream ss;
 			for (size_t i = 0; i < axioms.size(); i++)
@@ -3094,193 +3112,137 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			FctHelper::writeToFile(path, ss.str());
 			cout << "Saved " << ss.str().length() << " bytes in raw intermediate results to ./" << path << "." << endl;
 		};
-		if (sureSaves)
-			saveRawIntermediateResults(false);
 
-		startTime = chrono::steady_clock::now();
-		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << (concurrentDRuleSearch ? " Using up to " + to_string(thread::hardware_concurrency()) + " hardware thread contexts for D-rule replacement search." : "") << endl;
+		// 8. Perform preparation step.
+		if (allowGeneration && modificationRange >= 5)
+			exhaustiveGen(modificationRange, true, vaultFile, vaultRoundResult_initialTotalFunLen);
 
-		// 8. Group elements based on fundamental lengths.
-		map<size_t, vector<size_t>> indicesByLen;
-		for (size_t i = 0; i < numRules; i++)
-			indicesByLen[fundamentalLengths[i]].push_back(i);
-		for (size_t i = 0; i < axioms.size(); i++)
-			indicesByLen[1].push_back(numRules + i);
-		//#auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
-		//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + "):" + infixUnicode(e.result); }); }, { }, { }, "\n") << endl; // DlCore::formulaRepresentation_traverse(e.result); // DlCore::toPolishNotation(e.result);
-		//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + ")"; }); }, { }, { }, "\n") << endl;
+		// 9. Define procedure to look for N-rules as replacements (where applicable).
+		//    Only looks for rules, cannot eliminate rules that are axioms. These are reported later, but should be handled by the user.
+		auto necessitationReplacements = [&]() {
+			chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+			cout << "[Proof compression (rule search), round " << compressionRound << (babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": N-rule replacer started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << endl;
 
-		auto iToId = [&](size_t i) { if (i < numRules) return static_cast<int64_t>(i); else return -static_cast<int64_t>(i + 1 - numRules); };
-		auto printIndex = [&](size_t i) {
-			auto printAxiom = [](int64_t n) { if (n <= 9) return string { static_cast<char>('0' + n) }; else return string { static_cast<char>('a' + n - 10) }; };
-			auto printStep = [](size_t i) { return "[" + to_string(i) + "]"; };
-			int64_t id = iToId(i);
-			return id < 0 ? printAxiom(-id) : printStep(i);
-		};
-		auto idToLen = [&](int64_t id) -> size_t { if (id < 0) return 1; else return fundamentalLengths[id]; };
+			// 9.1 Group elements based on fundamental lengths.
+			map<size_t, vector<size_t>> indicesByLen;
+			for (size_t i = 0; i < numRules; i++)
+				indicesByLen[fundamentalLengths[i]].push_back(i);
+			for (size_t i = 0; i < axioms.size(); i++)
+				indicesByLen[1].push_back(numRules + i);
+			//#auto infixUnicode = [](const shared_ptr<DlFormula>& f) { string s = DlCore::formulaRepresentation_traverse(f); boost::replace_all(s, DlCore::terminalStr_and(), "∧"); boost::replace_all(s, DlCore::terminalStr_or(), "∨"); boost::replace_all(s, DlCore::terminalStr_nand(), "↑"); boost::replace_all(s, DlCore::terminalStr_nor(), "↓"); boost::replace_all(s, DlCore::terminalStr_imply(), "→"); boost::replace_all(s, DlCore::terminalStr_implied(), "←"); boost::replace_all(s, DlCore::terminalStr_nimply(), "↛"); boost::replace_all(s, DlCore::terminalStr_nimplied(), "↚"); boost::replace_all(s, DlCore::terminalStr_equiv(), "↔"); boost::replace_all(s, DlCore::terminalStr_xor(), "↮"); boost::replace_all(s, DlCore::terminalStr_com(), "↷"); boost::replace_all(s, DlCore::terminalStr_app(), "↝"); boost::replace_all(s, DlCore::terminalStr_not(), "¬"); boost::replace_all(s, DlCore::terminalStr_nece(), "□"); boost::replace_all(s, DlCore::terminalStr_poss(), "◇"); boost::replace_all(s, DlCore::terminalStr_obli(), "○"); boost::replace_all(s, DlCore::terminalStr_perm(), "⌔"); boost::replace_all(s, DlCore::terminalStr_top(), "⊤"); boost::replace_all(s, DlCore::terminalStr_bot(), "⊥"); return s; };
+			//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + "):" + infixUnicode(e.result); }); }, { }, { }, "\n") << endl; // DlCore::formulaRepresentation_traverse(e.result); // DlCore::toPolishNotation(e.result);
+			//#cout << "\nelementsByLen:\n" << FctHelper::mapStringF(indicesByLen, [&](const pair<const size_t, vector<size_t>>& p) { return to_string(p.first) + ": " + FctHelper::vectorStringF(p.second, [&](size_t i) { ProofElement& e = proofElements[i]; return string { e.rule } + "(" + to_string(e.refs[0]) + (e.rule == 'D' ? "," + to_string(e.refs[1]) : "") + ")"; }); }, { }, { }, "\n") << endl;
 
-		// 9. Detect and apply improving replacements of elements within this proof summary.
-		//     Only looks for rules, cannot eliminate rules that are axioms. These are reported in the next step, but should be handled by the user.
-		size_t fundamentalLength;
-		for (map<size_t, vector<size_t>>::reverse_iterator itRev = indicesByLen.rbegin(); (fundamentalLength = itRev->first) > 1; ++itRev) { // iterate longest to shortest rules (exclude axioms, which cannot be modified)
-			const vector<size_t>& indices = itRev->second;
-			for (size_t i : indices) {
-				ProofElement& e = proofElements[i];
-				array<int64_t, 2>& refs = e.refs;
-				atomic<bool> found = false;
-				bool dRule = e.rule == 'D';
-				bool nonMinimalD = dRule && (refs[0] >= 0 || refs[1] >= 0);
-				bool nonMinimalN = !dRule && refs[0] >= 0;
+			// 9.2 Define helpers and iterate elements within this proof summary.
+			auto iToId = [&](size_t i) { if (i < numRules) return static_cast<int64_t>(i); else return -static_cast<int64_t>(i + 1 - numRules); };
+			auto printIndex = [&](size_t i) {
+				auto printAxiom = [](int64_t n) { if (n <= 9) return string { static_cast<char>('0' + n) }; else return string { static_cast<char>('a' + n - 10) }; };
+				auto printStep = [](size_t i) { return "[" + to_string(i) + "]"; };
+				int64_t id = iToId(i);
+				return id < 0 ? printAxiom(-id) : printStep(i);
+			};
+			auto idToLen = [&](int64_t id) -> size_t { if (id < 0) return 1; else return fundamentalLengths[id]; };
+			size_t fundamentalLength;
+			for (map<size_t, vector<size_t>>::reverse_iterator itRev = indicesByLen.rbegin(); (fundamentalLength = itRev->first) > 1; ++itRev) { // iterate longest to shortest rules (exclude axioms, which cannot be modified)
+				const vector<size_t>& indices = itRev->second;
+				for (size_t i : indices) {
+					ProofElement& e = proofElements[i];
+					array<int64_t, 2>& refs = e.refs;
+					atomic<bool> found = false;
+					bool dRule = e.rule == 'D';
+					bool nonMinimalN = !dRule && refs[0] >= 0;
 
-				// 9.1 Look for N-rules as replacements (if applicable).
-				if (e.result->getChildren().size() == 1 && e.result->getValue()->value == DlCore::terminalStr_nece() && (dRule || nonMinimalN)) {
-					const shared_ptr<DlFormula>& e_child = e.result->getChildren()[0];
-					for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
-						size_t candidateAFundamentalLength = itFwdA->first;
-						if (candidateAFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
-							break;
-						for (size_t iA : itFwdA->second) {
-							ProofElement& eA = proofElements[iA];
-							const shared_ptr<DlFormula>& input = eA.result;
-							if (DlCore::isSchemaOf(input, e_child)) {
-								bool isMainStep = i < retractedDProof.size();
-								if (!DlCore::isSchemaOf(e_child, input)) { // 'e.result' needs to be modified
-									shared_ptr<DlFormula> consequent;
-									DlCore::fromPolishNotation_noRename(consequent, "L" + DlCore::toPolishNotation_numVars(input));
-									(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
-									vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
-									map<string, shared_ptr<DlFormula>> substitutions;
-									for (const string& v : vars)
-										substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
-									consequent = DlCore::substitute(consequent, substitutions);
-									cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl;
-									e.result = consequent;
-								}
-								string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
-								string newDProof = "N" + printIndex(iA);
-								if (dRule) {
-									cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-									e.rule = 'N';
-								} else
-									cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-								e.refs[0] = iToId(iA);
-								dProof = newDProof; // update 'retractedDProof' or 'helperRules'
-								fundamentalLengths[i] = candidateAFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
-								modified = true;
-								newImprovements++;
-								found = true;
-								break;
-							}
-						}
-						if (found)
-							break;
-					}
-					if (found)
-						continue;
-				}
-
-				// 9.2 Look for D-rules as replacements. ; NOTE: When parallelized, the solution procedure is not deterministic anymore.
-				mutex mtx;
-				auto searchDRuleReplacement = [&](const pair<const size_t, vector<size_t>>& fwdA, const size_t candidateAFundamentalLength) {
-					// Unmodified captures: &compressionRound, &dRule, &fundamentalLength, &i, &indicesByLen, &iToId, &idToLen, &printIndex, &proofElements
-					// Modifiable captures: &abstractDProofConclusions, &e, &found, &fundamentalLengths, &helperRules, &helperRulesConclusions, &modified, &mtx, &newImprovements, &retractedDProof
-					for (map<size_t, vector<size_t>>::iterator itFwdB = indicesByLen.begin(); itFwdB != indicesByLen.end(); ++itFwdB) {
-						size_t candidateBFundamentalLength = itFwdB->first;
-						if (candidateAFundamentalLength + candidateBFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
-							return;
-						for (size_t iA : fwdA.second) {
-							for (size_t iB : itFwdB->second) {
-								const ProofElement& eB = proofElements[iB]; // NOTE: 'e' might be modified concurrently, but eB != e = proofElements[i], since 'e' is fundamentally longer than 'eB'.
-								const shared_ptr<DlFormula>& conditional = eB.result;
-								const vector<shared_ptr<DlFormula>>& conditional_children = conditional->getChildren();
-								if (conditional_children.size() != 2 || conditional->getValue()->value != DlCore::terminalStr_imply())
-									continue;
-								const ProofElement& eA = proofElements[iA]; // NOTE: 'e' might be modified concurrently, but eA != e = proofElements[i], since 'e' is fundamentally longer than 'eA'.
-								// For special case: When itFwdA == itFwdB and iA == iB, a formula is unified with itself, thus there needs to be an extra separation of variables.
-								shared_ptr<DlFormula> _distinguishedFormula;
-								auto distinguishVariables = [&](const shared_ptr<DlFormula>& f) -> const shared_ptr<DlFormula>& {
-									vector<string> vars = DlCore::primitivesOfFormula_ordered(f);
-									map<string, shared_ptr<DlFormula>> substitutions;
-									for (const string& v : vars)
-										substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(v + "_")));
-									_distinguishedFormula = DlCore::substitute(f, substitutions);
-									return _distinguishedFormula;
-								};
-								const shared_ptr<DlFormula>& antecedent = &fwdA == &*itFwdB && iA == iB ? distinguishVariables(eA.result) : eA.result;
-								map<string, shared_ptr<DlFormula>> substitutions;
-								if (!found && DlCore::tryUnifyTrees(antecedent, conditional_children[0], &substitutions)) {
-									shared_ptr<DlFormula> consequent = DlCore::substitute(conditional_children[1], substitutions);
-									if (!found && DlCore::isSchemaOf(consequent, e.result)) {
-										if (!found) {
-											lock_guard<mutex> lock(mtx);
-											if (!found) {
-												found = true;
-												bool isMainStep = i < retractedDProof.size();
-												if (!DlCore::isSchemaOf(e.result, consequent)) { // 'e.result' needs to be modified
-													DlCore::fromPolishNotation_noRename(consequent, DlCore::toPolishNotation_numVars(consequent));
-													(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
-													vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
-													map<string, shared_ptr<DlFormula>> substitutions;
-													for (const string& v : vars)
-														substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
-													consequent = DlCore::substitute(consequent, substitutions);
-													cout << "[Proof compression (rule search), round " << compressionRound << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl;
-													e.result = consequent;
-												}
-												string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
-												string newDProof = "D" + printIndex(iB) + printIndex(iA);
-												if (dRule)
-													cout << "[Proof compression (rule search), round " << compressionRound << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-												else {
-													cout << "[Proof compression (rule search), round " << compressionRound << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateBFundamentalLength << "+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + candidateBFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
-													e.rule = 'D';
-												}
-												e.refs[0] = iToId(iB);
-												e.refs[1] = iToId(iA);
-												dProof = newDProof; // update 'retractedDProof' or 'helperRules'
-												fundamentalLengths[i] = candidateAFundamentalLength + candidateBFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
-												modified = true;
-												newImprovements++;
-												return;
-											}
-										} else
-											return;
-									}
-								}
-								if (found)
-									return;
-							}
-							if (found)
-								return;
-						}
-						if (found)
-							return;
-					}
-				};
-				if (nonMinimalD || nonMinimalN) { // NOTE: Even an axiom should be replaced when the other input is a rule no shorter than two alternative inputs combined).
-					if (concurrentDRuleSearch)
-						tbb::parallel_for_each(indicesByLen.begin(), indicesByLen.end(), [&](const pair<const size_t, vector<size_t>>& fwdA) {
-							if (found)
-								return;
-							size_t candidateAFundamentalLength = fwdA.first;
-							if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
-								return;
-							searchDRuleReplacement(fwdA, candidateAFundamentalLength);
-						});
-					else
+					// 9.3 Look for N-rules as replacements (if applicable).
+					if (e.result->getChildren().size() == 1 && e.result->getValue()->value == DlCore::terminalStr_nece() && (dRule || nonMinimalN)) {
+						const shared_ptr<DlFormula>& e_child = e.result->getChildren()[0];
 						for (map<size_t, vector<size_t>>::iterator itFwdA = indicesByLen.begin(); itFwdA != indicesByLen.end(); ++itFwdA) {
 							size_t candidateAFundamentalLength = itFwdA->first;
-							if (candidateAFundamentalLength + 2 >= fundamentalLength) // only shorter alternatives are tested
+							if (candidateAFundamentalLength + 1 >= fundamentalLength) // only shorter alternatives are tested
 								break;
-							searchDRuleReplacement(*itFwdA, candidateAFundamentalLength);
+							for (size_t iA : itFwdA->second) {
+								ProofElement& eA = proofElements[iA];
+								const shared_ptr<DlFormula>& input = eA.result;
+								if (DlCore::isSchemaOf(input, e_child)) {
+									bool isMainStep = i < retractedDProof.size();
+									if (!DlCore::isSchemaOf(e_child, input)) { // 'e.result' needs to be modified
+										shared_ptr<DlFormula> consequent;
+										DlCore::fromPolishNotation_noRename(consequent, "L" + DlCore::toPolishNotation_numVars(input));
+										(isMainStep ? abstractDProofConclusions[i] : helperRulesConclusions[i - retractedDProof.size()]) = consequent; // update 'abstractDProofConclusions' or 'helperRulesConclusions'
+										vector<string> vars = DlCore::primitivesOfFormula_ordered(consequent);
+										map<string, shared_ptr<DlFormula>> substitutions;
+										for (const string& v : vars)
+											substitutions.emplace(v, make_shared<DlFormula>(make_shared<String>(to_string(i) + "_" + v)));
+										consequent = DlCore::substitute(consequent, substitutions);
+										cout << "[Proof compression (rule search), round " << compressionRound << (babySteps ? "" : "." + to_string(subround)) << "] Step [" << i << "]'s consequent changed from " << DlCore::toPolishNotation(e.result) << " to " << DlCore::toPolishNotation(consequent) << "." << endl;
+										e.result = consequent;
+									}
+									string& dProof = isMainStep ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
+									string newDProof = "N" + printIndex(iA);
+									if (dRule) {
+										cout << "[Proof compression (rule search), round " << compressionRound << (babySteps ? "" : "." + to_string(subround)) << "] D-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << "+" << idToLen(e.refs[1]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+										e.rule = 'N';
+									} else
+										cout << "[Proof compression (rule search), round " << compressionRound << (babySteps ? "" : "." + to_string(subround)) << "] N-step [" << i << "] improved from " << dProof << " (1+" << idToLen(e.refs[0]) << " = " << fundamentalLength << " steps) to " << newDProof << " (1+" << candidateAFundamentalLength << " = " << candidateAFundamentalLength + 1 << " steps). [" << DlCore::toPolishNotation(e.result) << "]" << endl;
+									e.refs[0] = iToId(iA);
+									dProof = newDProof; // update 'retractedDProof' or 'helperRules'
+									fundamentalLengths[i] = candidateAFundamentalLength + 1; // also update 'fundamentalLengths', so the rule can possibly still be used in this compression round
+									modified = true;
+									newImprovements++;
+									found = true;
+									break;
+								}
+							}
 							if (found)
 								break;
 						}
+						if (found)
+							continue;
+					}
 				}
 			}
-		}
+			cout << "[Proof compression (rule search), round " << compressionRound << (babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": N-rule replacer complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << ". Applied " << newImprovements << " shortening replacement" << (newImprovements == 1 ? "" : "s") << "." << endl;
+		};
 
-		// 10. Detect and report trivial rules.
+		// 10. Perform regular proof compression.
+		chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
+		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Started. There are " << numRules << " rule" << (numRules == 1 ? "" : "s") << " and " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total." << endl;
+		purify(true);
+		if (sureSaves)
+			saveRawIntermediateResults(false);
+		bool foundPrepImprovements = foundImprovements;
+		bool foundRegularImprovements = false;
+		if (babySteps) {
+			exhaustiveGen();
+			if (foundImprovements)
+				foundRegularImprovements = true;
+			necessitationReplacements();
+			if (newImprovements)
+				foundRegularImprovements = true;
+		} else {
+			do { // essentially use '-x 3' until no more changes, but additionally attempt to replace with N-rules
+				newImprovements = 0;
+				do {
+					foundImprovements = false;
+					exhaustiveGen();
+					if (foundImprovements) {
+						foundRegularImprovements = true;
+						purify();
+					}
+					subround++;
+				} while (foundImprovements);
+				subround--;
+				necessitationReplacements();
+				if (newImprovements) {
+					foundRegularImprovements = true;
+					purify();
+				}
+				subround++;
+			} while (newImprovements);
+		}
+		foundImprovements = foundPrepImprovements;
+		newImprovements = foundRegularImprovements;
+
+		// 11. Detect and report trivial rules.
 		for (size_t i = 0; i < numRules; i++) {
 			ProofElement& rule = proofElements[i];
 			for (size_t a = 0; a < axioms.size(); a++) {
@@ -3290,15 +3252,15 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			}
 		}
 
-		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << ". Applied " << newImprovements << " shortening replacement" << (newImprovements == 1 ? "" : "s") << "." << endl;
-
-		// 11. Save raw intermediate results in file (if requested and this round was productive).
+		// 12. Save raw intermediate results in file (if requested and this round was productive).
 		if (sureSaves && newImprovements)
 			saveRawIntermediateResults(true);
+
+		cout << "[Proof compression (rule search), round " << compressionRound << "] " << myTime() << ": Complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
 		compressionRound++;
 	} while (newImprovements || foundImprovements);
 
-	// 12. Rebuild 'indexEvalSequence' (if some rules changed).
+	// 13. Rebuild 'indexEvalSequence' (if some rules changed).
 	if (modified) {
 		vector<size_t> newIndexEvalSequence;
 		set<size_t> registered; // to avoid duplicate evaluation indices in case lower indices use higher indices
@@ -3477,11 +3439,22 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 			}
 		}
 
-		// 4. Update proof.
+		// 4. Prepare to filter for final theorem of initial input (if requested). ; NOTE: This is necessary since new entries may be added to 'retractedDProof'.
+		if (!targetEverything && !filterForTheorems) {
+			if (targetIndices.empty())
+				throw logic_error("|targetIndices| = 0");
+			if (targetIndices[0] >= retractedDProof.size())
+				throw logic_error("targetIndices[0] = " + to_string(targetIndices[0]) + " >= " + to_string(retractedDProof.size()) + " = |retractedDProof|");
+			const shared_ptr<DlFormula>& targetTheorem = abstractDProofConclusions[targetIndices[0]];
+			_newFilterForTheorems.push_back(DRuleParser::AxiomInfo(DlCore::toPolishNotation_noRename(targetTheorem), targetTheorem));
+			newFilterForTheorems = &_newFilterForTheorems;
+		}
+
+		// 5. Update proof.
 		vector<AxiomInfo>* newRequiredIntermediateResults = requiredIntermediateResults;
 		vector<AxiomInfo> _newRequiredIntermediateResults;
 		{
-			// 4.1 Build new abstract proof.
+			// 5.1 Build new abstract proof.
 			vector<string> newAbstractDProof;
 			for (size_t i = 0; i < retractedDProof.size() + helperRules.size(); i++)
 				if (!obsoleteIndices.count(i)) {
@@ -3500,7 +3473,7 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 				}
 			retractedDProof = newAbstractDProof;
 
-			// 4.2 Update conclusions for validation (if available).
+			// 5.2 Update conclusions for validation (if available).
 			if (requiredIntermediateResults) { // NOTE: Do not modify 'requiredIntermediateResults', since it may share its address with 'filterForTheorems'.
 				for (size_t i = 0; i < requiredIntermediateResults->size(); i++)
 					if (!obsoleteIndices.count(i))
@@ -3518,7 +3491,7 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 		if (!silent)
 			cout << "Going to parse modified proof summary with " << obsoleteIndices.size() << " removed duplicate conclusion" << (obsoleteIndices.size() == 1 ? "" : "s") << "." << endl;
 
-		// 4.3 Parse and verify new abstract proof (and update all the extra information).
+		// 5.3 Parse and verify new abstract proof (and update all the extra information).
 		// NOTE: Essentially parseAbstractDProof(retractedDProof, abstractDProofConclusions, customAxioms, &helperRules, &helperRulesConclusions, &indexEvalSequence, debug)
 		//                   with validation, target theorem checks and index updates.
 		targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, newFilterForTheorems, newRequiredIntermediateResults, &indexEvalSequence, debug, silent);
@@ -3530,7 +3503,7 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 	}
 }
 
-vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool removeDuplicateConclusions, bool compress, bool compress_concurrentDRuleSearch, size_t compress_modificationRange, bool compress_keepMaxRules, const string* compress_vaultFile, bool compress_sureSaves, bool compress_skipFirstPrep, bool silent) {
+vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstractDProof, vector<shared_ptr<DlFormula>>& out_conclusions, const vector<AxiomInfo>* customAxioms, bool targetEverything, vector<AxiomInfo>* filterForTheorems, const vector<AxiomInfo>* conclusionsWithHelperProofs, unsigned minUseAmountToCreateHelperProof, vector<AxiomInfo>* requiredIntermediateResults, bool debug, size_t maxLengthToKeepProof, bool abstractProofStrings, size_t storeIntermediateUnfoldingLimit, size_t limit, bool removeDuplicateConclusions, bool compress, size_t compress_modificationRange, bool compress_keepMaxRules, const string* compress_vaultFile, bool compress_sureSaves, bool compress_skipFirstPrep, bool compress_babySteps, bool silent) {
 	chrono::time_point<chrono::steady_clock> startTime;
 
 	// 1. Parse abstract proof (and filter towards 'filterForTheorems', and validate 'requiredIntermediateResults' if requested), and obtain indices of target theorems.
@@ -3584,7 +3557,19 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		//       and 'indexEvalSequence' provides a rule evaluation sequence respecting dependencies between the rules.
 		//       For proof compression, we can now operate over this fully detailed proof summary in order to remove the kind of internal redundancy where other parts
 		//       of the summary provide a shorter alternative subproof at any position.
-		compressAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, targetIndices, customAxioms, targetEverything, filterForTheorems, compress_concurrentDRuleSearch, compress_modificationRange, compress_keepMaxRules, compress_vaultFile, compress_sureSaves, compress_skipFirstPrep);
+		compressAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, indexEvalSequence, targetIndices, customAxioms, targetEverything, filterForTheorems, compress_modificationRange, compress_keepMaxRules, compress_vaultFile, compress_sureSaves, compress_skipFirstPrep, compress_babySteps);
+
+#if 0 //###
+		size_t index = 0;
+		cout << "\nretractedDProof:\n" << FctHelper::vectorStringF(retractedDProof, [&](const string& s) { return "[" + to_string(index++) + "] " + s; }, { }, { }, "\n") << endl;
+		cout << "\nhelperRules:\n" << FctHelper::vectorStringF(helperRules, [&](const string& s) { return "[" + to_string(index++) + "] " + s; }, { }, { }, "\n") << endl;
+		index = 0;
+		cout << "\nabstractDProofConclusions:\n" << FctHelper::vectorStringF(abstractDProofConclusions, [&](const shared_ptr<DlFormula>& f) { return "[" + to_string(index++) + "] " + (f ? DlCore::toPolishNotation(f) : "null"); }, { }, { }, "\n") << endl;
+		cout << "\nhelperRulesConclusions:\n" << FctHelper::vectorStringF(helperRulesConclusions, [&](const shared_ptr<DlFormula>& f) { return "[" + to_string(index++) + "] " + (f ? DlCore::toPolishNotation(f) : "null"); }, { }, { }, "\n") << endl;
+		cout << "indexEvalSequence = " << FctHelper::vectorString(indexEvalSequence) << endl;
+		cout << "targetIndices = " << FctHelper::vectorString(targetIndices) << endl;
+#endif //###
+
 	}
 
 	// 4. Recombine abstract proof (bounded by 'targetIndices'), w.r.t. 'conclusionsWithHelperProofs', 'minUseAmountToCreateHelperProof', and 'maxLengthToKeepProof'.

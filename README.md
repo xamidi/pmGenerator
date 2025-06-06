@@ -118,7 +118,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -f: proofs are given by input file path (where a comma-separated string is stored), ignoring all CR, LF, whitespace, and lines starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
-      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-y] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
+      --transform <string> [-s <string>] [-j <limit or -1>] [-p <limit or -1>] [-n] [-u] [-t <string>] [-e] [-i <limit or -1>] [-l <limit or -1>] [-b] [-w] [-z] [-x <limit>] [-#] [-k] [-v <file>] [-h] [-q] [-f] [-o <output file>] [-d]
          Transform proof summary (as by '--parse [...] -s') into recombined variant ; ignores configured system (proof summaries provide their own axioms) ; "," represents LF
            -s: list a subproof with its conclusion if it occurs in the given comma-separated list of conclusions
            -j: join common subproofs together when they are used at least a given amount of times ; default: 2
@@ -132,12 +132,12 @@ Some more – and very special – proof systems are illustrated [further down b
            -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates ; beneficial in preparing '-x' or '-z'
            -w: read input without conclusions given
            -z: proof compression ; find and remove internal redundancies (e.g. non-trivial parts not affecting intermediate theorems) by attempting to use shorter owned subproofs at all positions
-           -x: proof compression with extended modification range; before each round generate relative abstract proofs (D-rules only) with up to <range> steps, potentially improving rules with new formulas ; default: 0
-           -y: disable multi-threaded D-rule replacement search in case proof compression is performed (enables deterministic procedure) ; not affecting exhaustive generations via '-x', which remain nondeterministic
-           -k: store maximum-size proofs generated via 'x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly
-           -v: coordinate iteration phases for maximum-size proofs generated via 'x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified
-           -h: save raw intermediate results in files before each proof compression round (and after productive rounds) ; after each preparation phase (exhaustive generation) in case '-x' is specified
-           -q: skip first round preparation for '-x' ; useful to continue working on intermediate results produced by an aborted computation using '-h'
+           -x: proof compression with extended modification range; for '-x 5' or higher: prepare each round with relative abstract proofs (D-rules only) of up to <range> steps, potentially improving rules with new formulas ; default: 0
+           -#: use smaller, less efficient proof compression steps ; increases the number of potential rounds and newly introduced intermediate conclusions, potentially leading to shorter proofs eventually
+           -k: store maximum-size proofs prepared via '-x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly
+           -v: coordinate preparation phases for maximum-size proofs generated via '-x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified
+           -h: save raw intermediate results in files at the beginning of each proof compression round (and at the end of productive rounds) ; after each preparation phase in case '-x' is specified
+           -q: skip first round preparation for '-x' ; useful to eliminate inefficiencies before extensive preparations, or to continue working on intermediate results produced by an aborted computation using '-h'
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
            -o: redirect the result's output to the specified file
            -d: print debug information
