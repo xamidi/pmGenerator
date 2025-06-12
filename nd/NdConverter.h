@@ -8,12 +8,12 @@ namespace nd {
 
 struct NdConverter {
 	// Convert a propositional natural deduction proof without premises in FitchFX format (https://github.com/mrieppel/FitchFX ; e.g. exported from https://mrieppel.github.io/FitchFX/)
-	// to a condensed detachment proof in a specified Hilbert system, i.e. read a natural deduction proof from a file, decontextualize, then and print its proof summary.
+	// to a condensed detachment proof in a specified Hilbert system, i.e. read a natural deduction proof from a file, decontextualize, and then print its proof summary.
 	// Translations can be based on proof data provided by the user in another proof summary of the target system. Only basic (i.e. non-derived) FitchFX rules are supported.
 	// NOTE: When not using the default axioms, minimal input requirements are proofs for (A1) ψ→(φ→ψ) (i.e. CpCqp) and (A2) (ψ→(φ→χ))→((ψ→φ)→(ψ→χ)) (i.e. CCpCqrCCpqCpr).
 	//       These enable support for rules →I ("conditional introduction") and →E ("conditional elimination"), but cannot prove any derivation containing negation.
 	//       When a proof for (A3) (¬ψ→¬φ)→(φ→ψ) (i.e. CCNpNqCqp) is also provided, all rules are automatically supported, as long as 'purity mode' is enabled by the user:
-	//       In this case, rules containing any operators other than "→" (i.e. C) and "¬" (i.e. N) are expressed in term of pure C-N-formulas, using the following aliases.
+	//       In this case, rules containing any operators other than "→" (i.e. C) and "¬" (i.e. N) are expressed in terms of pure C-N-formulas, using the following aliases.
 	//         (∧) (ψ∧φ):=¬(ψ→¬φ)          (i.e. Kpq:=NCpNq)
 	//         (∨) (ψ∨φ):=(¬ψ→φ)           (i.e. Apq:=CNpq)
 	//         (↔) (ψ↔φ):=¬((ψ→φ)→¬(φ→ψ))  (i.e. Epq:=NCCpqNCqp)
