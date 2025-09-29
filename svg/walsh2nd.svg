@@ -1,108 +1,99 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" height="500px" viewBox="0 0 80 87">
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="24.375" y1="5" x2="19.375" y2="15"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="24.375" y1="5" x2="29.375" y2="15"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="29.375" y1="15" x2="10" y2="25"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="29.375" y1="15" x2="48.75" y2="25"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="10" y1="25" x2="5" y2="35"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="10" y1="25" x2="15" y2="35"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="48.75" y1="25" x2="37.5" y2="35"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="48.75" y1="25" x2="60" y2="35"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="15" y1="35" x2="10" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="15" y1="35" x2="20" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="37.5" y1="35" x2="30" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="37.5" y1="35" x2="45" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="60" y1="35" x2="55" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="60" y1="35" x2="65" y2="45"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="30" y1="45" x2="30" y2="55"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="45" y1="45" x2="40" y2="55"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="45" y1="45" x2="50" y2="55"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="40" y1="55" x2="35" y2="65"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="40" y1="55" x2="45" y2="65"/>
-	<line style="fill:none; stroke:#000000; stroke-width:0.15" x1="35" y1="65" x2="35" y2="75"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="375px" height="425px" viewBox="-5 -5 75 85">
+	<rect x="-5" y="-5" width="100%" height="100%" fill="#fff"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="21.875" y1="2.5" x2="16.875" y2="12.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="21.875" y1="2.5" x2="26.875" y2="12.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="26.875" y1="12.5" x2="7.5" y2="22.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="26.875" y1="12.5" x2="46.25" y2="22.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="7.5" y1="22.5" x2="2.5" y2="32.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="7.5" y1="22.5" x2="12.5" y2="32.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="46.25" y1="22.5" x2="35" y2="32.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="46.25" y1="22.5" x2="57.5" y2="32.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="12.5" y1="32.5" x2="7.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="12.5" y1="32.5" x2="17.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="35" y1="32.5" x2="27.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="35" y1="32.5" x2="42.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="57.5" y1="32.5" x2="52.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="57.5" y1="32.5" x2="62.5" y2="42.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="27.5" y1="42.5" x2="27.5" y2="52.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="42.5" y1="42.5" x2="37.5" y2="52.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="42.5" y1="42.5" x2="47.5" y2="52.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="37.5" y1="52.5" x2="32.5" y2="62.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="37.5" y1="52.5" x2="42.5" y2="62.5"/>
+	<line style="fill:none; stroke:#000; stroke-width:0.15" x1="32.5" y1="62.5" x2="32.5" y2="72.5"/>
 	<defs id="vertexLibrary">
-		<circle id="vertexCircle" style="fill:#ccccff; stroke:#4040ff; stroke-width:0.2" cx="0" cy="0" r="2.5"/>
-		<rect id="vertexSquare" style="fill:#cccccc; stroke:#404040; stroke-width:0.2" x="-2.5" y="-2.5" width="5" height="5"/>
+		<circle id="vertexCircle" style="fill:#ccf; stroke:#4040ff; stroke-width:0.2" cx="0" cy="0" r="2.5"/>
+		<rect id="vertexSquare" style="fill:#ccc; stroke:#404040; stroke-width:0.2" x="-2.5" y="-2.5" width="5" height="5"/>
 		<g id="imply">
 			<use xlink:href="#vertexCircle"/>
-			<g transform="scale(0.21) translate(-9,-9)">
+			<g fill="#000" transform="scale(0.21) translate(-9,-9)">
 				<svg style="display:block" width="17" height="18" viewBox="0 0 17 18">
-					<g fill="#000000">
-						<use transform="matrix(10,0,0,10,2.4,12.9)" xlink:href="#imply_ref1"/>
-					</g>
-					<defs>
-						<path id="imply_ref1" transform="scale(0.001,-0.001)" d="M817.4,136 c-18.4,0 -35.2,13.7 -35.2,35.1 0,36.7 105.4,113.1 175.7,183.3 l-831.1,0 c-18.3,0 -35.1,16.9 -35.1,35.2 0,19.8 16.8,35.1 35.1,35.1 l831.1,0 C884.6,499.6 782.2,574.4 782.2,609.6 c0,21.4 16.8,35.1 35.2,35.1 10.7,0 19.8,-4.6 27.5,-13.7 80.9,-96.3 181.8,-183.4 307,-206.3 16.9,-3 29.1,-16.8 29.1,-35.1 0,-16.8 -12.2,-30.6 -29.1,-33.6 C1026.7,333.1 925.8,246 844.9,149.7 837.2,140.6 828.1,136 817.4,136 z"/>
-					</defs>
+					<path d="M10.574 11.54a.345.345 0 0 1-.352-.351c0-.367 1.054-1.131 1.757-1.833H3.668a.367.367 0 0 1-.351-.352c0-.198.168-.351.351-.351h8.311c-.733-.749-1.757-1.497-1.757-1.849 0-.214.168-.351.352-.351a.35.35 0 0 1 .275.137c.809.963 1.818 1.834 3.07 2.063.169.03.291.168.291.351a.343.343 0 0 1-.291.336c-1.252.229-2.261 1.1-3.07 2.063a.35.35 0 0 1-.275.137z"/>
 				</svg>
 			</g>
 		</g>
-		<g id="var_p">
+		<g id="var_p" fill="#000">
 			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,0,13)">
 				<path transform="scale(0.001,-0.001)" d="M378.9,21.4 c56.5,0 129.9,50.4 181.8,157.4 27.5,58 77.9,233.7 77.9,323.8 0,90.2 -36.7,143.7 -97.8,143.7 -25.9,0 -70.2,-10.7 -123.7,-58.1 C389.6,565.3 348.3,522.5 337.6,481.3 L262.8,181.8 c-4.6,-18.3 -4.6,-21.4 -4.6,-24.4 0,-9.2 19.9,-136 120.7,-136 z M-28.9,-296.3 c-12.3,0 -19.9,6.1 -19.9,18.3 0,29.1 16.8,29.1 35.1,29.1 67.2,0 70.2,10.7 82.5,62.6 L239.9,498.1 c6.1,25.9 10.7,42.7 10.7,77.9 0,58 -21.4,70.3 -47.4,70.3 -55,0 -85.6,-73.4 -111.5,-181.9 C82.5,430.8 81,429.3 65.7,429.3 c-3.1,0 -18.3,0 -18.3,15.3 0,4.6 19.8,96.2 47.3,148.2 13.8,27.5 42.8,87.1 113.1,87.1 56.5,0 122.2,-32.1 137.5,-114.6 C395.7,624.9 469,679.9 545.4,679.9 661.5,679.9 748.6,579 748.6,435.4 c0,-224.6 -191,-447.5 -368.2,-447.5 -77.9,0 -120.7,53.4 -140.5,97.7 C229.2,47.4 165,-201.6 165,-219.9 c0,-13.8 0,-24.4 76.4,-24.4 21.4,0 36.7,0 36.7,-16.9 0,-30.5 -19.9,-30.5 -27.5,-30.5 l-151.3,0 c-42.8,0 -87.1,-4.6 -128.2,-4.6 z"/>
 			</g>
 		</g>
-		<g id="var_q">
+		<g id="var_q" fill="#000">
 			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,0,13)">
 				<path transform="scale(0.001,-0.001)" d="M267.4,21.4 c85.5,0 171.1,97.8 194,140.5 C466,168.1 550,502.6 550,511.8 c0,10.7 -21.4,134.5 -120.7,134.5 C366.7,646.3 287.2,582.1 239.9,469 213.9,404.9 169.6,238.3 169.6,165 c0,-26 6.1,-143.6 97.8,-143.6 z M249,-296.3 c-19.8,0 -19.8,15.3 -19.8,16.8 0,30.6 15.2,30.6 35.1,30.6 85.6,1.5 97.8,7.6 110,50.4 4.6,13.7 55,219.9 68.8,273.4 -55,-55 -114.6,-91.6 -180.3,-91.6 C151.3,-16.7 61.1,77.9 61.1,227.6 c0,221.6 187.9,447.7 368.2,447.7 48.9,0 108.5,-24.5 142.1,-107 26,44.3 87.1,105.5 103.9,105.5 10.7,0 15.3,-9.2 15.3,-15.3 L479.7,-186.3 c-3,-13.7 -6.1,-22.9 -6.1,-33.6 0,-13.8 0,-24.4 73.3,-24.4 24.5,0 39.8,0 39.8,-16.9 0,-30.5 -19.9,-30.5 -27.5,-30.5 l-157.4,0 c-50.4,0 -103.9,-4.6 -152.8,-4.6 z"/>
 			</g>
 		</g>
-		<g id="var_r">
+		<g id="var_r" fill="#000">
 			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,0,13)">
 				<path transform="scale(0.001,-0.001)" d="M165,-16.7 c-22.9,0 -44.3,13.7 -44.3,41.1 0,7.7 9.2,42.8 13.7,65.7 l88.7,353 c19.8,79.4 24.4,96.2 24.4,128.3 0,58 -21.4,70.3 -47.4,70.3 -55,0 -85.5,-73.4 -111.5,-181.8 C79.4,426.3 77.9,424.7 62.6,424.7 c-3,0 -18.3,0 -18.3,15.3 0,4.6 19.9,96.3 47.4,148.2 13.7,27.5 42.7,87.1 113,87.1 71.8,0 126.8,-48.9 139.1,-117.7 29,42.8 96.2,117.7 195.5,117.7 77.9,0 126.8,-45.9 126.8,-99.3 0,-55 -42.8,-90.2 -84,-90.2 -41.3,0 -58.1,29.1 -58.1,53.5 0,39.7 33.6,76.4 79.5,84 -1.6,0 -24.5,18.4 -64.2,18.4 -65.7,0 -110,-39.8 -122.2,-50.4 C380.4,557.6 337.6,485.8 331.5,466 322.4,424.7 294.9,317.8 282.6,267.4 276.5,239.9 224.6,32.1 221.5,26 210.8,-4.5 183.3,-16.7 165,-16.7 z"/>
 			</g>
 		</g>
 		<g id="not">
 			<use xlink:href="#vertexCircle"/>
-			<g transform="scale(0.21) translate(-6.5,-9)">
+			<g fill="#000" transform="scale(0.21) translate(-6.5,-9)">
 				<svg style="display:block" width="12" height="18" viewBox="0 0 12 18">
-					<g fill="#000000">
-						<use transform="matrix(10,0,0,10,1.6,12.8)" xlink:href="#not_ref1"/>
-					</g>
-					<defs>
-						<path id="not_ref1" transform="scale(0.001,-0.001)" d="M791.4,82.5 c-19.9,0 -35.1,15.3 -35.1,35.1 l0,236.8 -629.5,0 c-18.3,0 -35.1,16.9 -35.1,35.2 0,19.8 16.8,35.1 35.1,35.1 l664.6,0 c19.9,0 35.1,-13.7 35.1,-35.1 l0,-272 c0,-19.8 -16.8,-35.1 -35.1,-35.1 z"/>
-					</defs>
+					<path d="M9.514 11.975a.345.345 0 0 1-.351-.351V9.256H2.868a.367.367 0 0 1-.351-.352c0-.198.168-.351.351-.351h6.646c.199 0 .351.137.351.351v2.72a.355.355 0 0 1-.351.351z"/>
 				</svg>
 			</g>
 		</g>
-		<g id="var_s">
+		<g id="var_s" fill="#000">
 			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,-0.4,13)">
 				<path transform="scale(0.001,-0.001)" d="M297.9,-16.7 c-131.4,0 -218.5,61 -218.5,148.1 0,68.7 45.9,100.8 85.6,100.8 32.1,0 56.5,-18.3 56.5,-53.4 0,-39.6 -32.7,-81.9 -83.6,-81.9 -4.1,0 -8.3,0.3 -12.6,0.9 35.1,-81 152.8,-81 174.1,-81 183.4,0 218.5,128.3 218.5,168.1 0,84 -79.4,100.8 -158.9,116.1 -44.3,9.1 -157.3,32.1 -157.3,151.2 0,67.2 56.5,223.1 258.2,223.1 116.1,0 181.8,-62.7 181.8,-131.4 0,-59.6 -36.7,-85.6 -70.3,-85.6 -33.6,0 -47.4,23 -47.4,44.3 0,33.7 30.6,67.3 73.4,68.8 -23,59.6 -99.3,70.3 -137.5,70.3 C325.4,641.7 288.8,548.5 288.8,504.2 c0,-68.8 61.1,-79.5 116.1,-91.7 67.2,-13.7 111.5,-21.4 152.7,-64.2 C576,330 605,291.8 605,236.8 605,168.1 545.4,-16.7 297.9,-16.7 z"/>
 			</g>
 		</g>
-		<g id="var_t">
+		<g id="var_t" fill="#000">
 			<g transform="scale(0.21) translate(0,-8) matrix(10,0,0,10,0,13)">
 				<path transform="scale(0.001,-0.001)" d="M236.8,-16.7 c-82.5,0 -140.5,58 -140.5,140.5 0,27.5 6.1,53.4 116.1,487.3 l-134.5,0 c-30.5,0 -42.8,0 -42.8,18.3 0,29.1 15.3,29.1 45.9,29.1 l143.6,0 59.6,242.9 c13.7,53.5 56.5,55 61.1,55 26,0 44.3,-15.3 44.3,-41.3 0,-9.1 -7.7,-39.7 -62.7,-256.6 l134.5,0 c27.5,0 42.8,0 42.8,-16.8 0,-30.6 -15.3,-30.6 -45.9,-30.6 l-143.6,0 L201.7,160.4 c-6.1,-26 -9.2,-36.6 -9.2,-73.3 0,-50.4 15.3,-70.3 47.4,-70.3 51.9,0 132.9,36.7 198.6,195.6 7.6,16.8 9.1,21.4 22.9,21.4 6.1,0 18.3,0 18.3,-15.3 0,-12.2 -87.1,-235.2 -242.9,-235.2 z"/>
 			</g>
 		</g>
 	</defs>
-	<use transform="translate(24.375,5)" xlink:href="#imply"/>
-	<use transform="translate(19.375,15)" xlink:href="#vertexSquare"/>
-	<use transform="translate(18.535,15)" xlink:href="#var_p"/>
-	<use transform="translate(29.375,15)" xlink:href="#imply"/>
-	<use transform="translate(10,25)" xlink:href="#imply"/>
-	<use transform="translate(48.75,25)" xlink:href="#imply"/>
-	<use transform="translate(5,35)" xlink:href="#vertexSquare"/>
-	<use transform="translate(4.19675,35)" xlink:href="#var_q"/>
-	<use transform="translate(15,35)" xlink:href="#imply"/>
-	<use transform="translate(37.5,35)" xlink:href="#imply"/>
-	<use transform="translate(60,35)" xlink:href="#imply"/>
-	<use transform="translate(10,45)" xlink:href="#vertexSquare"/>
-	<use transform="translate(9.16,45)" xlink:href="#var_p"/>
-	<use transform="translate(20,45)" xlink:href="#vertexSquare"/>
-	<use transform="translate(19.265,45)" xlink:href="#var_r"/>
-	<use transform="translate(30,45)" xlink:href="#not"/>
-	<use transform="translate(45,45)" xlink:href="#imply"/>
-	<use transform="translate(55,45)" xlink:href="#vertexSquare"/>
-	<use transform="translate(54.2755,45)" xlink:href="#var_s"/>
-	<use transform="translate(65,45)" xlink:href="#vertexSquare"/>
-	<use transform="translate(64.265,45)" xlink:href="#var_r"/>
-	<use transform="translate(30,55)" xlink:href="#vertexSquare"/>
-	<use transform="translate(29.265,55)" xlink:href="#var_r"/>
-	<use transform="translate(40,55)" xlink:href="#imply"/>
-	<use transform="translate(50,55)" xlink:href="#vertexSquare"/>
-	<use transform="translate(49.1968,55)" xlink:href="#var_q"/>
-	<use transform="translate(35,65)" xlink:href="#not"/>
-	<use transform="translate(45,65)" xlink:href="#vertexSquare"/>
-	<use transform="translate(44.4015,65)" xlink:href="#var_t"/>
-	<use transform="translate(35,75)" xlink:href="#vertexSquare"/>
-	<use transform="translate(34.2755,75)" xlink:href="#var_s"/>
+	<use transform="translate(21.875,2.5)" xlink:href="#imply"/>
+	<use transform="translate(16.875,12.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(16.035,12.5)" xlink:href="#var_p"/>
+	<use transform="translate(26.875,12.5)" xlink:href="#imply"/>
+	<use transform="translate(7.5,22.5)" xlink:href="#imply"/>
+	<use transform="translate(46.25,22.5)" xlink:href="#imply"/>
+	<use transform="translate(2.5,32.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(1.69675,32.5)" xlink:href="#var_q"/>
+	<use transform="translate(12.5,32.5)" xlink:href="#imply"/>
+	<use transform="translate(35,32.5)" xlink:href="#imply"/>
+	<use transform="translate(57.5,32.5)" xlink:href="#imply"/>
+	<use transform="translate(7.5,42.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(6.66,42.5)" xlink:href="#var_p"/>
+	<use transform="translate(17.5,42.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(16.765,42.5)" xlink:href="#var_r"/>
+	<use transform="translate(27.5,42.5)" xlink:href="#not"/>
+	<use transform="translate(42.5,42.5)" xlink:href="#imply"/>
+	<use transform="translate(52.5,42.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(51.7755,42.5)" xlink:href="#var_s"/>
+	<use transform="translate(62.5,42.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(61.765,42.5)" xlink:href="#var_r"/>
+	<use transform="translate(27.5,52.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(26.765,52.5)" xlink:href="#var_r"/>
+	<use transform="translate(37.5,52.5)" xlink:href="#imply"/>
+	<use transform="translate(47.5,52.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(46.69675,52.5)" xlink:href="#var_q"/>
+	<use transform="translate(32.5,62.5)" xlink:href="#not"/>
+	<use transform="translate(42.5,62.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(41.9015,62.5)" xlink:href="#var_t"/>
+	<use transform="translate(32.5,72.5)" xlink:href="#vertexSquare"/>
+	<use transform="translate(31.7755,72.5)" xlink:href="#var_s"/>
 </svg>

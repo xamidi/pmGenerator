@@ -217,7 +217,7 @@ string FctHelper::round(long double x, unsigned n, char separator) {
 	auto toStringWithoutTrailingZeroes = [&](long double f) -> string {
 		auto removeTrailingZeros = [&](const string& s) -> string { string::size_type i = s.find_first_not_of("0123456789-"); if (i == string::npos) return s; i = s.find_last_not_of('0'); return s.substr(0, i + 1); };
 		stringstream ss;
-		ss << fixed << f << scientific;
+		ss << fixed << setprecision(n + 2) << f << scientific;
 		return removeTrailingZeros(ss.str());
 	};
 	string result = toStringWithoutTrailingZeroes(x);

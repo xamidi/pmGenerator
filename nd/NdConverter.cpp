@@ -381,21 +381,18 @@ void NdConverter::convertFitchFxFileToDProofSummary(const string& ffxFile, const
 		axiomToUserAxiom = { { 1, 1 }, { 2, 2 }, { 3, 3 } };
 
 		// 5.4 Parse internal proof summary, filter out duplicates, and obtain fundamental lengths.
-		vector<size_t> fundamentalLengthsFromUser;
-		{
-			if (debug)
-				startTime = chrono::steady_clock::now();
-			DlProofEnumerator::convertProofSummaryToAbstractDProof(internalProofSummary, &targetAxioms, &abstractDProof, nullptr, false, normalPolishNotation, false, debug);
-			if (debug)
-				cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to convert proof summary to abstract D-proof." << endl;
-			printTargetSystem();
-			if (debug)
-				cout << "Going to recombine abstract D-proof of " << abstractDProof.size() << " theorem" << (abstractDProof.size() == 1 ? "" : "s") << " from internal proof summary." << endl;
-			abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
-			vector<size_t> allIndices(abstractDProof.size());
-			iota(allIndices.begin(), allIndices.end(), 0);
-			fundamentalLengths = DRuleParser::measureFundamentalLengthsInAbstractDProof(allIndices, abstractDProof, conclusions);
-		}
+		if (debug)
+			startTime = chrono::steady_clock::now();
+		DlProofEnumerator::convertProofSummaryToAbstractDProof(internalProofSummary, &targetAxioms, &abstractDProof, nullptr, false, normalPolishNotation, false, debug);
+		if (debug)
+			cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to convert proof summary to abstract D-proof." << endl;
+		printTargetSystem();
+		if (debug)
+			cout << "Going to recombine abstract D-proof of " << abstractDProof.size() << " theorem" << (abstractDProof.size() == 1 ? "" : "s") << " from internal proof summary." << endl;
+		abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true, false, 0, false, nullptr, false, false, false, !debug);
+		vector<size_t> allIndices(abstractDProof.size());
+		iota(allIndices.begin(), allIndices.end(), 0);
+		fundamentalLengths = DRuleParser::measureFundamentalLengthsInAbstractDProof(allIndices, abstractDProof, conclusions);
 	}
 
 	// 6. Track default axioms, helper theorems and ND-proof reasons that are supported for conversion.
