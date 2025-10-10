@@ -1331,6 +1331,8 @@ string DRuleParser::toDBProof(const string& dProof, const vector<AxiomInfo>* cus
 }
 
 void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vector<shared_ptr<DlFormula>>& out_abstractDProofConclusions, const vector<AxiomInfo>* customAxioms, vector<string>* optOut_helperRules, vector<shared_ptr<DlFormula>>* optOut_helperRulesConclusions, vector<size_t>* optOut_indexEvalSequence, bool debug) {
+	if (inOut_abstractDProof.empty())
+		throw invalid_argument("Abstract proof is empty.");
 	if (customAxioms && customAxioms->empty())
 		throw invalid_argument("Axiom list given but empty.");
 
@@ -1632,6 +1634,18 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	//#cout << "\n[AFTER-FORMULAS]\n" << FctHelper::vectorStringF(out_abstractDProofConclusions, [](const shared_ptr<DlFormula>& f) { return f ? DlCore::toPolishNotation(f) : "null"; }, { }, { }, "\n") << endl;
 	//#cout << "\n[HELPER-FORMULAS]\n" << FctHelper::vectorStringF(helperRulesConclusions, [](const shared_ptr<DlFormula>& f) { return f ? DlCore::toPolishNotation(f) : "null"; }, { }, { }, "\n") << endl;
 	//#cout << "indexEvalSequence = " << FctHelper::vectorString(indexEvalSequence) << endl;
+
+	if (debug) {
+		size_t mainSymbolCount = 0;
+		for (const shared_ptr<DlFormula>& f : out_abstractDProofConclusions)
+			mainSymbolCount += f->size();
+		size_t helperSymbolCount = 0;
+		for (const shared_ptr<DlFormula>& f : helperRulesConclusions)
+			helperSymbolCount += f->size();
+		size_t totalSymbolCount = mainSymbolCount + helperSymbolCount;
+		size_t totalFormulaCount = out_abstractDProofConclusions.size() + helperRulesConclusions.size();
+		cout << FctHelper::round(static_cast<long double>(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime).count()) / 1000.0, 2) << " ms taken to count " << totalSymbolCount << " symbol" << (totalSymbolCount == 1 ? "" : "s") << " in " << totalFormulaCount << " formula" << (totalFormulaCount == 1 ? "" : "s") << " (≈" << FctHelper::round(static_cast<long double>(totalSymbolCount) / totalFormulaCount, 2) << " symbols/formula). There are " << mainSymbolCount << " and " << helperSymbolCount << " symbols in " << out_abstractDProofConclusions.size() << " explicit and " << helperRulesConclusions.size() << " implicit conclusions (≈" << FctHelper::round(static_cast<long double>(mainSymbolCount) / out_abstractDProofConclusions.size(), 2) << " and " << (helperRulesConclusions.size() ? "≈" + FctHelper::round(static_cast<long double>(helperSymbolCount) / helperRulesConclusions.size(), 2) : "NaN") << " symbols/formula), respectively." << endl;
+	}
 
 	if (optOut_helperRules)
 		*optOut_helperRules = helperRules;
