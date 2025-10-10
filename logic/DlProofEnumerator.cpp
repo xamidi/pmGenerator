@@ -4100,6 +4100,12 @@ void DlProofEnumerator::printConclusionLengthPlotData(bool measureSymbolicLength
 				// Plot data: 1 10.67 3 14.50 5 17.42 7 19.76 9 26.11 11 31.58 13 36.63 15 44.23 17 51.76 19 59.96 21 69.83 23 80.27 25 91.84 27 104.78 29 118.81
 				// Polynomial regression result: 0.001137x³ + 0.056x² + 1.188x + 9.707
 
+				ss << string(FctHelper::digitsNum_uint32(wordLengthLimit), ' ') << "  Minimum and maximum " << (measureSymbolicLength ? "symbolic " : "") << "conclusion " << (measureSymbolicLength ? "" : "representation ") << "lengths are ";
+				if (!conclusionsAmount)
+					ss << "undefined (since there are no D-proofs of length " << wordLengthLimit << ").\n";
+				else
+					ss << allAmounts.begin()->first << " (×" << allAmounts.begin()->second << ") and " << prev(allAmounts.end())->first << " (×" << prev(allAmounts.end())->second << "), respectively.\n";
+
 				if (conclusionsAmount) {
 					size_t amountEvenConclusionLen = 0;
 					for (map<size_t, size_t>::const_iterator it = allAmounts.begin(); it != allAmounts.end(); ++it)
