@@ -520,6 +520,13 @@ Composable:
        -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates
        -o: redirect the result's output to the specified file
        -d: print debug information
+  --rebase &lt;input file&gt; &lt;base file&gt; [-n] [-u] [-k] [-o &lt;output file&gt;] [-d]
+     Rebase proof summary from axioms (b₁,…,bₘ) to axioms (a₁,…,aₙ), given a base proof summary with (a₁,…,aₙ):{b₁,…,bₘ} ; use base proofs to create shortcuts and remove duplicate conclusions ; ignores configured system
+       -n: specify and print formulas in normal Polish notation (e.g. "CpCqp"), not with numeric variables (e.g. "C0C1.0")
+       -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)
+       -k: keep proofs for all theorems (not only those which are used to derive given conclusions)
+       -o: redirect the result's output to the specified file
+       -d: print debug information
   --ndconvert &lt;input file&gt; [-b &lt;base file&gt;] [-n] [-u] [-h] [-k] [-o &lt;output file&gt;] [-d]
      Convert proof from Fitch-style natural deduction to condensed detachment in a user-definable Hilbert system and print its proof summary (usable via '--transform' and '--unfold') ; ignores configured system
      Input file must contain propositional FitchFX proof without premises, as exportable from https://mrieppel.github.io/FitchFX/ ; supported rules: 'Assumption','IP','~I','~E','&gt;I','&gt;E','&I','&E','vI','vE','&lt;&gt;I','&lt;&gt;E','Reit'

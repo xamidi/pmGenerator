@@ -44,6 +44,7 @@ enum class Task {
 	TransformProofSummary, //   --transform
 	UnfoldProofSummary, //      --unfold
 	UniteProofSummaries, //     --unite
+	RebaseProofSummary, //      --rebase
 	ConvertNaturalDeduction, // --ndconvert
 	SearchProofFiles, //        --search
 	ExtractFromProofFiles, //   --extract
@@ -144,6 +145,14 @@ static const map<Task, string>& cmdInfo() {
 				"       Unite proof summary files of the same system which are given by a comma-separated list of paths ; targets and prints all used conclusions ; ignores configured system (proof summaries provide their own axioms)\n"
 				"         -n: specify and print formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
 				"         -b: duplicate conclusion removal ; replace each given subproof that has a redundant conclusion with its first shortest alternative and remove duplicates\n"
+				"         -o: redirect the result's output to the specified file\n"
+				"         -d: print debug information\n";
+		_[Task::RebaseProofSummary] =
+				"    --rebase <input file> <base file> [-n] [-u] [-k] [-o <output file>] [-d]\n"
+				"       Rebase proof summary from axioms (b_1,…,b_m) to axioms (a_1,…,a_n), given a base proof summary with (a_1,…,a_n):{b_1,…,b_m} ; use base proofs to create shortcuts and remove duplicate conclusions ; ignores configured system\n"
+				"         -n: specify and print formulas in normal Polish notation (e.g. \"CpCqp\"), not with numeric variables (e.g. \"C0C1.0\")\n"
+				"         -u: print formulas in infix notation with operators as Unicode characters ; does not affect input format (for which '-n' can still be specified)\n"
+				"         -k: keep proofs for all theorems (not only those which are used to derive given conclusions)\n"
 				"         -o: redirect the result's output to the specified file\n"
 				"         -d: print debug information\n";
 		_[Task::ConvertNaturalDeduction] =
@@ -434,6 +443,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			cout << cmdInfo().at(Task::TransformProofSummary);
 			cout << cmdInfo().at(Task::UnfoldProofSummary);
 			cout << cmdInfo().at(Task::UniteProofSummaries);
+			cout << cmdInfo().at(Task::RebaseProofSummary);
 			cout << cmdInfo().at(Task::ConvertNaturalDeduction);
 			cout << cmdInfo().at(Task::SearchProofFiles);
 			cout << cmdInfo().at(Task::ExtractFromProofFiles);
@@ -606,6 +616,11 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
 				tasks.emplace_back(Task::UniteProofSummaries, map<string, string> { { "string", argv[++i] }, { "outputFile", "" } }, map<string, int64_t> { }, map<string, bool> { { "useOutputFile", false }, { "normalPolishNotation", false }, { "removeDuplicateConclusions", false }, { "debug", false } });
+			} else if (command == "rebase") { // --rebase <input file> <base file> [-n] [-u] [-k] [-o <output file>] [-d]
+				if (i + 2 >= argc)
+					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
+				tasks.emplace_back(Task::RebaseProofSummary, map<string, string> { { "inputFile", argv[i + 1] }, { "baseFile", argv[i + 2] }, { "outputFile", "" } }, map<string, int64_t> { }, map<string, bool> { { "useOutputFile", false }, { "normalPolishNotation", false }, { "printInfixUnicode", false }, { "keepAllTheorems", false }, { "debug", false } });
+				i += 2;
 			} else if (command == "ndconvert") { // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
 				if (i + 1 >= argc)
 					return printUsage("Missing parameter for \"--" + command + "\".", recent(command));
@@ -697,6 +712,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: //   --transform -d (print debug information)
 			case Task::UnfoldProofSummary: //         --unfold -d (print debug information)
 			case Task::UniteProofSummaries: //         --unite -d (print debug information)
+			case Task::RebaseProofSummary: //         --rebase -d (print debug information)
 			case Task::ConvertNaturalDeduction: // --ndconvert -d (print debug information)
 			case Task::SearchProofFiles: //           --search -d (print debug information)
 			case Task::ExtractFromProofFiles: //     --extract -d (print debug information)
@@ -835,6 +851,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: // --transform -k (store maximum-size proofs prepared via '-x' also when they do not prove known intermediate theorems)
 				tasks.back().bln["compress_keep"] = true;
 				break;
+			case Task::RebaseProofSummary: //         --rebase -k (keep proofs for all theorems)
 			case Task::ConvertNaturalDeduction: // --ndconvert -k (keep proofs for all theorems)
 				tasks.back().bln["keepAllTheorems"] = true;
 				break;
@@ -909,6 +926,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: //   --transform -n (specify and print formulas in normal Polish notation)
 			case Task::UnfoldProofSummary: //         --unfold -n (specify formulas in normal Polish notation)
 			case Task::UniteProofSummaries: //         --unite -n (specify and print formulas in normal Polish notation)
+			case Task::RebaseProofSummary: //         --rebase -n (specify and print formulas in normal Polish notation)
 			case Task::ConvertNaturalDeduction: // --ndconvert -n (specify and print formulas in normal Polish notation)
 			case Task::SearchProofFiles: //           --search -n (specify formulas in normal Polish notation)
 				tasks.back().bln["normalPolishNotation"] = true;
@@ -938,6 +956,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::TransformProofSummary: //   --transform -o <output file> (redirect the result's output to the specified file)
 			case Task::UnfoldProofSummary: //         --unfold -o <output file> (redirect the result's output to the specified file)
 			case Task::UniteProofSummaries: //         --unite -o <output file> (redirect the result's output to the specified file)
+			case Task::RebaseProofSummary: //         --rebase -o <output file> (redirect the result's output to the specified file)
 			case Task::ConvertNaturalDeduction: // --ndconvert -o <output file> (redirect the result's output to the specified file)
 			case Task::ExtractFromProofFiles: //     --extract -o <output file> (specify output file path for '-t')
 				if (i + 1 >= argc)
@@ -1084,6 +1103,7 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				tasks.back().bln["unicodeInfixNotation"] = true;
 				break;
 			case Task::TransformProofSummary: //   --transform -u (print formulas in infix notation with operators as Unicode characters)
+			case Task::RebaseProofSummary: //         --rebase -u (print formulas in infix notation with operators as Unicode characters)
 			case Task::ConvertNaturalDeduction: // --ndconvert -u (print formulas in infix notation with operators as Unicode characters)
 				tasks.back().bln["printInfixUnicode"] = true;
 				break;
@@ -1232,6 +1252,9 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 				case Task::UniteProofSummaries: // --unite
 					ss << ++index << ". uniteProofSummaries(\"" << t.str["string"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
+				case Task::RebaseProofSummary: // --rebase
+					ss << ++index << ". rebaseProofSummary(\"" << t.str["inputFile"] << "\", \"" << t.str["baseFile"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")\n";
+					break;
 				case Task::ConvertNaturalDeduction: // --ndconvert
 					ss << ++index << ". convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")\n";
 					break;
@@ -1345,6 +1368,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 			case Task::UniteProofSummaries: // --unite <input files> [-n] [-b] [-o <output file>] [-d]
 				cout << "[Main] Calling uniteProofSummaries(\"" << t.str["string"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["removeDuplicateConclusions"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["debug"]) << ")." << endl;
 				DlProofEnumerator::uniteProofSummary(t.str["string"], t.bln["normalPolishNotation"], t.bln["removeDuplicateConclusions"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["debug"]);
+				break;
+			case Task::RebaseProofSummary: // --rebase <input file> <base file> [-n] [-u] [-k] [-o <output file>] [-d]
+				cout << "[Main] Calling rebaseProofSummary(\"" << t.str["inputFile"] << "\", \"" << t.str["baseFile"] << "\", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")." << endl;
+				DlProofEnumerator::rebaseProofSummary(t.str["inputFile"], t.str["baseFile"], t.bln["normalPolishNotation"], t.bln["printInfixUnicode"], t.bln["useOutputFile"] ? &t.str["outputFile"] : nullptr, t.bln["keepAllTheorems"], t.bln["debug"]);
 				break;
 			case Task::ConvertNaturalDeduction: // --ndconvert <input file> [-b <base file>] [-n] [-u] [-h] [-k] [-o <output file>] [-d]
 				cout << "[Main] Calling convertFitchFxFileToDProofSummary(\"" << t.str["inputFile"] << "\", " << (t.bln["useOutputFile"] ? "\"" + t.str["outputFile"] + "\"" : "null") << ", " << (t.bln["useBaseFile"] ? "\"" + t.str["baseFile"] + "\"" : "null") << ", " << bstr(t.bln["normalPolishNotation"]) << ", " << bstr(t.bln["printInfixUnicode"]) << ", " << bstr(t.bln["pure"]) << ", " << bstr(t.bln["keepAllTheorems"]) << ", " << bstr(t.bln["debug"]) << ")." << endl;

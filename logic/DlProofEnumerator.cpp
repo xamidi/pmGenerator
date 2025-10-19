@@ -1201,7 +1201,7 @@ void DlProofEnumerator::uniteProofSummary(const string& input, bool normalPolish
 	for (const string& path : paths) {
 		vector<DRuleParser::AxiomInfo> targetAxioms_part;
 		vector<string> abstractDProof_part;
-		DlProofEnumerator::convertProofSummaryToAbstractDProof(path, &targetAxioms_part, &abstractDProof_part, nullptr, true, normalPolishNotation, false, debug);
+		convertProofSummaryToAbstractDProof(path, &targetAxioms_part, &abstractDProof_part, nullptr, true, normalPolishNotation, false, debug);
 		size_t shift = abstractDProof.size();
 		if (targetAxioms.empty()) {
 			targetAxioms = targetAxioms_part;
@@ -1241,12 +1241,181 @@ void DlProofEnumerator::uniteProofSummary(const string& input, bool normalPolish
 		string::size_type bytes;
 		{
 			ofstream fout(file, fstream::out | fstream::binary);
-			bytes = DlProofEnumerator::printProofSummary(fout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
+			bytes = printProofSummary(fout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
 		}
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
 	} else {
-		string::size_type bytes = DlProofEnumerator::printProofSummary(cout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
+		string::size_type bytes = printProofSummary(cout, targetAxioms, abstractDProof, conclusions, normalPolishNotation);
+		cout << flush;
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;
+	}
+}
+
+void DlProofEnumerator::rebaseProofSummary(const string& inputFile, const string& baseFile, bool normalPolishNotation, bool printInfixUnicode, const string* outputFile, bool targetEverything, bool debug) {
+	chrono::time_point<chrono::steady_clock> startTime;
+
+	// 1. Read proof summaries.
+	vector<DRuleParser::AxiomInfo> inputAxioms;
+	vector<string> abstractDProof_input;
+	vector<DRuleParser::AxiomInfo> requiredIntermediateResults;
+	vector<DRuleParser::AxiomInfo> targetAxioms;
+	vector<string> abstractDProof;
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	convertProofSummaryToAbstractDProof(inputFile, &inputAxioms, &abstractDProof_input, targetEverything ? nullptr : &requiredIntermediateResults, true, normalPolishNotation, false, debug);
+	convertProofSummaryToAbstractDProof(baseFile, &targetAxioms, &abstractDProof, nullptr, true, normalPolishNotation, false, debug);
+	if (debug)
+		cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to read input and base files with " << abstractDProof_input.size() << " and " << abstractDProof.size() << " dedicated indices. Input system: " << FctHelper::vectorStringF(inputAxioms, [&](const DRuleParser::AxiomInfo& ax) { return normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom); }, "(", ")") << ", Target system: " << FctHelper::vectorStringF(targetAxioms, [&](const DRuleParser::AxiomInfo& ax) { return normalPolishNotation ? DlCore::toPolishNotation(ax.refinedAxiom) : DlCore::toPolishNotation_noRename(ax.refinedAxiom); }, "(", ")") << endl;
+	bool systemsEqual = inputAxioms.size() == targetAxioms.size();
+	if (systemsEqual)
+		for (size_t i = 0; i < inputAxioms.size(); i++)
+			if (*inputAxioms[i].refinedAxiom != *targetAxioms[i].refinedAxiom) {
+				systemsEqual = false;
+				break;
+			}
+	if (systemsEqual)
+		cout << "[WARNING] Trivial rebase: Input and target systems are equal." << endl;
+
+	// 2. Parse base proof summary and find input axiom translation.
+	map<string, string> inputAxiomTranslation;
+	{
+		vector<shared_ptr<DlFormula>> abstractDProofConclusions;
+		vector<string> helperRules;
+		vector<shared_ptr<DlFormula>> helperRulesConclusions;
+		DRuleParser::parseAbstractDProof(abstractDProof, abstractDProofConclusions, &targetAxioms, &helperRules, &helperRulesConclusions, nullptr, debug);
+		for (size_t i = 0; i < inputAxioms.size(); i++) {
+			const shared_ptr<DlFormula> ax = inputAxioms[i].refinedAxiom;
+			bool found = false;
+			for (size_t j = 0; j < targetAxioms.size(); j++) {
+				if (DlCore::isSchemaOf(ax, targetAxioms[j].refinedAxiom) && inputAxiomTranslation.emplace(i < 9 ? to_string(i + 1) : string { char('a' + i - 9) }, j < 9 ? to_string(j + 1) : string { char('a' + j - 9) }).second) {
+					found = true;
+					break;
+				}
+			}
+			if (found)
+				continue;
+			for (size_t j = 0; j < abstractDProofConclusions.size(); j++)
+				if (DlCore::isSchemaOf(ax, abstractDProofConclusions[j]) && inputAxiomTranslation.emplace(i < 9 ? to_string(i + 1) : string { char('a' + i - 9) }, "[" + to_string(j) + "]").second) {
+					found = true;
+					break;
+				}
+			if (found)
+				continue;
+			for (size_t j = 0; j < helperRulesConclusions.size(); j++)
+				if (DlCore::isSchemaOf(ax, helperRulesConclusions[j]) && inputAxiomTranslation.emplace(i < 9 ? to_string(i + 1) : string { char('a' + i - 9) }, "[" + to_string(abstractDProofConclusions.size() + j) + "]").second) {
+					found = true;
+					break;
+				}
+			if (!found)
+				throw invalid_argument("DlProofEnumerator::rebaseProofSummary(): Original axiom (" + (i < 9 ? to_string(i + 1) : string { char('a' + i - 9) }) + ") " + (normalPolishNotation ? DlCore::toPolishNotation(ax) : DlCore::toPolishNotation_noRename(ax)) + " is not proven in the base proof summary at \"" + baseFile + "\".");
+		}
+		//#cout << "inputAxiomTranslation = " << FctHelper::mapString(inputAxiomTranslation) << endl;
+
+		// 3. Move helpers to main vector regardless of order.
+		abstractDProof.insert(abstractDProof.end(), helperRules.begin(), helperRules.end());
+	}
+
+	// 4. Parse and translate input proof summary, and append it to base proof summary.
+	const size_t shift = abstractDProof.size();
+	{
+		// 4.1 Parse input proof summary.
+		vector<shared_ptr<DlFormula>> abstractDProofConclusions_input;
+		{
+			vector<string> helperRules_input;
+			vector<shared_ptr<DlFormula>> helperRulesConclusions_input;
+			DRuleParser::parseAbstractDProof(abstractDProof_input, abstractDProofConclusions_input, &inputAxioms, &helperRules_input, &helperRulesConclusions_input, nullptr, debug);
+
+			// 4.2 Move helpers to main vectors regardless of order.
+			abstractDProof_input.insert(abstractDProof_input.end(), helperRules_input.begin(), helperRules_input.end());
+			abstractDProofConclusions_input.insert(abstractDProofConclusions_input.end(), helperRulesConclusions_input.begin(), helperRulesConclusions_input.end());
+		}
+
+		// 4.3 Find old indices which prove new axioms.
+		map<size_t, string> targetIndexTranslation;
+		for (size_t i = 0; i < targetAxioms.size(); i++) {
+			const shared_ptr<DlFormula> ax = targetAxioms[i].refinedAxiom;
+			for (size_t j = 0; j < abstractDProofConclusions_input.size(); j++)
+				if (DlCore::isSchemaOf(ax, abstractDProofConclusions_input[j]))
+					targetIndexTranslation.emplace(j, i < 9 ? to_string(i + 1) : string { char('a' + i - 9) });
+		}
+		//#cout << "targetIndexTranslation = " << FctHelper::mapString(targetIndexTranslation) << endl;
+
+		// 4.4 Translate and append.
+		auto substitute = [&](const string& s) -> string {
+			string result;
+			bool inReference = false;
+			unsigned refIndex = 0;
+			for (char c : s)
+				switchRefs(c, inReference, refIndex, [&]() {
+					map<size_t, string>::const_iterator searchResult = targetIndexTranslation.find(refIndex);
+					if (searchResult != targetIndexTranslation.end())
+						result += searchResult->second; // replace old index by new axiom
+					else
+						result += "[" + to_string(refIndex + shift) + "]";
+				}, [&]() {
+					switch (c) {
+					case 'D':
+						result += "D";
+						break;
+					case 'N':
+						result += "N";
+						break;
+					default: {
+						map<string, string>::const_iterator searchResult = inputAxiomTranslation.find(string { c });
+						if (searchResult == inputAxiomTranslation.end())
+							throw logic_error("c == '" + string { c } + "'");
+						result += searchResult->second; // replace old axiom by new axiom or index
+						break;
+					}
+					}
+				});
+			if (inReference)
+				throw invalid_argument("DlProofEnumerator::rebaseProofSummary(): Missing character ']' after '['.");
+			return result;
+		};
+		for (const string& dProof : abstractDProof_input)
+			abstractDProof.push_back(substitute(dProof));
+	}
+
+	// 5. Recombine proof summary.
+	vector<shared_ptr<DlFormula>> conclusions;
+	abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, targetEverything, targetEverything ? nullptr : &requiredIntermediateResults, nullptr, UINT_MAX, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, true);
+
+	// 6. Find old indices which prove new axioms, and report them (if any).
+	vector<size_t> indicesWithAxioms;
+	vector<string> axiomsForIndices;
+	for (size_t i = 0; i < targetAxioms.size(); i++) {
+		const shared_ptr<DlFormula> ax = targetAxioms[i].refinedAxiom;
+		for (size_t j = 0; j < conclusions.size(); j++) {
+			if (DlCore::isSchemaOf(ax, conclusions[j])) {
+				indicesWithAxioms.push_back(j);
+				axiomsForIndices.push_back(i < 9 ? to_string(i + 1) : string { char('a' + i - 9) });
+			}
+		}
+	}
+	if (!indicesWithAxioms.empty()) {
+		bool _1 = indicesWithAxioms.size() == 1;
+		cout << "[WARNING] Axiom" << (_1 ? " " : "s ") << FctHelper::vectorString(axiomsForIndices, { }, { }, ",") << (_1 ? " is" : " are") << " also proven at " << (_1 ? "index " : "indices ") << FctHelper::vectorString(indicesWithAxioms, { }, { }, ",") << (_1 ? "." : ", respectively.") << " To remove such redundancies, you can further utilize proof compression or theorem filtering." << endl;
+	}
+
+	// 7. Print recombined proof summary.
+	if (debug)
+		startTime = chrono::steady_clock::now();
+	if (outputFile) { // Not using FctHelper::writeToFile() in order to write huge files without huge string acquisition.
+		filesystem::path file = filesystem::u8path(*outputFile);
+		while (!filesystem::exists(file) && !FctHelper::ensureDirExists(file.string()))
+			cerr << "Failed to create file at \"" << file.string() << "\", trying again." << endl;
+		string::size_type bytes;
+		{
+			ofstream fout(file, fstream::out | fstream::binary);
+			bytes = printProofSummary(fout, targetAxioms, abstractDProof, conclusions, normalPolishNotation, printInfixUnicode);
+		}
+		if (debug)
+			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print and save " << bytes << " bytes to " << file.string() << "." << endl;
+	} else {
+		string::size_type bytes = printProofSummary(cout, targetAxioms, abstractDProof, conclusions, normalPolishNotation, printInfixUnicode);
 		cout << flush;
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to print " << bytes << " bytes." << endl;

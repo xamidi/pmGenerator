@@ -1336,7 +1336,7 @@ void DRuleParser::parseAbstractDProof(vector<string>& inOut_abstractDProof, vect
 	if (customAxioms && customAxioms->empty())
 		throw invalid_argument("Axiom list given but empty.");
 
-	// 1. Ensure full referencing (except that only higher indices can reference lower indices)
+	// 1. Ensure full referencing (except that only higher indices can reference lower indices).
 	//#cout << "\n[BEFORE]\n" << FctHelper::vectorString(inOut_abstractDProof, { }, { }, "\n") << endl;
 	for (size_t i = 1; i < inOut_abstractDProof.size(); i++)
 		for (size_t j = 0; j < i; j++)
