@@ -2755,7 +2755,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					int64_t location = [&]() { tbb::concurrent_hash_map<string, pair<int64_t, size_t>>::const_accessor rAcc; obtainedConclusions.find(rAcc, conclusion); return rAcc->second.first; }();
 					if (location < 0) { // found some improvement of this rule
 						if (!(-location & 64))
-							throw logic_error("Rule [" + to_string(i) + "] improvement points to invalid or axiom location " + to_string(location) + ".");
+							throw logic_error("Rule [" + to_string(i) + "] improvement points to invalid or axiom location " + to_string(location) + ". Using '-b' to remove duplicate conclusions might evade such issues.");
 						if (!foundImprovements) {
 							cout << "[Summary] Found individual improvements (w.r.t. unmodified fundamental lengths of original rules):" << endl;
 							foundImprovements = true;
@@ -3150,7 +3150,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			// 9.2 Define helpers and iterate elements within this proof summary.
 			auto iToId = [&](size_t i) { if (i < numRules) return static_cast<int64_t>(i); else return -static_cast<int64_t>(i + 1 - numRules); };
 			auto printIndex = [&](size_t i) {
-				auto printAxiom = [](int64_t n) { if (n <= 9) return string { static_cast<char>('0' + n) }; else return string { static_cast<char>('a' + n - 10) }; };
+				auto printAxiom = [](int64_t n) { return string { static_cast<char>(n <= 9 ? '0' + n : 'a' + n - 10) }; };
 				auto printStep = [](size_t i) { return "[" + to_string(i) + "]"; };
 				int64_t id = iToId(i);
 				return id < 0 ? printAxiom(-id) : printStep(i);
@@ -3376,34 +3376,49 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 	}
 
 	// 2. Find duplicate conclusions of D-proofs.
-	vector<set<size_t>> duplicateIndexSets;
+	struct cmpTrueFirst {
+		bool operator()(const pair<size_t, bool>& a, const pair<size_t, bool>& b) const {
+			if (a.second != b.second)
+				return a.second; // (x,true) < (y,false), i.e. all axioms precede all indices
+			return a.first < b.first;
+		}
+	};
+	vector<set<pair<size_t, bool>, cmpTrueFirst>> duplicateIndexSets;
 	{
 		if (debug)
 			startTime = chrono::steady_clock::now();
-		map<string, set<size_t>, cmpStringGrow> formulaOccurrences;
+		map<string, set<pair<size_t, bool>, cmpTrueFirst>, cmpStringGrow> formulaOccurrences;
 		size_t duplicateCounter = 0;
+		static const vector<AxiomInfo> defaultAxioms = []() { shared_ptr<DlFormula> v0 = make_shared<DlFormula>(make_shared<String>("0")); shared_ptr<DlFormula> v1 = make_shared<DlFormula>(make_shared<String>("1")); shared_ptr<DlFormula> v2 = make_shared<DlFormula>(make_shared<String>("2")); return vector<AxiomInfo> { AxiomInfo("1", _ax1(v0, v1)), AxiomInfo("2", _ax2(v0, v1, v2)), AxiomInfo("3", _ax3(v0, v1)) }; }();
+		const vector<AxiomInfo>& axioms = customAxioms ? *customAxioms : defaultAxioms;
+		for (size_t i = 0; i < axioms.size(); i++) { // also consider 1-step proofs (of axioms)
+			set<pair<size_t, bool>, cmpTrueFirst>& entry = formulaOccurrences[DlCore::toPolishNotation_noRename(axioms[i].refinedAxiom)];
+			entry.emplace(i + 1, true);
+		}
 		for (size_t i = 0; i < abstractDProofConclusions.size(); i++) {
-			set<size_t>& entry = formulaOccurrences[DlCore::toPolishNotation_noRename(abstractDProofConclusions[i])];
-			entry.emplace(i);
+			set<pair<size_t, bool>, cmpTrueFirst>& entry = formulaOccurrences[DlCore::toPolishNotation_noRename(abstractDProofConclusions[i])];
+			entry.emplace(i, false);
 			if (entry.size() > 1)
 				duplicateCounter++;
 		}
 		for (size_t i = 0; i < helperRulesConclusions.size(); i++) {
-			set<size_t>& entry = formulaOccurrences[DlCore::toPolishNotation_noRename(helperRulesConclusions[i])];
-			entry.emplace(abstractDProofConclusions.size() + i);
+			set<pair<size_t, bool>, cmpTrueFirst>& entry = formulaOccurrences[DlCore::toPolishNotation_noRename(helperRulesConclusions[i])];
+			entry.emplace(abstractDProofConclusions.size() + i, false);
 			if (entry.size() > 1)
 				duplicateCounter++;
 		}
 		if (debug)
 			cout << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << " taken to detect " << duplicateCounter << " duplicate conclusion" << (duplicateCounter == 1 ? "" : "s") << " in extended proof summary." << endl;
-		for (const pair<const string, set<size_t>>& p : formulaOccurrences)
+		for (const pair<const string, set<pair<size_t, bool>, cmpTrueFirst>>& p : formulaOccurrences)
 			if (p.second.size() > 1)
 				duplicateIndexSets.push_back(p.second);
 	}
-	//#cout << "duplicateIndexSets = " << FctHelper::vectorStringF(duplicateIndexSets, [](const set<size_t>& s) { return FctHelper::setString(s); }) << endl;
+	//#cout << "duplicateIndexSets = " << FctHelper::vectorStringF(duplicateIndexSets, [](const set<pair<size_t, bool>, cmpTrueFirst>& s) { return FctHelper::setStringF(s, [](const pair<size_t, bool>& p) { return (p.second ? "ax:" + string { static_cast<char>(p.first <= 9 ? '0' + p.first : 'a' + p.first - 10) } : to_string(p.first)); }); }) << endl;
 	vector<size_t> duplicateIndices;
-	for (const set<size_t>& s : duplicateIndexSets)
-		duplicateIndices.insert(duplicateIndices.end(), s.begin(), s.end());
+	for (const set<pair<size_t, bool>, cmpTrueFirst>& s : duplicateIndexSets)
+		for (const pair<size_t, bool>& p : s)
+			if (!p.second)
+				duplicateIndices.push_back(p.first);
 	vector<size_t> storedFundamentalLengths = measureFundamentalLengthsInAbstractDProof(duplicateIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, debug);
 
 	if (!duplicateIndexSets.empty()) { // filter only if there are duplicates
@@ -3411,26 +3426,40 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 			startTime = chrono::steady_clock::now();
 
 		// 3. Find index translation and indices to skip.
-		map<size_t, size_t> indexTranslation;
+		map<size_t, pair<size_t, bool>> indexTranslation;
 		unordered_set<size_t> obsoleteIndices;
 		{
 			// 3.1 Find indices to remove and their replacements.
-			map<size_t, size_t> replacements;
-			for (const set<size_t>& s : duplicateIndexSets) {
-				size_t bestIndex = *s.begin();
-				size_t minLen = storedFundamentalLengths[bestIndex];
-				for (set<size_t>::const_iterator it = next(s.begin()); it != s.end(); ++it) {
-					size_t len = storedFundamentalLengths[*it];
-					if (len < minLen) {
-						bestIndex = *it;
-						minLen = len;
+			map<size_t, pair<size_t, bool>> replacements;
+			for (const set<pair<size_t, bool>, cmpTrueFirst>& s : duplicateIndexSets) {
+				const pair<size_t, bool>& firstEntry = *s.begin();
+				size_t bestIndex = SIZE_MAX;
+				size_t minLen = SIZE_MAX;
+				if (firstEntry.second) // axiom
+					minLen = 1;
+				else { // has no axioms
+					bestIndex = firstEntry.first;
+					minLen = storedFundamentalLengths[bestIndex];
+					for (set<pair<size_t, bool>, cmpTrueFirst>::const_iterator it = next(s.begin()); it != s.end(); ++it) {
+						size_t len = storedFundamentalLengths[it->first];
+						if (len < minLen) {
+							bestIndex = it->first;
+							minLen = len;
+						}
 					}
 				}
-				for (size_t i : s)
-					if (i != bestIndex) {
-						replacements.emplace(i, bestIndex);
+				for (const pair<size_t, bool>& p : s) {
+					size_t i = p.first;
+					if (minLen == 1) {
+						if (!p.second) { // define replacements only for indices (which are replaced by axioms)
+							replacements.emplace(i, firstEntry);
+							obsoleteIndices.emplace(i);
+						}
+					} else if (p.first != bestIndex) { // no axioms
+						replacements.emplace(i, pair<size_t, bool> { bestIndex, false });
 						obsoleteIndices.emplace(i);
 					}
+				}
 			}
 
 			// 3.2 Build index translation based on removals and replacements.
@@ -3440,15 +3469,19 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 				if (obsoleteIndices.count(i))
 					shift = true;
 				else if (shift)
-					indexTranslation.emplace(i, indexTranslation.size() + offset);
+					indexTranslation.emplace(i, pair<size_t, bool> { indexTranslation.size() + offset, false });
 				else
 					offset++;
 			for (size_t i = 0; i < retractedDProof.size() + helperRules.size(); i++) {
-				map<size_t, size_t>::const_iterator itReplacement = replacements.find(i);
+				map<size_t, pair<size_t, bool>>::const_iterator itReplacement = replacements.find(i);
 				if (itReplacement != replacements.end()) {
-					size_t replacingIndex = itReplacement->second;
-					map<size_t, size_t>::const_iterator itShift = indexTranslation.find(replacingIndex);
-					indexTranslation.emplace(i, itShift == indexTranslation.end() ? replacingIndex : itShift->second);
+					const pair<size_t, bool>& replacement = itReplacement->second;
+					if (replacement.second) // replace with axiom
+						indexTranslation[i] = replacement;
+					else { // replace with (possibly shifted) index
+						map<size_t, pair<size_t, bool>>::const_iterator itShift = indexTranslation.find(replacement.first);
+						indexTranslation[i] = itShift == indexTranslation.end() ? replacement : itShift->second;
+					}
 				}
 			}
 		}
@@ -3478,8 +3511,13 @@ void DRuleParser::removeDuplicateConclusionsFromAbstractDProof(vector<string>& r
 					unsigned refIndex = 0;
 					for (char c : dProof)
 						switchRefs(c, inReference, refIndex, [&]() {
-							map<size_t, size_t>::const_iterator itShift = indexTranslation.find(refIndex);
-							result += "[" + to_string(itShift == indexTranslation.end() ? refIndex : itShift->second) + "]";
+							map<size_t, pair<size_t, bool>>::const_iterator itShift = indexTranslation.find(refIndex);
+							if (itShift == indexTranslation.end())
+								result += "[" + to_string(refIndex) + "]";
+							else if (itShift->second.second)
+								result += string { static_cast<char>(itShift->second.first <= 9 ? '0' + itShift->second.first : 'a' + itShift->second.first - 10) };
+							else
+								result += "[" + to_string(itShift->second.first) + "]";
 						}, [&]() { result += string { c }; });
 					if (inReference)
 						throw invalid_argument("DRuleParser::removeDuplicateConclusionsFromAbstractDProof(): Missing character ']' after '['.");
