@@ -2039,7 +2039,6 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		vector<tbb::concurrent_vector<AbstractDProof>> extraData; // relative abstract D-proofs of length index
 
 		// 5. Prepare vault containers for exhaustive generation data.
-		string vault_str;
 		struct cmpComboGrow { // to sort like proof length combinations
 			bool operator()(const array<uint32_t, 2>& a, const array<uint32_t, 2>& b) const {
 				size_t sumA = static_cast<size_t>(a[0]) + a[1];
@@ -2054,8 +2053,6 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					return a[0] < b[0];
 			}
 		};
-		map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow> vault; // imported vault entries ; should only be used for a single incomplete round
-		map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow> vaultInputs; // input formulas from vault entries to skip computations
 		struct VaultSummaryEntry {
 			size_t original;
 			string originalRule;
@@ -2065,19 +2062,30 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			size_t totalProofStepsAfter;
 			VaultSummaryEntry(size_t original, string originalRule, size_t originalFunLen, string newRule, size_t newFunLen, size_t totalProofStepsAfter) : original(original), originalRule(originalRule), originalFunLen(originalFunLen), newRule(newRule), newFunLen(newFunLen), totalProofStepsAfter(totalProofStepsAfter) { }
 		};
-		vector<VaultSummaryEntry> vaultRoundResult; // used to reconstruct a complete round stored in vault
-		size_t vaultRoundResult_initialTotalFunLen = 0; // modified iff summary for complete round reconstruction is given
+		struct VaultRoundData {
+			string str; // entire text from (and written to) vault file
+			map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow> entries; // imported vault entries ; should only be used for a single incomplete round ; exemplary element: (1, 1): [D[0][10]:CCCN0.0.1CCN0.0.0, D[63][3]:CNN0.0, D[63]3:CNN0.0]
+			map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow> entries_inputFormulas; // input formulas from vault entries to skip computations ; exemplary element: (1, 1): [D(CCCC0.1C2.1.3CC2.0.3)(CC0CCN1.1.1CCN1.1.1), D(CCNN0.1CNN0.0)(C0.0), D(CCNN0.1CNN0.0)(C0CN0.1)]
+			vector<VaultSummaryEntry> roundResult; // used to reconstruct a complete round stored in vault
+			size_t roundResult_initialTotalFunLen = 0; // total proof steps before applying round result ; modified iff summary for complete round reconstruction is given
+		};
+		VaultRoundData v;
 
 		// 6. Print extended configuration and import vault (if requested).
 		if (allowGeneration && modificationRange >= 5) {
 			string indent = "\n" + string(63 + FctHelper::digitsNum_uint64(modificationRange), ' ');
 			cout << "[Proof compression] Extended rule search configuration " << modificationRange << "-" << keepMaxRules << "-" << static_cast<bool>(vaultFile) << "-" << skipFirstPrep << ": Before each round generate relative abstract proofs (D-rules only) with up to " << (modificationRange % 2 == 0 ? modificationRange - 1 : modificationRange) << " steps and improve existing rules accordingly, potentially with new formulas." << (keepMaxRules ? indent + "Store maximum-size generated proofs also when they do not prove known intermediate theorems, so they remain potentially useful as replacements for subproofs." : "") << (vaultFile ? indent + "Use vault file at \"" + *vaultFile + "\" to coordinate preparation phases for maximum-size proofs, to avoid repeating these computations over multiple runs." : "") << (skipFirstPrep ? indent + "Skip preparation of the first round." : "") << endl;
-			if (vaultFile) {
+			auto initVaultRoundData = [](VaultRoundData& v, const size_t compressionRound, const size_t* subround, const size_t numRules, const vector<AxiomInfo>& axioms, const vector<size_t>& fundamentalLengths, const vector<string>& retractedDProof, const vector<string>& helperRules, const vector<AxiomInfo>* customAxioms, const string* vaultFile) {
+				string& vault_str = v.str;
 				bool fileExists = filesystem::exists(*vaultFile);
 				if (fileExists && !FctHelper::readFile(*vaultFile, vault_str)) {
 					cerr << "[Proof compression] ERROR Failed to read vault file. Aborting." << endl;
 					exit(0);
 				}
+				map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vault = v.entries;
+				map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vaultInputs = v.entries_inputFormulas;
+				vector<VaultSummaryEntry>& vaultRoundResult = v.roundResult;
+				size_t& vaultRoundResult_initialTotalFunLen = v.roundResult_initialTotalFunLen;
 
 				// 6.1 Parse entries from vault file.
 				istringstream sr(vault_str);
@@ -2224,8 +2232,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				vault_str += (vault_str.empty() || vault_str[vault_str.length() - 1] == '\n' ? "" : "\n");
 				if (!fileExists || !foundCurrentRound)
 					vault_str += "[round " + to_string(compressionRound) + "]\n";
-				//#cout << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return p.first + ":" + p.second; }); }, { }, { }, "\n") << endl;
-				//#cout << FctHelper::vectorStringF(vaultRoundResult, [](const VaultSummaryEntry& r) { return "[" + to_string(r.original) + "]: \"" + r.originalRule + "\" (" + to_string(r.originalFunLen) + ") -> \"" + r.newRule + "\" (" + to_string(r.newFunLen) + ") [" + to_string(r.totalProofStepsAfter) + "]"; }, { }, { }, "\n") << endl;
+				//#cout << "vault:\n" << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return p.first + ":" + p.second; }); }, { }, { }, "\n") << endl;
+				//#cout << "vaultRoundResult:\n" << FctHelper::vectorStringF(vaultRoundResult, [](const VaultSummaryEntry& r) { return "[" + to_string(r.original) + "]: \"" + r.originalRule + "\" (" + to_string(r.originalFunLen) + ") -> \"" + r.newRule + "\" (" + to_string(r.newFunLen) + ") [" + to_string(r.totalProofStepsAfter) + "]"; }, { }, { }, "\n") << endl;
 
 				// 6.2 Check vault entries.
 				vector<string> extendedAbstractDProof;
@@ -2326,10 +2334,12 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						vaultInputs.at(p.first).push_back(result);
 					}
 				}
-				//#cout << FctHelper::mapStringF(vaultInputs, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return "D(" + p.first + ")(" + p.second + ")"; }); }, { }, { }, "\n") << endl;
+				//#cout << "vaultInputs:\n" << FctHelper::mapStringF(vaultInputs, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return "D(" + p.first + ")(" + p.second + ")"; }); }, { }, { }, "\n") << endl;
 				if (!vault.empty())
 					cout << "[Proof compression] Imported " << vault.size() << " relevant preparation phase" << (vault.size() == 1 ? "" : "s") << " with the following amounts of rules: " << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + to_string(p.second.size()); }) << endl;
-			}
+			};
+			if (vaultFile)
+				initVaultRoundData(v, compressionRound, nullptr, numRules, axioms, fundamentalLengths, retractedDProof, helperRules, customAxioms, vaultFile);
 		}
 
 		// 7. Define lambda functions to
@@ -2338,7 +2348,12 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		//    - save raw intermediate results in file ('auto saveRawIntermediateResults').
 		size_t subround = 0;
 		// X. Perform an exhaustive generation to improve the proof summary.
-		auto exhaustiveGen = [&](size_t modificationRange = 3, bool preparation = false, const string* vaultFile = nullptr, size_t vaultRoundResult_initialTotalFunLen = 0) {
+		auto exhaustiveGen = [&](VaultRoundData& v, size_t modificationRange = 3, bool preparation = false, const string* vaultFile = nullptr) {
+			string& vault_str = v.str;
+			const map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vault = v.entries;
+			const map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vaultInputs = v.entries_inputFormulas;
+			const vector<VaultSummaryEntry>& vaultRoundResult = v.roundResult;
+			const size_t& vaultRoundResult_initialTotalFunLen = v.roundResult_initialTotalFunLen;
 			chrono::time_point<chrono::steady_clock> startTime = chrono::steady_clock::now();
 			extraData.clear();
 			extraData.resize(modificationRange + 1); // NOTE: The outer vector remains constant in size and inner vectors are tbb::concurrent_vector to avoid reallocations for parallel accessibility during growth.
@@ -2465,7 +2480,20 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				return true;
 			};
 			string* vaultOutput = vaultFile ? &vault_str : nullptr;
-			if (!vaultRoundResult_initialTotalFunLen) {
+			if (vaultRoundResult_initialTotalFunLen) { // improvements already available from vault
+				foundImprovements = true;
+				size_t totalProofSteps = 0;
+				for (const VaultSummaryEntry& improvement : vaultRoundResult) {
+					if (fundamentalLengths[improvement.original] != improvement.originalFunLen)
+						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": Rule [" << improvement.original << "] " << improvement.originalRule << " has fundamental length " << fundamentalLengths[improvement.original] << ", not " << improvement.originalFunLen << "." << endl;
+					(improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()]) = improvement.newRule; // replace actual rule
+					fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions); // update fundamental lengths
+					totalProofSteps = accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL);
+					if (improvement.totalProofStepsAfter != totalProofSteps)
+						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": After minimizing rule [" << improvement.original << "] " << improvement.originalRule << ", there are " << totalProofSteps << " proof steps in total, not " << improvement.totalProofStepsAfter << "." << endl;
+				}
+				cout << "[Summary] Applied " << vaultRoundResult.size() << " vault improvement" << (vaultRoundResult.size() == 1 ? "" : "s") << ". Reduced " << vaultRoundResult_initialTotalFunLen << " total proof steps down to " << totalProofSteps << "." << endl;
+			} else {
 				for (size_t len = 3; len < extraData.size(); len += 2) { // len <= extraData.size() - 1 == modificationRange <= UINT16_MAX = 65535, i.e. 16 bits are sufficient to store any valid 'len'
 					vector<pair<array<uint32_t, 2>, unsigned>> combinations = DlProofEnumerator::proofLengthCombinationsD_oddLengths(static_cast<unsigned>(len - 2), true);
 					//#auto printAsNonterminal = [&](unsigned x) { return x > len - 2 ? "A" : "X" + to_string(x); };
@@ -2879,19 +2907,6 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					}
 				} else
 					cout << "[Summary] Found no improvements." << endl;
-			} else { // improvements already available from vault
-				foundImprovements = true;
-				size_t totalProofSteps = 0;
-				for (const VaultSummaryEntry& improvement : vaultRoundResult) {
-					if (fundamentalLengths[improvement.original] != improvement.originalFunLen)
-						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": Rule [" << improvement.original << "] " << improvement.originalRule << " has fundamental length " << fundamentalLengths[improvement.original] << ", not " << improvement.originalFunLen << "." << endl;
-					(improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()]) = improvement.newRule; // replace actual rule
-					fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions); // update fundamental lengths
-					totalProofSteps = accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL);
-					if (improvement.totalProofStepsAfter != totalProofSteps)
-						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": After minimizing rule [" << improvement.original << "] " << improvement.originalRule << ", there are " << totalProofSteps << " proof steps in total, not " << improvement.totalProofStepsAfter << "." << endl;
-				}
-				cout << "[Summary] Applied " << vaultRoundResult.size() << " vault improvement" << (vaultRoundResult.size() == 1 ? "" : "s") << ". Reduced " << vaultRoundResult_initialTotalFunLen << " total proof steps down to " << totalProofSteps << "." << endl;
 			}
 
 			// X.5 Make newly encoded intermediate conclusions explicit and filter out duplicates (in case they were introduced).
@@ -3129,7 +3144,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 
 		// 8. Perform preparation step.
 		if (allowGeneration && modificationRange >= 5)
-			exhaustiveGen(modificationRange, true, vaultFile, vaultRoundResult_initialTotalFunLen);
+			exhaustiveGen(v, modificationRange, true, vaultFile);
 
 		// 9. Define procedure to look for N-rules as replacements (where applicable).
 		//    Only looks for rules, cannot eliminate rules that are axioms. These are reported later, but should be handled by the user.
@@ -3226,7 +3241,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		bool foundPrepImprovements = foundImprovements;
 		bool foundRegularImprovements = false;
 		if (babySteps) {
-			exhaustiveGen();
+			VaultRoundData v_subround;
+			exhaustiveGen(v_subround);
 			if (foundImprovements)
 				foundRegularImprovements = true;
 			necessitationReplacements();
@@ -3237,7 +3253,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				newImprovements = 0;
 				do {
 					foundImprovements = false;
-					exhaustiveGen();
+					VaultRoundData v_subround;
+					exhaustiveGen(v_subround);
 					if (foundImprovements) {
 						foundRegularImprovements = true;
 						purify();
