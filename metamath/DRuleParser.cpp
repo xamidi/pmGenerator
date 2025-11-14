@@ -1967,15 +1967,15 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 	size_t compressionRound = 1;
 	size_t newImprovements = 1; // improvements from actual compression rounds
 	bool foundImprovements = true; // improvements from (preparative) exhaustive generations
-	bool allowGeneration;
+	bool allowPreparation;
 	bool needSkip = skipFirstPrep;
 	do { // compression round loop
-		allowGeneration = newImprovements || foundImprovements; // generation can be skipped iff there were no improvements in the last round
+		allowPreparation = newImprovements || foundImprovements; // preparative generation can be skipped iff there were no improvements in the last round
 		foundImprovements = false;
 		newImprovements = 0;
 		if (needSkip) {
 			foundImprovements = true; // assume productive generation
-			allowGeneration = false; // .. and skip it
+			allowPreparation = false; // .. and skip it
 			needSkip = false;
 		}
 
@@ -2038,7 +2038,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		};
 		vector<tbb::concurrent_vector<AbstractDProof>> extraData; // relative abstract D-proofs of length index
 
-		// 5. Prepare vault containers for exhaustive generation data.
+		// 5. Prepare vault containers and procedures for exhaustive generation.
 		struct cmpComboGrow { // to sort like proof length combinations
 			bool operator()(const array<uint32_t, 2>& a, const array<uint32_t, 2>& b) const {
 				size_t sumA = static_cast<size_t>(a[0]) + a[1];
@@ -2069,277 +2069,287 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 			vector<VaultSummaryEntry> roundResult; // used to reconstruct a complete round stored in vault
 			size_t roundResult_initialTotalFunLen = 0; // total proof steps before applying round result ; modified iff summary for complete round reconstruction is given
 		};
-		VaultRoundData v;
+		VaultRoundData v_prep;
+		// A. Import vault and prepare data for a single round.
+		auto initVaultRoundData = [&](VaultRoundData& v, const size_t compressionRound, const size_t* subround = nullptr) {
+			string& vault_str = v.str;
+			bool fileExists = filesystem::exists(*vaultFile);
+			if (fileExists && !FctHelper::readFile(*vaultFile, vault_str)) {
+				cerr << "[Proof compression] ERROR Failed to read vault file. Aborting." << endl;
+				exit(0);
+			}
+			map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vault = v.entries;
+			map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vaultInputs = v.entries_inputFormulas;
+			vector<VaultSummaryEntry>& vaultRoundResult = v.roundResult;
+			size_t& vaultRoundResult_initialTotalFunLen = v.roundResult_initialTotalFunLen;
+			string roundId = to_string(compressionRound) + (subround ? "." + to_string(*subround) : "");
 
-		// 6. Print extended configuration and import vault (if requested).
-		if (allowGeneration && modificationRange >= 5) {
-			string indent = "\n" + string(63 + FctHelper::digitsNum_uint64(modificationRange), ' ');
-			cout << "[Proof compression] Extended rule search configuration " << modificationRange << "-" << keepMaxRules << "-" << static_cast<bool>(vaultFile) << "-" << skipFirstPrep << ": Before each round generate relative abstract proofs (D-rules only) with up to " << (modificationRange % 2 == 0 ? modificationRange - 1 : modificationRange) << " steps and improve existing rules accordingly, potentially with new formulas." << (keepMaxRules ? indent + "Store maximum-size generated proofs also when they do not prove known intermediate theorems, so they remain potentially useful as replacements for subproofs." : "") << (vaultFile ? indent + "Use vault file at \"" + *vaultFile + "\" to coordinate preparation phases for maximum-size proofs, to avoid repeating these computations over multiple runs." : "") << (skipFirstPrep ? indent + "Skip preparation of the first round." : "") << endl;
-			auto initVaultRoundData = [](VaultRoundData& v, const size_t compressionRound, const size_t* subround, const size_t numRules, const vector<AxiomInfo>& axioms, const vector<size_t>& fundamentalLengths, const vector<string>& retractedDProof, const vector<string>& helperRules, const vector<AxiomInfo>* customAxioms, const string* vaultFile) {
-				string& vault_str = v.str;
-				bool fileExists = filesystem::exists(*vaultFile);
-				if (fileExists && !FctHelper::readFile(*vaultFile, vault_str)) {
-					cerr << "[Proof compression] ERROR Failed to read vault file. Aborting." << endl;
-					exit(0);
-				}
-				map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vault = v.entries;
-				map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vaultInputs = v.entries_inputFormulas;
-				vector<VaultSummaryEntry>& vaultRoundResult = v.roundResult;
-				size_t& vaultRoundResult_initialTotalFunLen = v.roundResult_initialTotalFunLen;
-
-				// 6.1 Parse entries from vault file.
-				istringstream sr(vault_str);
-				string line;
-				size_t lineNo = 0;
-				bool foundCurrentRound = false;
-				array<uint32_t, 2> currentPhase = { 0, 0 };
-				while (getline(sr, line)) {
-					lineNo++;
-					if (foundCurrentRound) {
-						if (!line.empty()) {
-							if (line.starts_with("[round "))
-								break; // next round => we're done
-							else if (line.starts_with("[Summary]")) {
-								if (line.starts_with("[Summary] Improvements (ordered), from ") && line.ends_with(" proof steps in total:")) {
-									if (vaultRoundResult_initialTotalFunLen || FctHelper::toUInt(line.substr(39, line.length() - 61), vaultRoundResult_initialTotalFunLen).ec != errc()) {
-										cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
-										exit(0);
-									}
-								} else if (line.starts_with("[Summary] Step: (")) {
-									string::size_type pos = line.find(", ", 17);
-									string originalRule;
-									string original_str;
-									string originalFunLen_str;
-									if (pos != string::npos) {
-										original_str = line.substr(17, pos - 17);
-										string remainder = line.substr(pos + 2);
-										pos = remainder.find(" -> ");
-										if (pos != string::npos) {
-											originalRule = remainder.substr(0, pos);
-											pos = remainder.find("), fundamental lengths (", pos + 1);
-											if (pos != string::npos) {
-												remainder = remainder.substr(pos + 24);
-												pos = remainder.find(", ");
-												if (pos != string::npos)
-													originalFunLen_str = remainder.substr(0, pos);
-											}
-										}
-									}
-									size_t original;
-									size_t originalFunLen;
-									if (pos == string::npos || FctHelper::toUInt(original_str, original).ec != errc() || FctHelper::toUInt(originalFunLen_str, originalFunLen).ec != errc()) {
-										cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
-										exit(0);
-									}
-									if (!getline(sr, line)) {
-										cerr << "[Proof compression] ERROR Missing supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " after line " << lineNo << ". Aborting." << endl;
-										exit(0);
-									}
-									lineNo++;
-									if (!line.starts_with("[Summary]    => ")) {
-										cerr << "[Proof compression] ERROR Invalid supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
-										exit(0);
-									}
-									string newRule;
-									string usage;
-									string newFunLen_str;
-									string totalProofStepsAfter_str;
-									pos = line.find(", fundamental length ", 16);
-									if (pos != string::npos) {
-										newRule = line.substr(16, pos - 16);
-										string remainder = line.substr(pos + 21);
-										pos = remainder.find(" (");
-										if (pos != string::npos) {
-											newFunLen_str = remainder.substr(0, pos);
-											remainder = remainder.substr(pos + 2);
-											pos = remainder.find("), ");
-											if (pos != string::npos) {
-												usage = remainder.substr(0, pos);
-												remainder = remainder.substr(pos + 3);
-												pos = remainder.find(" proof steps in total");
-												if (pos != string::npos)
-													totalProofStepsAfter_str = remainder.substr(0, pos);
-											}
-										}
-									}
-									size_t newFunLen;
-									size_t totalProofStepsAfter;
-									if (pos == string::npos || FctHelper::toUInt(newFunLen_str, newFunLen).ec != errc() || FctHelper::toUInt(totalProofStepsAfter_str, totalProofStepsAfter).ec != errc() || (newFunLen <= originalFunLen && usage != "applied") || (newFunLen > originalFunLen && usage != "ignored")) {
-										cerr << "[Proof compression] ERROR Invalid supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
-										exit(0);
-									}
-									if (newFunLen <= originalFunLen) // applied, i.e. actual improvement
-										vaultRoundResult.emplace_back(original, originalRule, originalFunLen, newRule, newFunLen, totalProofStepsAfter);
-								} else {
+			// A.1 Parse entries from vault file.
+			istringstream sr(vault_str);
+			string line;
+			size_t lineNo = 0;
+			bool foundCurrentRound = false;
+			bool markedUnproductive = false;
+			array<uint32_t, 2> currentPhase = { 0, 0 };
+			while (getline(sr, line)) {
+				lineNo++;
+				if (foundCurrentRound) {
+					if (!line.empty()) {
+						if (line.starts_with("[round "))
+							break; // next round => we're done
+						else if (line.starts_with("[Summary]")) {
+							if (line.starts_with("[Summary] Found no improvements. There are ") && line.ends_with(" proof steps in total.")) {
+								if (vaultRoundResult_initialTotalFunLen || FctHelper::toUInt(line.substr(43, line.length() - 65), vaultRoundResult_initialTotalFunLen).ec != errc()) {
 									cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
 									exit(0);
 								}
-							} else if (line[0] == '(' && line[line.length() - 1] == ')') {
-								vector<string> elems = FctHelper::stringSplit(line.substr(1, line.length() - 2), ", ");
-								if (elems.size() == 2) {
-									array<uint32_t, 2> phase = { 0, 0 };
-									if (FctHelper::toUInt(elems[0], phase[0]).ec == errc() && FctHelper::toUInt(elems[1], phase[1]).ec == errc() && phase[0] && phase[1]) {
-										currentPhase = phase; // next preparation phase
-										vault[currentPhase];
-									}
+								markedUnproductive = true;
+								break; // unproductive round => we're done
+							} else if (line.starts_with("[Summary] Improvements (ordered), from ") && line.ends_with(" proof steps in total:")) {
+								if (vaultRoundResult_initialTotalFunLen || FctHelper::toUInt(line.substr(39, line.length() - 61), vaultRoundResult_initialTotalFunLen).ec != errc()) {
+									cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
+									exit(0);
 								}
-							} else if (currentPhase[0] && currentPhase[1] && line.starts_with("Found shorter proof ") && line.ends_with(").")) {
-								string::size_type pos = line.find(' ', 20);
-								string rule;
-								string conclusion;
+							} else if (line.starts_with("[Summary] Step: (")) {
+								string::size_type pos = line.find(", ", 17);
+								string originalRule;
 								string original_str;
 								string originalFunLen_str;
 								if (pos != string::npos) {
-									rule = line.substr(20, pos - 20);
-									pos = line.find(" / ", pos + 1);
+									original_str = line.substr(17, pos - 17);
+									string remainder = line.substr(pos + 2);
+									pos = remainder.find(" -> ");
 									if (pos != string::npos) {
-										string remainder = line.substr(pos + 3);
-										pos = remainder.find(' ');
+										originalRule = remainder.substr(0, pos);
+										pos = remainder.find("), fundamental lengths (", pos + 1);
 										if (pos != string::npos) {
-											conclusion = remainder.substr(0, pos);
-											pos = remainder.find("original [");
-											if (pos != string::npos) {
-												remainder = remainder.substr(pos + 10);
-												pos = remainder.find("] (");
-												if (pos != string::npos) {
-													original_str = remainder.substr(0, pos);
-													originalFunLen_str = remainder.substr(pos + 3, remainder.length() - pos - 5);
-												}
-											}
+											remainder = remainder.substr(pos + 24);
+											pos = remainder.find(", ");
+											if (pos != string::npos)
+												originalFunLen_str = remainder.substr(0, pos);
 										}
 									}
 								}
 								size_t original;
 								size_t originalFunLen;
 								if (pos == string::npos || FctHelper::toUInt(original_str, original).ec != errc() || FctHelper::toUInt(originalFunLen_str, originalFunLen).ec != errc()) {
-									cerr << "[Proof compression] ERROR Failed to parse relevant vault entry \"" << rule << "\" from ./" << *vaultFile << ":" << lineNo << "\". Aborting." << endl;
+									cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
 									exit(0);
-								} else if (original >= numRules) {
-									cerr << "[Proof compression] ERROR Found invalid vault entry \"" << rule << "\" from ./" << *vaultFile << ":" << lineNo << "\":\n" << string(26, ' ') << "There is no rule [" << original << "]. Mismatching proof summary. Aborting." << endl;
+								}
+								if (!getline(sr, line)) {
+									cerr << "[Proof compression] ERROR Missing supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " after line " << lineNo << ". Aborting." << endl;
 									exit(0);
-								} else if (fundamentalLengths[original] != originalFunLen)
-									cout << "[Proof compression] Mismatching fundamental length of [" << original << "] (" << fundamentalLengths[original] << ") for vault entry " << rule << " (" << originalFunLen << ") from ./" << *vaultFile << ":" << lineNo << "." << endl;
-								vault.at(currentPhase).emplace_back(rule, conclusion);
+								}
+								lineNo++;
+								if (!line.starts_with("[Summary]    => ")) {
+									cerr << "[Proof compression] ERROR Invalid supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
+									exit(0);
+								}
+								string newRule;
+								string usage;
+								string newFunLen_str;
+								string totalProofStepsAfter_str;
+								pos = line.find(", fundamental length ", 16);
+								if (pos != string::npos) {
+									newRule = line.substr(16, pos - 16);
+									string remainder = line.substr(pos + 21);
+									pos = remainder.find(" (");
+									if (pos != string::npos) {
+										newFunLen_str = remainder.substr(0, pos);
+										remainder = remainder.substr(pos + 2);
+										pos = remainder.find("), ");
+										if (pos != string::npos) {
+											usage = remainder.substr(0, pos);
+											remainder = remainder.substr(pos + 3);
+											pos = remainder.find(" proof steps in total");
+											if (pos != string::npos)
+												totalProofStepsAfter_str = remainder.substr(0, pos);
+										}
+									}
+								}
+								size_t newFunLen;
+								size_t totalProofStepsAfter;
+								if (pos == string::npos || FctHelper::toUInt(newFunLen_str, newFunLen).ec != errc() || FctHelper::toUInt(totalProofStepsAfter_str, totalProofStepsAfter).ec != errc() || (newFunLen <= originalFunLen && usage != "applied") || (newFunLen > originalFunLen && usage != "ignored")) {
+									cerr << "[Proof compression] ERROR Invalid supplementary \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
+									exit(0);
+								}
+								if (newFunLen <= originalFunLen) // applied, i.e. actual improvement
+									vaultRoundResult.emplace_back(original, originalRule, originalFunLen, newRule, newFunLen, totalProofStepsAfter);
+							} else {
+								cerr << "[Proof compression] ERROR Invalid \"[Summary]\" entry in vault file ./" << *vaultFile << " at line " << lineNo << ". Aborting." << endl;
+								exit(0);
 							}
-						}
-					} else if (line == "[round " + to_string(compressionRound) + "]")
-						foundCurrentRound = true;
-				}
-				if (!fileExists)
-					cout << "[Proof compression] Storing all 'round " << compressionRound << "' results to a new vault file after each preparation phase for maximum-size proofs." << endl;
-				else if (!foundCurrentRound)
-					cout << "[Proof compression] Found no \"[round " << compressionRound << "]\" in vault. Appending all 'round " << compressionRound << "' results to existing vault file after each preparation phase for maximum-size proofs." << endl;
-				vault_str += (vault_str.empty() || vault_str[vault_str.length() - 1] == '\n' ? "" : "\n");
-				if (!fileExists || !foundCurrentRound)
-					vault_str += "[round " + to_string(compressionRound) + "]\n";
-				//#cout << "vault:\n" << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return p.first + ":" + p.second; }); }, { }, { }, "\n") << endl;
-				//#cout << "vaultRoundResult:\n" << FctHelper::vectorStringF(vaultRoundResult, [](const VaultSummaryEntry& r) { return "[" + to_string(r.original) + "]: \"" + r.originalRule + "\" (" + to_string(r.originalFunLen) + ") -> \"" + r.newRule + "\" (" + to_string(r.newFunLen) + ") [" + to_string(r.totalProofStepsAfter) + "]"; }, { }, { }, "\n") << endl;
-
-				// 6.2 Check vault entries.
-				vector<string> extendedAbstractDProof;
-				vector<shared_ptr<DlFormula>> extendedAbstractDProofConclusions;
-				vector<shared_ptr<DlFormula>> extendedHelperRulesConclusions;
-				size_t index = 0;
-				if (!vault.empty()) {
-					map<size_t, pair<string, string>> checks;
-					extendedAbstractDProof = retractedDProof;
-					extendedAbstractDProof.insert(extendedAbstractDProof.end(), helperRules.begin(), helperRules.end());
-					index = extendedAbstractDProof.size();
-					for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault)
-						for (const pair<string, string>& q : p.second) {
-							checks.emplace(extendedAbstractDProof.size(), q);
-							extendedAbstractDProof.push_back(q.first);
-						}
-					//#size_t c = 0; cout << "extendedAbstractDProof:\n" << FctHelper::vectorStringF(extendedAbstractDProof, [&](const string& s) { return "[" + to_string(c++) + "] " + s; }, { }, { }, "\n") << endl;
-					vector<string> extendedHelperRules;
-					cout << "[Proof compression] Going to parse rules from vault." << endl;
-					parseAbstractDProof(extendedAbstractDProof, extendedAbstractDProofConclusions, customAxioms, &extendedHelperRules, &extendedHelperRulesConclusions);
-					for (const pair<const size_t, pair<string, string>>& p : checks) {
-						string correctConclusion = DlCore::toPolishNotation_noRename(extendedAbstractDProofConclusions[p.first]);
-						if (correctConclusion != p.second.second) {
-							cerr << "[Proof compression] ERROR Found invalid vault entry " << p.second.first << ":" << p.second.second << ". Actual conclusion is " << correctConclusion << ". Aborting." << endl;
-							exit(0);
+						} else if (line[0] == '(' && line[line.length() - 1] == ')') {
+							vector<string> elems = FctHelper::stringSplit(line.substr(1, line.length() - 2), ", ");
+							if (elems.size() == 2) {
+								array<uint32_t, 2> phase = { 0, 0 };
+								if (FctHelper::toUInt(elems[0], phase[0]).ec == errc() && FctHelper::toUInt(elems[1], phase[1]).ec == errc() && phase[0] && phase[1]) {
+									currentPhase = phase; // next preparation phase
+									vault[currentPhase];
+								}
+							}
+						} else if (currentPhase[0] && currentPhase[1] && line.starts_with("Found shorter proof ") && line.ends_with(").")) {
+							string::size_type pos = line.find(' ', 20);
+							string rule;
+							string conclusion;
+							string original_str;
+							string originalFunLen_str;
+							if (pos != string::npos) {
+								rule = line.substr(20, pos - 20);
+								pos = line.find(" / ", pos + 1);
+								if (pos != string::npos) {
+									string remainder = line.substr(pos + 3);
+									pos = remainder.find(' ');
+									if (pos != string::npos) {
+										conclusion = remainder.substr(0, pos);
+										pos = remainder.find("original [");
+										if (pos != string::npos) {
+											remainder = remainder.substr(pos + 10);
+											pos = remainder.find("] (");
+											if (pos != string::npos) {
+												original_str = remainder.substr(0, pos);
+												originalFunLen_str = remainder.substr(pos + 3, remainder.length() - pos - 5);
+											}
+										}
+									}
+								}
+							}
+							size_t original;
+							size_t originalFunLen;
+							if (pos == string::npos || FctHelper::toUInt(original_str, original).ec != errc() || FctHelper::toUInt(originalFunLen_str, originalFunLen).ec != errc()) {
+								cerr << "[Proof compression] ERROR Failed to parse relevant vault entry \"" << rule << "\" from ./" << *vaultFile << ":" << lineNo << "\". Aborting." << endl;
+								exit(0);
+							} else if (original >= numRules) {
+								cerr << "[Proof compression] ERROR Found invalid vault entry \"" << rule << "\" from ./" << *vaultFile << ":" << lineNo << "\":\n" << string(26, ' ') << "There is no rule [" << original << "]. Mismatching proof summary. Aborting." << endl;
+								exit(0);
+							} else if (fundamentalLengths[original] != originalFunLen)
+								cout << "[Proof compression] Mismatching fundamental length of [" << original << "] (" << fundamentalLengths[original] << ") for vault entry " << rule << " (" << originalFunLen << ") from ./" << *vaultFile << ":" << lineNo << "." << endl;
+							vault.at(currentPhase).emplace_back(rule, conclusion);
 						}
 					}
-					cout << "[Proof compression] Successfully parsed " << checks.size() << " rule" << (checks.size() == 1 ? "" : "s") << " from vault." << endl;
-				} else if (fileExists && foundCurrentRound)
-					cout << "[Proof compression] No relevant preparation phase was found in vault." << endl;
-				if (static_cast<bool>(vaultRoundResult_initialTotalFunLen) == vaultRoundResult.empty()) {
-					cerr << "[Proof compression] ERROR Incomplete \"[Summary]\" specification in vault file ./" << *vaultFile << ". Aborting." << endl;
-					exit(0);
-				}
-				if (vaultRoundResult_initialTotalFunLen && vaultRoundResult_initialTotalFunLen != accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL)) {
-					cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " != " << vaultRoundResult_initialTotalFunLen << " proof steps in total. Aborting." << endl;
-					exit(0);
-				}
-				for (const VaultSummaryEntry& improvement : vaultRoundResult)
-					if (improvement.original >= numRules) {
-						cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There is no rule [" << improvement.original << "]. Aborting." << endl;
-						exit(0);
-					} else if (improvement.originalRule != (improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()])) {
-						cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There is no rule " << improvement.originalRule << " at [" << improvement.original << "]. Aborting." << endl;
-						exit(0);
-					}
+				} else if (line == "[round " + roundId + "]")
+					foundCurrentRound = true;
+			}
+			if (!fileExists)
+				cout << "[Proof compression] Storing all 'round " << roundId << "' results to a new vault file after each preparation phase for maximum-size proofs." << endl;
+			else if (!foundCurrentRound)
+				cout << "[Proof compression] Found no \"[round " << roundId << "]\" in vault. Appending all 'round " << roundId << "' results to existing vault file after each preparation phase for maximum-size proofs." << endl;
+			vault_str += (vault_str.empty() || vault_str[vault_str.length() - 1] == '\n' ? "" : "\n");
+			if (!fileExists || !foundCurrentRound)
+				vault_str += "[round " + roundId + "]\n";
+			//#cout << "vault:\n" << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return p.first + ":" + p.second; }); }, { }, { }, "\n") << endl;
+			//#cout << "vaultRoundResult:\n" << FctHelper::vectorStringF(vaultRoundResult, [](const VaultSummaryEntry& r) { return "[" + to_string(r.original) + "]: \"" + r.originalRule + "\" (" + to_string(r.originalFunLen) + ") -> \"" + r.newRule + "\" (" + to_string(r.newFunLen) + ") [" + to_string(r.totalProofStepsAfter) + "]"; }, { }, { }, "\n") << endl;
 
-				// 6.3 Obtain input formulas for vault entries.
-				for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault) {
-					vaultInputs[p.first];
+			// A.2 Check vault entries.
+			vector<string> extendedAbstractDProof;
+			vector<shared_ptr<DlFormula>> extendedAbstractDProofConclusions;
+			vector<shared_ptr<DlFormula>> extendedHelperRulesConclusions;
+			size_t index = 0;
+			if (!vault.empty()) {
+				map<size_t, pair<string, string>> checks;
+				extendedAbstractDProof = retractedDProof;
+				extendedAbstractDProof.insert(extendedAbstractDProof.end(), helperRules.begin(), helperRules.end());
+				index = extendedAbstractDProof.size();
+				for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault)
 					for (const pair<string, string>& q : p.second) {
-						string& rule = extendedAbstractDProof[index++];
-						vector<size_t> refs;
-						string ax;
-						bool inReference = false;
-						unsigned refIndex = 0;
+						checks.emplace(extendedAbstractDProof.size(), q);
+						extendedAbstractDProof.push_back(q.first);
+					}
+				//#size_t c = 0; cout << "extendedAbstractDProof:\n" << FctHelper::vectorStringF(extendedAbstractDProof, [&](const string& s) { return "[" + to_string(c++) + "] " + s; }, { }, { }, "\n") << endl;
+				vector<string> extendedHelperRules;
+				cout << "[Proof compression] Going to parse rules from vault." << endl;
+				parseAbstractDProof(extendedAbstractDProof, extendedAbstractDProofConclusions, customAxioms, &extendedHelperRules, &extendedHelperRulesConclusions);
+				for (const pair<const size_t, pair<string, string>>& p : checks) {
+					string correctConclusion = DlCore::toPolishNotation_noRename(extendedAbstractDProofConclusions[p.first]);
+					if (correctConclusion != p.second.second) {
+						cerr << "[Proof compression] ERROR Found invalid vault entry " << p.second.first << ":" << p.second.second << ". Actual conclusion is " << correctConclusion << ". Aborting." << endl;
+						exit(0);
+					}
+				}
+				cout << "[Proof compression] Successfully parsed " << checks.size() << " rule" << (checks.size() == 1 ? "" : "s") << " from vault." << endl;
+			} else if (fileExists && foundCurrentRound)
+				cout << "[Proof compression] No relevant preparation phase was found in vault." << endl;
+			if (!markedUnproductive && static_cast<bool>(vaultRoundResult_initialTotalFunLen) == vaultRoundResult.empty()) {
+				cerr << "[Proof compression] ERROR Incomplete \"[Summary]\" specification in vault file ./" << *vaultFile << ". Aborting." << endl;
+				exit(0);
+			}
+			if (vaultRoundResult_initialTotalFunLen && vaultRoundResult_initialTotalFunLen != accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL)) {
+				cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " != " << vaultRoundResult_initialTotalFunLen << " proof steps in total. Aborting." << endl;
+				exit(0);
+			}
+			for (const VaultSummaryEntry& improvement : vaultRoundResult)
+				if (improvement.original >= numRules) {
+					cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There is no rule [" << improvement.original << "]. Aborting." << endl;
+					exit(0);
+				} else if (improvement.originalRule != (improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()])) {
+					cerr << "[Proof compression] ERROR Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": There is no rule " << improvement.originalRule << " at [" << improvement.original << "]. Aborting." << endl;
+					exit(0);
+				}
+
+			// A.3 Obtain input formulas for vault entries.
+			for (const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p : vault) {
+				vaultInputs[p.first];
+				for (const pair<string, string>& q : p.second) {
+					string& rule = extendedAbstractDProof[index++];
+					vector<size_t> refs;
+					string ax;
+					bool inReference = false;
+					unsigned refIndex = 0;
+					for (char c : rule)
+						switchRefs(c, inReference, refIndex, [&]() {
+							refs.push_back(refIndex);
+						}, []() { });
+					while (rule[0] == '[') { // handle single reference duplicates by traversing to the original
+						size_t ref = index - 1;
+						if (refs.size() != 1)
+							throw logic_error("Invalid rule \"" + rule + "\" at index " + to_string(ref) + ".");
+						cout << "[Proof compression] Detected duplicate rule: \"[" << ref << "] " << DlCore::toPolishNotation_noRename(ref < extendedAbstractDProof.size() ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]) << " = " << rule << "\", for \"[" << refs[0] << "] " << DlCore::toPolishNotation_noRename(refs[0] < extendedAbstractDProof.size() ? extendedAbstractDProofConclusions[refs[0]] : extendedHelperRulesConclusions[refs[0] - extendedAbstractDProof.size()]) << " = " << extendedAbstractDProof[refs[0]] << "\" [Vault entry: (" << p.first[0] << ", " << p.first[1] << "): " << q.first << "=" << q.second << "]" << endl;
+						rule = extendedAbstractDProof[refs[0]];
+						refs.clear();
 						for (char c : rule)
 							switchRefs(c, inReference, refIndex, [&]() {
 								refs.push_back(refIndex);
 							}, []() { });
-						while (rule[0] == '[') { // handle single reference duplicates by traversing to the original
-							size_t ref = index - 1;
-							if (refs.size() != 1)
-								throw logic_error("Invalid rule \"" + rule + "\" at index " + to_string(ref) + ".");
-							cout << "[Proof compression] Detected duplicate rule: \"[" << ref << "] " << DlCore::toPolishNotation_noRename(ref < extendedAbstractDProof.size() ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]) << " = " << rule << "\", for \"[" << refs[0] << "] " << DlCore::toPolishNotation_noRename(refs[0] < extendedAbstractDProof.size() ? extendedAbstractDProofConclusions[refs[0]] : extendedHelperRulesConclusions[refs[0] - extendedAbstractDProof.size()]) << " = " << extendedAbstractDProof[refs[0]] << "\" [Vault entry: (" << p.first[0] << ", " << p.first[1] << "): " << q.first << "=" << q.second << "]" << endl;
-							rule = extendedAbstractDProof[refs[0]];
-							refs.clear();
-							for (char c : rule)
-								switchRefs(c, inReference, refIndex, [&]() {
-									refs.push_back(refIndex);
-								}, []() { });
-						}
-						char l = rule[1];
-						char r = rule[rule.size() - 1];
-						size_t axL = l == '[' ? 0 : l <= '9' ? l - '0' : l - 'a' + 10;
-						size_t axR = r == ']' ? 0 : r <= '9' ? r - '0' : r - 'a' + 10;
-						pair<string, string> result;
-						bool first = true;
-						if (axL) {
-							if (axL > axioms.size())
-								throw logic_error("Invalid axiom '" + string { l } + "' used by imported rule \"" + q.first + "\".");
-							result.first = DlCore::toPolishNotation_noRename(axioms[axL - 1].refinedAxiom);
-							first = false;
-						}
-						for (size_t ref : refs) {
-							bool isMainStep = ref < extendedAbstractDProof.size();
-							if (first) {
-								result.first = DlCore::toPolishNotation_noRename(isMainStep ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]);
-								first = false;
-							} else
-								result.second = DlCore::toPolishNotation_noRename(isMainStep ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]);
-						}
-						if (axR) {
-							if (axR > axioms.size())
-								throw logic_error("Invalid axiom '" + string { r } + "' used by imported rule \"" + q.first + "\".");
-							result.second = DlCore::toPolishNotation_noRename(axioms[axR - 1].refinedAxiom);
-						}
-						vaultInputs.at(p.first).push_back(result);
 					}
+					char l = rule[1];
+					char r = rule[rule.size() - 1];
+					size_t axL = l == '[' ? 0 : l <= '9' ? l - '0' : l - 'a' + 10;
+					size_t axR = r == ']' ? 0 : r <= '9' ? r - '0' : r - 'a' + 10;
+					pair<string, string> result;
+					bool first = true;
+					if (axL) {
+						if (axL > axioms.size())
+							throw logic_error("Invalid axiom '" + string { l } + "' used by imported rule \"" + q.first + "\".");
+						result.first = DlCore::toPolishNotation_noRename(axioms[axL - 1].refinedAxiom);
+						first = false;
+					}
+					for (size_t ref : refs) {
+						bool isMainStep = ref < extendedAbstractDProof.size();
+						if (first) {
+							result.first = DlCore::toPolishNotation_noRename(isMainStep ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]);
+							first = false;
+						} else
+							result.second = DlCore::toPolishNotation_noRename(isMainStep ? extendedAbstractDProofConclusions[ref] : extendedHelperRulesConclusions[ref - extendedAbstractDProof.size()]);
+					}
+					if (axR) {
+						if (axR > axioms.size())
+							throw logic_error("Invalid axiom '" + string { r } + "' used by imported rule \"" + q.first + "\".");
+						result.second = DlCore::toPolishNotation_noRename(axioms[axR - 1].refinedAxiom);
+					}
+					vaultInputs.at(p.first).push_back(result);
 				}
-				//#cout << "vaultInputs:\n" << FctHelper::mapStringF(vaultInputs, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return "D(" + p.first + ")(" + p.second + ")"; }); }, { }, { }, "\n") << endl;
-				if (!vault.empty())
-					cout << "[Proof compression] Imported " << vault.size() << " relevant preparation phase" << (vault.size() == 1 ? "" : "s") << " with the following amounts of rules: " << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + to_string(p.second.size()); }) << endl;
-			};
-			if (vaultFile)
-				initVaultRoundData(v, compressionRound, nullptr, numRules, axioms, fundamentalLengths, retractedDProof, helperRules, customAxioms, vaultFile);
+			}
+			//#cout << "vaultInputs:\n" << FctHelper::mapStringF(vaultInputs, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + FctHelper::vectorStringF(p.second, [](const pair<string, string>& p) { return "D(" + p.first + ")(" + p.second + ")"; }); }, { }, { }, "\n") << endl;
+			if (!vault.empty())
+				cout << "[Proof compression] Imported " << vault.size() << " relevant preparation phase" << (vault.size() == 1 ? "" : "s") << " with the following amounts of rules: " << FctHelper::mapStringF(vault, [](const pair<const array<uint32_t, 2>, vector<pair<string, string>>>& p) { return "(" + to_string(p.first[0]) + ", " + to_string(p.first[1]) + "): " + to_string(p.second.size()); }) << endl;
+		};
+
+		// 6. Print extended configuration and import vault (if requested).
+		{
+			string indent = "\n" + string(54 + FctHelper::digitsNum_uint64(modificationRange), ' ');
+			cout << "[Proof compression] Rule search configuration " << modificationRange << "-" << keepMaxRules << "-" << static_cast<bool>(vaultFile) << "-" << skipFirstPrep << ": Regular rounds generate relative abstract proofs with up to 3 steps. They possibly replace utilized formulas with proper schemas." << (allowPreparation && modificationRange >= 5 ? indent + "Before each round generate relative abstract proofs (D-rules only) with up to " + to_string(modificationRange % 2 == 0 ? modificationRange - 1 : modificationRange) + " steps and improve existing rules accordingly, potentially with new formulas." : "") << (keepMaxRules ? indent + "Store maximum-size generated proofs also when they do not prove known intermediate theorems, so they remain potentially useful as replacements for subproofs." : "") << (vaultFile ? indent + "Use vault file at \"" + *vaultFile + "\" to coordinate phases for maximum-size proofs, to avoid repeating these computations over multiple runs." : "") << (skipFirstPrep ? indent + "Skip preparation of the first round." : "") << endl;
+			if (allowPreparation && modificationRange >= 5 && vaultFile)
+				initVaultRoundData(v_prep, compressionRound);
 		}
 
 		// 7. Define lambda functions to
@@ -2348,7 +2358,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		//    - save raw intermediate results in file ('auto saveRawIntermediateResults').
 		size_t subround = 0;
 		// X. Perform an exhaustive generation to improve the proof summary.
-		auto exhaustiveGen = [&](VaultRoundData& v, size_t modificationRange = 3, bool preparation = false, const string* vaultFile = nullptr) {
+		auto exhaustiveGen = [&](VaultRoundData& v, size_t modificationRange = 3, bool preparation = false) {
 			string& vault_str = v.str;
 			const map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vault = v.entries;
 			const map<array<uint32_t, 2>, vector<pair<string, string>>, cmpComboGrow>& vaultInputs = v.entries_inputFormulas;
@@ -2480,19 +2490,22 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				return true;
 			};
 			string* vaultOutput = vaultFile ? &vault_str : nullptr;
-			if (vaultRoundResult_initialTotalFunLen) { // improvements already available from vault
-				foundImprovements = true;
-				size_t totalProofSteps = 0;
-				for (const VaultSummaryEntry& improvement : vaultRoundResult) {
-					if (fundamentalLengths[improvement.original] != improvement.originalFunLen)
-						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": Rule [" << improvement.original << "] " << improvement.originalRule << " has fundamental length " << fundamentalLengths[improvement.original] << ", not " << improvement.originalFunLen << "." << endl;
-					(improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()]) = improvement.newRule; // replace actual rule
-					fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions); // update fundamental lengths
-					totalProofSteps = accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL);
-					if (improvement.totalProofStepsAfter != totalProofSteps)
-						cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": After minimizing rule [" << improvement.original << "] " << improvement.originalRule << ", there are " << totalProofSteps << " proof steps in total, not " << improvement.totalProofStepsAfter << "." << endl;
-				}
-				cout << "[Summary] Applied " << vaultRoundResult.size() << " vault improvement" << (vaultRoundResult.size() == 1 ? "" : "s") << ". Reduced " << vaultRoundResult_initialTotalFunLen << " total proof steps down to " << totalProofSteps << "." << endl;
+			if (vaultRoundResult_initialTotalFunLen) { // results already available from vault
+				foundImprovements = !vaultRoundResult.empty();
+				if (foundImprovements) {
+					size_t totalProofSteps = 0;
+					for (const VaultSummaryEntry& improvement : vaultRoundResult) {
+						if (fundamentalLengths[improvement.original] != improvement.originalFunLen)
+							cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": Rule [" << improvement.original << "] " << improvement.originalRule << " has fundamental length " << fundamentalLengths[improvement.original] << ", not " << improvement.originalFunLen << "." << endl;
+						(improvement.original < retractedDProof.size() ? retractedDProof[improvement.original] : helperRules[improvement.original - retractedDProof.size()]) = improvement.newRule; // replace actual rule
+						fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions); // update fundamental lengths
+						totalProofSteps = accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL);
+						if (improvement.totalProofStepsAfter != totalProofSteps)
+							cout << "[WARNING] Mismatching \"[Summary]\" specification in vault file ./" << *vaultFile << ": After minimizing rule [" << improvement.original << "] " << improvement.originalRule << ", there are " << totalProofSteps << " proof steps in total, not " << improvement.totalProofStepsAfter << "." << endl;
+					}
+					cout << "[Summary] Applied " << vaultRoundResult.size() << " vault improvement" << (vaultRoundResult.size() == 1 ? "" : "s") << ". Reduced " << vaultRoundResult_initialTotalFunLen << " total proof steps down to " << totalProofSteps << "." << endl;
+				} else
+					cout << "[Summary] Applied 0 vault improvements. There are " << vaultRoundResult_initialTotalFunLen << " total proof steps." << endl;
 			} else {
 				for (size_t len = 3; len < extraData.size(); len += 2) { // len <= extraData.size() - 1 == modificationRange <= UINT16_MAX = 65535, i.e. 16 bits are sufficient to store any valid 'len'
 					vector<pair<array<uint32_t, 2>, unsigned>> combinations = DlProofEnumerator::proofLengthCombinationsD_oddLengths(static_cast<unsigned>(len - 2), true);
@@ -2823,6 +2836,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				}
 
 				// X.4 Combine and summarize improvements.
+				stringstream ss;
 				if (foundImprovements) {
 					auto popNext = [&](map<size_t, int64_t>& locations, size_t& funLen) -> pair<const size_t, int64_t> { // obtain and remove entry with minimal fundamental length according to 'fundamentalLengths'
 						map<size_t, map<size_t, int64_t>> ordered; // fundamental length -> (index, location)
@@ -2871,7 +2885,6 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 							}
 						return ss.str();
 					};
-					stringstream ss;
 					ss << "[Summary] Improvements (ordered), from " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total:\n";
 					cout << ss.str() << flush;
 					while (!improvements.empty()) {
@@ -2883,7 +2896,7 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 						const AbstractDProof& candidate = extraData[(location >> 7) & UINT16_MAX][location >> 23];
 						size_t funLen_candidate = measure(candidate.toString());
 						stringstream ss1;
-						ss1 << "[Summary] Step: (" << index << ", " << dProof << " -> " << candidate.toConclusionString() << "), fundamental lengths (" << funLen << ", " << funLen_candidate << ")" << endl;
+						ss1 << "[Summary] Step: (" << index << ", " << dProof << " -> " << candidate.toConclusionString() << "), fundamental lengths (" << funLen << ", " << funLen_candidate << ")\n";
 						cout << ss1.str() << flush;
 						if (vaultOutput)
 							ss << ss1.str();
@@ -2895,18 +2908,20 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 							fundamentalLengths = measureFundamentalLengthsInAbstractDProof(allIndices, retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions); // update fundamental lengths
 						}
 						stringstream ss2;
-						ss2 << "[Summary]    => " << optimizedRule << ", fundamental length " << optimizedFunLen << (apply ? " (applied)" : " (ignored)") << ", " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total" << endl;
+						ss2 << "[Summary]    => " << optimizedRule << ", fundamental length " << optimizedFunLen << (apply ? " (applied)" : " (ignored)") << ", " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total\n";
 						cout << ss2.str() << flush;
 						if (vaultOutput)
 							ss << ss2.str();
 					}
-					if (vaultOutput) {
-						*vaultOutput += ss.str();
-						FctHelper::writeToFile(*vaultFile, *vaultOutput);
-						cout << vaultOutput->length() << " bytes written to vault file." << endl;
-					}
-				} else
-					cout << "[Summary] Found no improvements." << endl;
+				} else {
+					ss << "[Summary] Found no improvements. There are " << accumulate(fundamentalLengths.begin(), fundamentalLengths.end(), 0uLL) << " proof steps in total.\n";
+					cout << ss.str() << flush;
+				}
+				if (vaultOutput) {
+					*vaultOutput += ss.str();
+					FctHelper::writeToFile(*vaultFile, *vaultOutput);
+					cout << vaultOutput->length() << " bytes written to vault file." << endl;
+				}
 			}
 
 			// X.5 Make newly encoded intermediate conclusions explicit and filter out duplicates (in case they were introduced).
@@ -3143,8 +3158,8 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		};
 
 		// 8. Perform preparation step.
-		if (allowGeneration && modificationRange >= 5)
-			exhaustiveGen(v, modificationRange, true, vaultFile);
+		if (allowPreparation && modificationRange >= 5)
+			exhaustiveGen(v_prep, modificationRange, true);
 
 		// 9. Define procedure to look for N-rules as replacements (where applicable).
 		//    Only looks for rules, cannot eliminate rules that are axioms. These are reported later, but should be handled by the user.
@@ -3241,8 +3256,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 		bool foundPrepImprovements = foundImprovements;
 		bool foundRegularImprovements = false;
 		if (babySteps) {
-			VaultRoundData v_subround;
-			exhaustiveGen(v_subround);
+			VaultRoundData v_gen;
+			if (vaultFile)
+				initVaultRoundData(v_gen, compressionRound, &subround);
+			exhaustiveGen(v_gen, 3, false);
 			if (foundImprovements)
 				foundRegularImprovements = true;
 			necessitationReplacements();
@@ -3253,8 +3270,10 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				newImprovements = 0;
 				do {
 					foundImprovements = false;
-					VaultRoundData v_subround;
-					exhaustiveGen(v_subround);
+					VaultRoundData v_gen;
+					if (vaultFile)
+						initVaultRoundData(v_gen, compressionRound, &subround);
+					exhaustiveGen(v_gen, 3, false);
 					if (foundImprovements) {
 						foundRegularImprovements = true;
 						purify();

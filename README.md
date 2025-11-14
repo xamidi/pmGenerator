@@ -137,7 +137,7 @@ Some more – and very special – proof systems are illustrated [further down b
            -x: proof compression with extended modification range; for '-x 5' or higher: prepare each round with relative abstract proofs (D-rules only) of up to <range> steps, potentially improving rules with new formulas ; default: 0
            -#: use smaller, less efficient proof compression steps ; increases the number of potential rounds and newly introduced intermediate conclusions, potentially leading to shorter proofs eventually
            -k: store maximum-size proofs prepared via '-x' also when they do not prove known intermediate theorems, so they can still be used as replacements for subproofs ; increases memory consumption significantly
-           -v: coordinate preparation phases for maximum-size proofs generated via '-x' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified
+           -v: coordinate phases for maximum-size proofs generated via '-x' or '-z' with the specified vault file (to avoid repeating these computations over multiple runs) ; used only when '-k' unspecified
            -h: save raw intermediate results in files at the beginning of each proof compression round (and at the end of productive rounds) ; after each preparation phase in case '-x' is specified
            -q: skip first round preparation for '-x' ; useful to eliminate inefficiencies before extensive preparations, or to continue working on intermediate results produced by an aborted computation using '-h'
            -f: proof summary is given by input file path ; ignores lines that are empty or starting with '%'
