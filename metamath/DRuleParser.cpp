@@ -3130,8 +3130,13 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 					retractedDProof.push_back(helperRules[i]);
 					abstractDProofConclusions.push_back(helperRulesConclusions[i]);
 				}
-				parseAbstractDProof(retractedDProof, abstractDProofConclusions, customAxioms, &helperRules, &helperRulesConclusions, &indexEvalSequence);
-				modified = false; // no need to rebuild 'indexEvalSequence', for now
+				// Must also update 'targetIndices', so call parseValidateAndFilterAbstractDProof() without intermediate conclusion validation rather than just parseAbstractDProof().
+				helperRules.clear();
+				helperRulesConclusions.clear();
+				targetIndices = parseValidateAndFilterAbstractDProof(retractedDProof, abstractDProofConclusions, helperRules, helperRulesConclusions, customAxioms, targetEverything, filterForTheorems, nullptr, &indexEvalSequence);
+				if (!helperRules.empty())
+					throw logic_error("Purifier shouldn't introduce new intermediate conclusions.");
+				modified = false; // no need to rebuild 'indexEvalSequence', for now ; NOTE: removeIndices() already refreshed 'numRules', 'fundamentalLengths' and 'proofElements'.
 			}
 			cout << "[Proof compression (rule search), round " << compressionRound << (initial || babySteps ? "" : "." + to_string(subround)) << "] " << myTime() << ": Purifier complete after " << FctHelper::durationStringMs(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - startTime)) << "." << endl;
 		};
@@ -3689,6 +3694,8 @@ vector<string> DRuleParser::recombineAbstractDProof(const vector<string>& abstra
 		auto collectRefIndices = [&](size_t i, const auto& me) {
 			if (referencedIndices.count(i))
 				return;
+			if (i >= retractedDProof.size() + helperRules.size())
+				throw logic_error("Requesting invalid target index " + to_string(i) + ". The constructed abstract proof contains only " + to_string(retractedDProof.size() + helperRules.size()) + " rule" + (retractedDProof.size() + helperRules.size() == 1 ? "." : "s."));
 			const string& dProof = i < retractedDProof.size() ? retractedDProof[i] : helperRules[i - retractedDProof.size()];
 			bool inReference = false;
 			unsigned refIndex = 0;
