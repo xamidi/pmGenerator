@@ -2262,8 +2262,12 @@ void DRuleParser::compressAbstractDProof(vector<string>& retractedDProof, vector
 				for (const pair<const size_t, pair<string, string>>& p : checks) {
 					string correctConclusion = DlCore::toPolishNotation_noRename(extendedAbstractDProofConclusions[p.first]);
 					if (correctConclusion != p.second.second) {
-						cerr << "[Proof compression] ERROR Found invalid vault entry " << p.second.first << ":" << p.second.second << ". Actual conclusion is " << correctConclusion << ". Aborting." << endl;
-						exit(0);
+						if (DlCore::isSchemaOf_polishNotation_noRename_numVars_vec(correctConclusion, p.second.second))
+							cout << "[Proof compression] NOTE Found obsolete vault entry " << p.second.first << ":" << p.second.second << ". Actual conclusion is its proper schema " << correctConclusion << "." << endl;
+						else {
+							cerr << "[Proof compression] ERROR Found invalid vault entry " << p.second.first << ":" << p.second.second << ". Actual conclusion is " << correctConclusion << ". Aborting." << endl;
+							exit(0);
+						}
 					}
 				}
 				cout << "[Proof compression] Successfully parsed " << checks.size() << " rule" << (checks.size() == 1 ? "" : "s") << " from vault." << endl;
