@@ -32,17 +32,17 @@
 #### Introduction
 
 This research software is designed to compute and verify the logical consequences of given sets of axioms, which makes it an automated theorem prover (ATP).
-Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens). In a way, *pmGenerator* is to conventional ATPs what a microscope is to binoculars.
+Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens). In a way, *pmGenerator* is to conventional ATPs what a microscope is to binoculars. This tool is *the only one of its kind* for using a [maximally condensed proof notation](https://en.wikipedia.org/wiki/Condensed_detachment#D-notation) to process completely [formal](https://en.wikipedia.org/wiki/Formal_proof) and [effective](https://en.wikipedia.org/wiki/Constructive_proof) proofs in user-defined systems with [outstanding performance](https://github.com/xamidi/pmGenerator/discussions/4#literature).
 
 ##### Why *pmGenerator* excels in “exploration”
 
-Unlike regular ATPs like Prover9 or Vampire, which are “goal-oriented” (you give them a target and they try to find a path), *pmGenerator* is “source-oriented”: It treats the axioms as a seed and breadth-first searches the space of all possible [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) under extensive optimizations.<sup>✾</sup>
+Unlike regular ATPs like Prover9 or Vampire, which are “goal-oriented” (you give them a target and they try to find a path), *pmGenerator* is “source-oriented”: It treats the axioms as a seed and [breadth-first searches](https://en.wikipedia.org/wiki/Breadth-first_search) the space of all possible [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) under extensive optimizations.<sup>✾</sup>
 
-This makes it arguably the best tool for seeing the “tree” of what a specific, user-defined system actually produces, rather than just checking whether a specific statement is provable.
+This makes it arguably the best tool for seeing the “[tree](https://en.wikipedia.org/wiki/Tree_%28abstract_data_type%29)” of what a specific, user-defined system actually produces, rather than just checking whether a specific statement is provable.
 
 ##### Target theorem proving and refinement
 
-The program can perform additional operations on thereby generated proof data. Once sufficient knowledge is available, *pmGenerator* can utilize it in order to convert proofs from (user-friendly) natural deduction into the explored system, thus revealing paths to specified targets, meaning *pmGenerator* can also be used “goal-oriented”.
+The program can perform additional operations on generated proof data. Once sufficient knowledge is available, *pmGenerator* can utilize it in order to convert proofs from (user-friendly) [natural deduction](https://plato.stanford.edu/entries/natural-deduction/) into the explored system, thus revealing paths to specified targets, meaning *pmGenerator* can also be used “goal-oriented”.
 
 Furthermore, such paths (or any user-provided proofs for that matter) can then be used to find more refined variants towards the same goals, thanks to *pmGenerator*'s proof compression capabilities. Thus *pmGenerator* can also work “path-oriented”, which — paired with its ability to generate exhaustive sets of minimal proofs — makes it an excellent tool for proof minimization with respect to a certain range of systems.
 
