@@ -7,7 +7,10 @@
 <details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 1. [Introduction](#introduction)
-   1. [Frege's calculus simplified by Łukasiewicz `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp)`](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info)
+   1. [Why *pmGenerator* excels in “exploration”](#why-pmgenerator-excels-in-exploration)
+   2. [Target theorem proving and refinement](#target-theorem-proving-and-refinement)
+   3. [Details](#details)
+   4. [Frege's calculus simplified by Łukasiewicz `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp)`](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info)
 2. [Navigation](#navigation)
 3. [Usage](#usage)
    1. [Commands](#commands)
@@ -28,11 +31,30 @@
 
 #### Introduction
 
+This research software is designed to compute and verify the logical consequences of given sets of axioms, which makes it an automated theorem prover (ATP).
+Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens). In a way, *pmGenerator* is to conventional ATPs what a microscope is to binoculars.
+
+##### Why *pmGenerator* excels in “exploration”
+
+Unlike regular ATPs like Prover9 or Vampire, which are “goal-oriented” (you give them a target and they try to find a path), *pmGenerator* is “source-oriented”: It treats the axioms as a seed and breadth-first searches the space of all possible [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) under extensive optimizations.<sup>✾</sup>
+
+This makes it arguably the best tool for seeing the “tree” of what a specific, user-defined system actually produces, rather than just checking whether a specific statement is provable.
+
+##### Target theorem proving and refinement
+
+The program can perform additional operations on thereby generated proof data. Once sufficient knowledge is available, *pmGenerator* can utilize it in order to convert proofs from (user-friendly) natural deduction into the explored system, thus revealing paths to specified targets, meaning *pmGenerator* can also be used “goal-oriented”.
+
+Furthermore, such paths (or any user-provided proofs for that matter) can then be used to find more refined variants towards the same goals, thanks to *pmGenerator*'s proof compression capabilities. Thus *pmGenerator* can also work “path-oriented”, which — paired with its ability to generate exhaustive sets of minimal proofs — makes it an excellent tool for proof minimization with respect to a certain range of systems.
+
+##### Details
+
 This tool can collect exhaustive sets of [condensed detachment](https://en.wikipedia.org/wiki/Condensed_detachment) proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's [“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") collection.  
-The D-rule combines [unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) with [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens) (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) within [Hilbert systems](https://en.wikipedia.org/wiki/Hilbert_system) based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
+The D-rule combines [unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) with modus ponens (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all syntactic consequences within [Hilbert systems](https://en.wikipedia.org/wiki/Hilbert_system) based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
 There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions) for questions, ideas, challenges, and related information. Numerous use cases of the tool are exemplified, for example *proof parsing* under the [Proof Notation](https://github.com/xamidi/pmGenerator/discussions/2#proof-notation) section of the [“Minimal 1-bases for C-N propositional calculus”](https://github.com/xamidi/pmGenerator/discussions/2) proof minimization challenge.
 
 Eligible for high-performance computing. If you have access to a powerful computer, you may use *pmGenerator* to further contribute to our knowledge regarding the [complexity of proof systems](https://en.wikipedia.org/wiki/Proof_complexity).<sup>⚜</sup> Progress that has already been made is exemplarily shown below.
+
+<sup>✾</sup><sub>Presupposing finitely many axiom schemas, this works by restricting the proof space such that only the most general suitable substitutions are utilized, leading to only finitely many proofs for any given number of proof steps. These proofs derive so-called *most general theorems*, each of which represents infinitely many formulas by substitution. Furthermore, exhaustive generation quickly becomes impractical for greater numbers of axiom schemas, so it may be useful to include only *relevant* ones and merge later. However, there is support for up to thirty-five axiom schemas named `1`, `2`, …, `9`, `a`, `b`, …, `z`. At this point, they can use only up to two nullary (`O`,`V`), five unary (`L`,`M`,`N`,`P`,`Z`), and twelve binary (`A`,`B`,`C`,`D`,`E`,`F`,`G`,`J`,`K`,`S`,`U`,`X`) connectives, but this could be easily extended [upon request](https://github.com/xamidi/pmGenerator/discussions). The notation extends Łukasiewicz's (cf. [logic-structuralizer](https://xamidi.github.io/logic-structuralizer/), example “ψ”), but the meaning of connectives is defined solely by axioms — with the notable exceptions of `C` (left-to-right implication) which is used by modus ponens, and possibly `L` (necessity) which is used by necessitation if enabled by the user.</sub>
 
 <sup>⚜</sup><sub>For example, whether there is a polynomially-bounded *propositional* proof system is equivalent to **NP=coNP**, and showing that there is none would also show **P≠NP**. The question **“Are the Frege systems polynomially bounded?”** resisted decades of effort and is seen as a fundamental open problem in [propositional proof complexity](https://web.archive.org/web/20230116223323fw_/https://www.cs.toronto.edu/~toni/Courses/ProofComp2017/Papers/segerlind.pdf).</sub>
 
@@ -451,5 +473,6 @@ The system of modal logic illustrated below extends [Frege's calculus simplified
 </details>
 <a name="footnotes"></a>
 
-<sup>✻</sup><sub>A proof is *minimal* in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a *shortest* proof (also “minimal”, but referring to length) — not “*the* minimal proof” as in this context.</sub>  
+<sup>✻</sup><sub>A proof is *minimal* in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a *shortest* proof (also “minimal”, but referring to length) — not “*the* minimal proof” as in this context.</sub>
+
 <sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project [rwth1392](pdf/rwth1392_extension_2025.pdf "View rwth1392_extension_2025.pdf").</sub>
