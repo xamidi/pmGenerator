@@ -4,6 +4,8 @@
 
 [![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
 
+<sup>A tool meant to assist research on deductive systems with detachment.</sup>
+
 <details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 1. [Introduction](#introduction)
