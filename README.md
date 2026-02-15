@@ -4,7 +4,7 @@
 
 [![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
 
-<sup>A tool meant to assist research on deductive systems with detachment.</sup>
+<sup>A tool meant to assist research on logical systems with detachment.</sup>
 
 <details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -33,32 +33,50 @@
 
 #### Introduction
 
+<p align="justify">
 This research software is designed to compute and verify the logical consequences of given sets of axioms, which makes it an automated theorem prover (ATP).
-Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and [modus ponens](https://en.wikipedia.org/wiki/Modus_ponens). In a way, *pmGenerator* is to conventional ATPs what a microscope is to binoculars. This tool is *the only one of its kind* for using a [maximally condensed proof notation](https://en.wikipedia.org/wiki/Condensed_detachment#D-notation) to process completely [formal](https://en.wikipedia.org/wiki/Formal_proof) and [effective](https://en.wikipedia.org/wiki/Constructive_proof) proofs in user-defined systems with [outstanding performance](https://github.com/xamidi/pmGenerator/discussions/4#literature).
+Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and <a href="https://en.wikipedia.org/wiki/Modus_ponens">modus ponens</a>. In a way, <em>pmGenerator</em> is to conventional ATPs what a microscope is to binoculars. This tool is <em>the only one of its kind</em> for using a <a href="https://en.wikipedia.org/wiki/Condensed_detachment#D-notation">maximally condensed proof notation</a> to process completely <a href="https://en.wikipedia.org/wiki/Formal_proof">formal</a> and <a href="https://en.wikipedia.org/wiki/Constructive_proof">effective</a> proofs in user-defined systems with <a href="https://github.com/xamidi/pmGenerator/discussions/4#literature">outstanding performance</a>.
+</p>
 
 ##### Why *pmGenerator* excels in “exploration”
 
-Unlike regular ATPs like Prover9 or Vampire, which are “goal-oriented” (you give them a target and they try to find a path), *pmGenerator* is “source-oriented”: It treats the axioms as a seed and [breadth-first searches](https://en.wikipedia.org/wiki/Breadth-first_search) the space of all possible [syntactic consequences](https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence) under extensive optimizations.<sup>✾</sup>
+<p align="justify">
+Unlike regular ATPs like Prover9 or Vampire, which are “goal-oriented” (you give them a target and they try to find a path), <em>pmGenerator</em> is “source-oriented”: It treats the axioms as a seed and <a href="https://en.wikipedia.org/wiki/Breadth-first_search">breadth-first searches</a> the space of all possible <a href="https://en.wikipedia.org/wiki/Logical_consequence#Syntactic_consequence">syntactic consequences</a> under extensive optimizations.<sup>✾</sup>
+</p>
 
-This makes it arguably the best tool for seeing the “[tree](https://en.wikipedia.org/wiki/Tree_%28abstract_data_type%29)” of what a specific, user-defined system actually produces, rather than just checking whether a specific statement is provable.
+<p align="justify">
+This makes it arguably the best tool for seeing the “<a href="https://en.wikipedia.org/wiki/Tree_(abstract_data_type)">tree</a>” of what a specific, user-defined system actually produces, rather than just checking whether a specific statement is provable.
+</p>
 
 ##### Target theorem proving and refinement
 
-The program can perform additional operations on generated proof data. Once sufficient knowledge is available, *pmGenerator* can utilize it in order to convert proofs from (user-friendly) [natural deduction](https://plato.stanford.edu/entries/natural-deduction/) into the explored system, thus revealing paths to specified targets, meaning *pmGenerator* can also be used “goal-oriented”.
+<p align="justify">
+The program can perform additional operations on generated proof data. Once sufficient knowledge is available, <em>pmGenerator</em> can utilize it in order to convert proofs from (user-friendly) <a href="https://plato.stanford.edu/entries/natural-deduction/">natural deduction</a> into the explored system, thus revealing paths to specified targets, meaning <em>pmGenerator</em> can also be used “goal-oriented”.
+</p>
 
-Furthermore, such paths (or any user-provided proofs for that matter) can then be used to find more refined variants towards the same goals, thanks to *pmGenerator*'s proof compression capabilities. Thus *pmGenerator* can also work “path-oriented”, which — paired with its ability to generate exhaustive sets of minimal proofs — makes it an excellent tool for proof minimization with respect to a certain range of systems.
+<p align="justify">
+Furthermore, such paths (or any user-provided proofs for that matter) can then be used to find more refined variants towards the same goals, thanks to <em>pmGenerator</em>'s proof compression capabilities. Thus <em>pmGenerator</em> can also work “path-oriented”, which — paired with its ability to generate exhaustive sets of minimal proofs — makes it an excellent tool for proof minimization with respect to a certain range of systems.
+</p>
 
 ##### Details
 
-This tool can collect exhaustive sets of [condensed detachment](https://en.wikipedia.org/wiki/Condensed_detachment) proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's [“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”](https://us.metamath.org/mmsolitaire/pmproofs.txt "us.metamath.org/mmsolitaire/pmproofs.txt") collection.  
-The D-rule combines [unification](https://en.wikipedia.org/wiki/Unification_(computer_science)) with modus ponens (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus *pmGenerator* covers all syntactic consequences within [Hilbert systems](https://en.wikipedia.org/wiki/Hilbert_system) based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.  
-There is a [discussion forum](https://github.com/xamidi/pmGenerator/discussions) for questions, ideas, challenges, and related information. Numerous use cases of the tool are exemplified, for example *proof parsing* under the [Proof Notation](https://github.com/xamidi/pmGenerator/discussions/2#proof-notation) section of the [“Minimal 1-bases for C-N propositional calculus”](https://github.com/xamidi/pmGenerator/discussions/2) proof minimization challenge.
+<p align="justify">
+This tool can collect exhaustive sets of <a href="https://en.wikipedia.org/wiki/Condensed_detachment">condensed detachment</a> proofs in D-N-notation and has various functions to display, analyze and utilize them. It can, for example, be used to generate improved versions of Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt" title="us.metamath.org/mmsolitaire/pmproofs.txt">“Shortest known proofs of the propositional calculus theorems from Principia Mathematica”</a> collection.<br>
+The D-rule combines <a href="https://en.wikipedia.org/wiki/Unification_(computer_science)">unification</a> with modus ponens (⊢p,⊢Cpq ⇒ ⊢q), and there is an option to enable the N-rule (rule of necessitation; ⊢p ⇒ ⊢Lp), thus <em>pmGenerator</em> covers all syntactic consequences within <a href="https://en.wikipedia.org/wiki/Hilbert_system">Hilbert systems</a> based on modus ponens and necessitation, each with a minimal proof, limited only by computing power.<br>
+There is a <a href="https://github.com/xamidi/pmGenerator/discussions">discussion forum</a> for questions, ideas, challenges, and related information. Numerous use cases of the tool are exemplified, for example <em>proof parsing</em> under the <a href="https://github.com/xamidi/pmGenerator/discussions/2#proof-notation">Proof Notation</a> section of the <a href="https://github.com/xamidi/pmGenerator/discussions/2">“Minimal 1-bases for C-N propositional calculus”</a> proof minimization challenge.
+</p>
 
-Eligible for high-performance computing. If you have access to a powerful computer, you may use *pmGenerator* to further contribute to our knowledge regarding the [complexity of proof systems](https://en.wikipedia.org/wiki/Proof_complexity).<sup>⚜</sup> Progress that has already been made is exemplarily shown below.
+<p align="justify">
+Eligible for high-performance computing. If you have access to a powerful computer, you may use <em>pmGenerator</em> to further contribute to our knowledge regarding the <a href="https://en.wikipedia.org/wiki/Proof_complexity">complexity of proof systems</a>.<sup>⚜</sup> Progress that has already been made is exemplarily shown below.
+</p>
 
-<sup>✾</sup><sub>Presupposing finitely many axiom schemas, this works by restricting the proof space such that only the most general suitable substitutions are utilized, leading to only finitely many proofs for any given number of proof steps. These proofs derive so-called *most general theorems*, each of which represents infinitely many formulas by substitution. Furthermore, exhaustive generation quickly becomes impractical for greater numbers of axiom schemas, so it may be useful to include only *relevant* ones and merge later. However, there is support for up to thirty-five axiom schemas named `1`, `2`, …, `9`, `a`, `b`, …, `z`. At this point, they can use only up to two nullary (`O`,`V`), five unary (`L`,`M`,`N`,`P`,`Z`), and twelve binary (`A`,`B`,`C`,`D`,`E`,`F`,`G`,`J`,`K`,`S`,`U`,`X`) connectives, but this could be easily extended [upon request](https://github.com/xamidi/pmGenerator/discussions). The notation extends Łukasiewicz's (cf. [logic-structuralizer](https://xamidi.github.io/logic-structuralizer/), example “ψ”), but the meaning of connectives is defined solely by axioms — with the notable exceptions of `C` (left-to-right implication) which is used by modus ponens, and possibly `L` (necessity) which is used by necessitation if enabled by the user.</sub>
+<p align="justify">
+<sup>✾</sup><sub>Presupposing finitely many axiom schemas, this works by restricting the proof space such that only the most general suitable substitutions are utilized, leading to only finitely many proofs for any given number of proof steps. These proofs derive so-called <em>most general theorems</em>, each of which represents infinitely many formulas by substitution. Furthermore, exhaustive generation quickly becomes impractical for greater numbers of axiom schemas, so it may be useful to include only <em>relevant</em> ones and merge later. However, there is support for up to thirty-five axiom schemas named <code>1</code>, <code>2</code>, …, <code>9</code>, <code>a</code>, <code>b</code>, …, <code>z</code>. At this point, they can use only up to two nullary (<code>O</code>,<code>V</code>), five unary (<code>L</code>,<code>M</code>,<code>N</code>,<code>P</code>,<code>Z</code>), and twelve binary (<code>A</code>,<code>B</code>,<code>C</code>,<code>D</code>,<code>E</code>,<code>F</code>,<code>G</code>,<code>J</code>,<code>K</code>,<code>S</code>,<code>U</code>,<code>X</code>) connectives, but this could be easily extended <a href="https://github.com/xamidi/pmGenerator/discussions">upon request</a>. The notation extends Łukasiewicz's (cf. <a href="https://xamidi.github.io/logic-structuralizer/">logic-structuralizer</a>, example “ψ”), but the meaning of connectives is defined solely by axioms — with the notable exceptions of <code>C</code> (left-to-right implication) which is used by modus ponens, and possibly <code>L</code> (necessity) which is used by necessitation if enabled by the user.</sub>
+</p>
 
-<sup>⚜</sup><sub>For example, whether there is a polynomially-bounded *propositional* proof system is equivalent to **NP=coNP**, and showing that there is none would also show **P≠NP**. The question **“Are the Frege systems polynomially bounded?”** resisted decades of effort and is seen as a fundamental open problem in [propositional proof complexity](https://web.archive.org/web/20230116223323fw_/https://www.cs.toronto.edu/~toni/Courses/ProofComp2017/Papers/segerlind.pdf).</sub>
+<p align="justify">
+<sup>⚜</sup><sub>For example, whether there is a polynomially-bounded <em>propositional</em> proof system is equivalent to <strong>NP=coNP</strong>, and showing that there is none would also show <strong>P≠NP</strong>. The question <strong>“Are the Frege systems polynomially bounded?”</strong> resisted decades of effort and is seen as a fundamental open problem in <a href="https://web.archive.org/web/20230116223323fw_/https://www.cs.toronto.edu/~toni/Courses/ProofComp2017/Papers/segerlind.pdf">propositional proof complexity</a>.</sub>
+</p>
 
 ###### Frege's calculus simplified by Łukasiewicz ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg)) &nbsp;<sup><sub>[[top1000](data/top1000SmallestConclusions_1to39Steps.txt)] [[cardinalities](data/cardinalities.txt)] [[db](https://us.metamath.org/mmsolitaire/pmproofs.txt)] [[customization info](data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def)]</sub></sup>
 
@@ -84,9 +102,11 @@ Eligible for high-performance computing. If you have access to a powerful comput
 
 </details>
 
-Measured RAM requirements correspond to the maximum resident set size according to [Slurm](https://slurm.schedmd.com/documentation.html), i.e. `MaxRSS` of [sacct](https://slurm.schedmd.com/sacct.html).  
-Required resources vary based on implementation and environment; numbers are to illustrate orders of magnitude.  
-Some more – and very special – proof systems are illustrated [further down below](#custom-proof-systems).
+<p align="justify">
+Measured RAM requirements correspond to the maximum resident set size according to <a href="https://slurm.schedmd.com/documentation.html">Slurm</a>, i.e. <code>MaxRSS</code> of <a href="https://slurm.schedmd.com/sacct.html">sacct</a>.<br>
+Required resources vary based on implementation and environment; numbers are to illustrate orders of magnitude.<br>
+Some more – and very special – proof systems are illustrated <a href="#custom-proof-systems">further down below</a>.
+</p>
 
 #### Navigation
 
@@ -296,24 +316,28 @@ The following exemplary [Slurm](https://slurm.schedmd.com/documentation.html) ba
     #SBATCH --nodes=6
     srun -n 6 ./pmGenerator -m 31
 
-A subsequent query with [squeue](https://slurm.schedmd.com/squeue.html) would then reveal the following information:
+<p align="justify">
+A subsequent query with <a href="https://slurm.schedmd.com/squeue.html">squeue</a> would then reveal the following information:
+</p>
 
     $ squeue -o "%.9i %.8j %.9P %.11a %.8u %.5C %.5D %.10T %.10M %.10l %.19S %R" -u <userID>
         JOBID     NAME PARTITION     ACCOUNT     USER  CPUS NODES      STATE       TIME TIME_LIMIT          START_TIME NODELIST(REASON)
      34762453 pmGen-20      c18m    rwth1392 <userID>   288     6    RUNNING       3:34 3-00:00:00 2023-05-04T07:52:24 ncm[0297,0306-0307,0315,0320-0321]
 
-You may have a look at the [log file](log/dProofs31_6node_288cpu.log) generated by that computation.
+<p align="justify">
+You may have a look at the <a href="log/dProofs31_6node_288cpu.log">log file</a> generated by that computation.
+</p>
 
 #### Custom Proof Systems
 
-There are illustrated seven proof systems in the following which according to [M. Walsh and B. Fitelson](http://fitelson.org/walsh.pdf) are minimal 1-bases (i.e. generators consisting of shortest single axioms) for propositional logic.
+There are illustrated seven proof systems in the following which according to [M. Walsh and B. Fitelson](http://fitelson.org/walsh.pdf) are minimal 1‑bases (i.e. generators consisting of shortest single axioms) for propositional logic.
 Their only remaining candidate CCCpqCCrNsCtNtCCtpCrp can be refuted since `pmGenerator -c -n -s CCCpqCCrNsCtNtCCtpCrp -g -1` produces only 9 more representatives (1.`D11:CCpCNpqCrCNpq`, 2.`D1D11:CCNppCqp`, 3.`D1D1D11:CCpNCpNpCqNCpNp`, 4.`DD11D11:CpCNCqCNqrCNqr`, 5.`DD11D1D11:CpCNCNqqq`, 6.`DDD11D111:CNCpCNpqCNpq`, 7.`DD11D1D1D11:CpCNCqNCqNqNCqNq`, 8.`DDD11D1D111:CNCNppp`, 9.`DDD11D1D1D111:CNCpNCpNpNCpNp`).  
 Therefore, these systems are implied to be the only minimal 1-bases for C-N propositional calculus.
 
-Target files are distinguished using a hexadecimal SHA-512/224 digest as a folder name for each proof system.  
-For user identification of hash folders, I recommend to use custom icons, such as illustrated below.  
-&nbsp;&nbsp;<sub>![Icon-Preview](png/customIconPreview.png "Hash folders with icons under Windows 7")</sub>  
-For this purpose, a favicon database (`ico.dll`) is included in the release files, as well as an archive (`ico.7z`) with all the `.ico` files for usability with non-Windows operating systems.
+<p align="justify">
+Target files are distinguished using a hexadecimal SHA-512/224 digest as a folder name for each proof system.<br>For user identification of hash folders, I recommend to use custom icons, such as illustrated below.<br>
+&nbsp;&nbsp;<sub><img src="png/customIconPreview.png" alt="Icon-Preview" title="Hash folders with icons under Windows 7"></sub><br>For this purpose, a favicon database (<code>ico.dll</code>) is included in the release files, as well as an archive (<code>ico.7z</code>) with all the <code>.ico</code> files for usability with non-Windows operating systems.
+</p>
 
 ###### Meredith's Axiom; 1-basis ([CCCCCpqCNrNsrtCCtpCsp](svg/meredith.svg)) &nbsp;<sup><sub>[[top1000](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt)] [[cardinalities](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt)] [[nd](data/m_ffx.txt)] [[sample](data/m.txt)] [[info](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def)]</sub></sup>
 
@@ -450,10 +474,14 @@ For this purpose, a favicon database (`ico.dll`) is included in the release file
 
 </details>
 
+<p align="justify">
 The above systems show remarkable differences in complexity, despite similarities. For example, the syntax trees of Walsh's 3rd and 4th axiom differ only in four leaf nodes.
+</p>
 
-Only systems with an odd-ary rule such as necessitation can have condensed detachment proofs of even lengths.  
-The system of modal logic illustrated below extends [Frege's calculus simplified by Łukasiewicz](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info). It can be covered by enabling the N-rule without limiting the number of its consecutive applications via `-c -N -1`.
+<p align="justify">
+Only systems with an odd-ary rule such as necessitation can have condensed detachment proofs of even lengths.<br>
+The system of modal logic illustrated below extends <a href="#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info">Frege's calculus simplified by Łukasiewicz</a>. It can be covered by enabling the N-rule without limiting the number of its consecutive applications via <code>-c -N -1</code>.
+</p>
 
 ###### S5 ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg),[CLpp](svg/truth-4.svg),[CLCpqCLpLq](svg/kripke-5.svg),[CNLNpLNLNp](svg/lewis-6.svg)) &nbsp;<sup><sub>[[top1000](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt)] [[cardinalities](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt)] [[db](data/s5proofs.txt)] [[sample](data/s5.txt)] [[info](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def)]</sub></sup>
 
@@ -475,6 +503,10 @@ The system of modal logic illustrated below extends [Frege's calculus simplified
 </details>
 <a name="footnotes"></a>
 
-<sup>✻</sup><sub>A proof is *minimal* in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a *shortest* proof (also “minimal”, but referring to length) — not “*the* minimal proof” as in this context.</sub>
+<p align="justify">
+<sup>✻</sup><sub>A proof is <em>minimal</em> in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a <em>shortest</em> proof (also “minimal”, but referring to length) — not “<em>the</em> minimal proof” as in this context.</sub>
+</p>
 
-<sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project [rwth1392](pdf/rwth1392_extension_2025.pdf "View rwth1392_extension_2025.pdf").</sub>
+<p align="justify">
+<sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project <a href="pdf/rwth1392_extension_2025.pdf" title="View rwth1392_extension_2025.pdf">rwth1392</a>.</sub>
+</p>
