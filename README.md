@@ -9,10 +9,11 @@
 <details><summary><h4 id="contents">Contents</h4> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
 1. [Introduction](#introduction)
-   1. [Why *pmGenerator* excels in “exploration”](#why-pmgenerator-excels-in-exploration)
-   2. [Target theorem proving and refinement](#target-theorem-proving-and-refinement)
-   3. [Details](#details)
-   4. [Frege's calculus simplified by Łukasiewicz `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp)`](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info)
+   1. [Who is this for, serving which purpose?](#who-is-this-for-serving-which-purpose)
+   2. [Why *pmGenerator* excels in “exploration”](#why-pmgenerator-excels-in-exploration)
+   3. [Target theorem proving and refinement](#target-theorem-proving-and-refinement)
+   4. [Details](#details)
+   5. [Frege's calculus simplified by Łukasiewicz `(CpCqp,CCpCqrCCpqCpr,CCNpNqCqp)`](#freges-calculus-simplified-by-łukasiewicz-cpcqpccpcqrccpqcprccnpnqcqp-top1000-cardinalities-db-customization-info)
 2. [Navigation](#navigation)
 3. [Usage](#usage)
    1. [Commands](#commands)
@@ -36,6 +37,27 @@
 <p align="justify">
 This research software is designed to compute and verify the logical consequences of given sets of axioms, which makes it an automated theorem prover (ATP).
 Albeit an unusual one: it is best suited to explore a given proof space in full detail. It supports classical, non-classical, and modal logic but is limited to proof systems built upon propositions and <a href="https://en.wikipedia.org/wiki/Modus_ponens">modus ponens</a>. In a way, <em>pmGenerator</em> is to conventional ATPs what a microscope is to binoculars. This tool is <em>the only one of its kind</em> for using a <a href="https://en.wikipedia.org/wiki/Condensed_detachment#D-notation">maximally condensed proof notation</a> to process completely <a href="https://en.wikipedia.org/wiki/Formal_proof">formal</a> and <a href="https://en.wikipedia.org/wiki/Constructive_proof">effective</a> proofs in user-defined systems with <a href="https://github.com/xamidi/pmGenerator/discussions/4#literature">outstanding performance</a>.
+</p>
+
+##### Who is this for, serving which purpose?
+
+<p align="justify">
+This project is aimed towards:
+</p>
+
+<ol>
+<li><div align="justify">People developing, exploring, or teaching proof systems. This includes philosophers, computer scientists, mathematicians, and even hobbyists using formal logic.</div>
+<ul><li><div align="justify">This tool can generate and process exhaustive and refined proof collections. It is highly beneficial when different researchers share these files for their systems of interest with others to download and build upon.</div></li></ul>
+</li>
+<li><div align="justify">Curious learners, including undergraduates, who can use this tool to handle and/or experiment with <em>Hilbert-style proofs</em>. Some universities require students to find such proofs in order to complete exercise sheets, for example.</div></li>
+<li><div align="justify">Motivated, capable individuals who are able to contribute to proof minimization challenges, like Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> or my <a href="https://github.com/xamidi/pmGenerator/discussions/2">1-basis challenge</a>.</div></li>
+<li><div align="justify">Proof theorists interested in the structure and/or complexity of proofs.</div>
+<ul><li><div align="justify">Ideally including some proof complexity theorists interested in further discussing how such technology, data, and algorithms could be used to tackle the issue of Frege system complexity, or similar.</div></li></ul>
+</li>
+</ol>
+
+<p align="justify">
+The above list should help you understand whether you are part of the intended audience but is not meant to be comprehensive. If you need help with technical issues, please post your questions in <a href="https://github.com/xamidi/pmGenerator/discussions">this project's forum</a>.
 </p>
 
 ##### Why *pmGenerator* excels in “exploration”
