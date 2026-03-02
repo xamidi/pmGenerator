@@ -1229,7 +1229,7 @@ void DlProofEnumerator::uniteProofSummary(const string& input, bool normalPolish
 				abstractDProof.push_back(translate(s));
 		}
 		if (debug)
-			cout << "Appended " << abstractDProof.size() << " abstract D-proofs from \"" << path << "\"." << endl;
+			cout << "Appended " << abstractDProof_part.size() << " abstract D-proof" << (abstractDProof_part.size() == 1 ? "" : "s") << " from \"" << path << "\", " << abstractDProof.size() << " in total." << endl;
 	}
 	abstractDProof = DRuleParser::recombineAbstractDProof(abstractDProof, conclusions, &targetAxioms, true, nullptr, nullptr, 1, nullptr, debug, SIZE_MAX, true, SIZE_MAX, SIZE_MAX, removeDuplicateConclusions);
 	if (debug)
