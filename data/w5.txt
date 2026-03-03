@@ -4,38 +4,102 @@
 % Proof system configuration: pmGenerator -c -n -s CCpqCCCrCstCqCNsNpCps
 % SHA-512/224 hash: 1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72
 %
-% Full summary: pmGenerator --transform data/w5.txt -f -n -t . -j 1
+% Full summary: pmGenerator --transform data/w5.txt -f -n -t _
 % Step counting: pmGenerator --transform data/w5.txt -f -n -t . -p -2 -d
-%                pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
-% Compact (548 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCCpCqrCCCsqtCNqNsCsq
-% Concrete (680 bytes): pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
+%     - all:     pmGenerator --transform data/w5.txt -f -n -t _ -p -2 -d
+%     - targets: pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq,CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -p -2 -d
+%     - 1st PMC: pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -p -2 -d
+%     - 2nd PMC: pmGenerator --transform data/w5.txt -f -n -t CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -p -2 -d
+% Compact (2273 bytes):   pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq,CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -j -1 -s CCCpCqrCCCCsCtuCCvwCNtNCCxCwyCzCNwNvCCCxCwyCzCNwNvtCNqNCvzCCvzq,CCCpCqrCCCCsCtuCCvwCNtNCxwCCxwtCNqNCvxCCvxq,CCCpCqrCCCstCCuvCwvCNqNCwuCCwuq,CCCpCqrCCCstCCuCtCNvNsCsvCNqNCCwCvxuCCCwCvxuq,CCCpCqrCCCsqtCNqNsCsq,CCCpCNNqrsCCsqq,CCCpCqrCCCsttCNqNsCsq,CCCpCqrCCCstCsuCNqNCCvCCtuwCsuCCCvCCtuwCsuq,CCCpCqrCCCCCCsCtuCCvwCNtNxCxtCyCNvNzCCazCavCNqNCzyCCzyq
+% - 1st PMC (548 bytes):  pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -s CCCpCqrCCCsqtCNqNsCsq
+% - 2nd PMC (2028 bytes): pmGenerator --transform data/w5.txt -f -n -t CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -j -1 -s CCCpCqrCCCCsCtuCCvwCNtNCCxCwyCzCNwNvCCCxCwyCzCNwNvtCNqNCvzCCvzq,CCCpCqrCCCCsCtuCCvwCNtNCxwCCxwtCNqNCvxCCvxq,CCCpCqrCCCstCCuvCwvCNqNCwuCCwuq,CCCpCqrCCCstCCuCtCNvNsCsvCNqNCCwCvxuCCCwCvxuq,CCCpCqrCCCsqtCNqNsCsq,CCCpCqrCCCCsCtuCvCNtNCCwCNNvxvCytCNqNCyCCwCNNvxvCCyCCwCNNvxvq,CCCpCqrCCCsttCNqNsCsq,CCCpCqrCCCCCCsCtuCCvwCNtNxCxtCyCNvNzCCazCavCNqNCzyCCzyq
+% Concrete (4335 bytes):  pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq,CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -j -1 -e
+% - 1st PMC (680 bytes):  pmGenerator --transform data/w5.txt -f -n -t CpCqp,CCpCqrCCpqCpr,CCNpNqCqp,Cpp,CCpqCCqrCpr,CCNppp,CpCNpq -j -1 -e
+% - 2nd PMC (3682 bytes): pmGenerator --transform data/w5.txt -f -n -t CCCCCpqCNrNsrtCCtpCsp,CCpCCNpqrCsCCNtCrtCpt,CpCCqCprCCNrCCNstqCsr,CpCCNqCCNrsCptCCtqCrq,CpCCNqCCNrsCtqCCrtCrq,CCCpqCCCNrNsrtCCtpCsp -j -1 -e
 
     CCpqCCCrCstCqCNsNpCps = 1
 [0] CCCpCqrCCCCsCtuCvCNtNwCwtCNqNCwvCCwvq = D11
 [1] CCCpCqrCCCstuCNqNCCvCuwCCCCxCyzCtCNyNsCsyCNuNCstCCCvCuwCCCCxCyzCtCNyNsCsyCNuNCstq = D1[0]
-[2] CCCpCqrCCCstuCNqNCCvCuwCCCCxCyzCCsaCNyNCCbCacCtCNaNsCCCbCacCtCNaNsyCNuNCstCCCvCuwCCCCxCyzCCsaCNyNCCbCacCtCNaNsCCCbCacCtCNaNsyCNuNCstq = D1D1D[0][0]
+[2] CCCpCqrCCCCsCtuCCvwCNtNCCxCwyCzCNwNvCCCxCwyCzCNwNvtCNqNCvzCCvzq = D1D[0][0]
+[3] CCCpCqrCCCstuCNqNCCvCuwCCCCxCyzCCsaCNyNCCbCacCtCNaNsCCCbCacCtCNaNsyCNuNCstCCCvCuwCCCCxCyzCCsaCNyNCCbCacCtCNaNsCCCbCacCtCNaNsyCNuNCstq = D1[2]
+[4] CCCpCqrCCCstuCNqNCCCCvCwxCtCNwNsCswuCCCCCvCwxCtCNwNsCswuq = D1D[0][1]
+[5] CCCpCqrCCCCCCsCtuCvCNtNwCwtxyCNqNCCzCyaCCCwvxCNyNCCCCsCtuCvCNtNwCwtxCCCzCyaCCCwvxCNyNCCCCsCtuCvCNtNwCwtxq = D1[4]
 
 % Axiom 1 by Łukasiewicz (CCpqCCqrCpr), i.e. (0→1)→((1→2)→(0→2)) ; 15 steps
-[3] CCpqCCqrCpr = D[0]D1D[0][1]
+[6] CCpqCCqrCpr = D[0][4]
 
-[4] CCCpCqrCCCstuCNqNCCCCvCwxCCyzCNwNCCaCzbCCucCNzNyCCCaCzbCCucCNzNywCCCCdCefCtCNeNsCseCNuNCstCCCCCvCwxCCyzCNwNCCaCzbCCucCNzNyCCCaCzbCCucCNzNywCCCCdCefCtCNeNsCseCNuNCstq = D1D[0]D1D[2][1]
-[5] CCCCCpCqrCsCNqNtCtqCCuCNCtsvCCwxCNNCtsNNwCCtsw = D[0][4]
-[6] CCCpCqrCCCsqtCNqNsCsq = DD[0]D[1]D1D[1][5]1
+[7] CCCpCqrCCCstCuCsvCNqNCuCCwCvxCtCNvNsCCuCCwCvxCtCNvNsq = D1D[0]D1D[0][3]
+[8] CCCpCqrCCCCsCtuCCvwCNtNCxwCCxwtCNqNCvxCCvxq = D1D[0]D1D[0]D1D[1][0]
+[9] CCCpCqrCCCstuCNqNCCvCuwCCCCxCyzCCsaCNyNCtaCCtayCNuNCstCCCvCuwCCCCxCyzCCsaCNyNCtaCCtayCNuNCstq = D1[8]
+[10] CCCpCqrCCCstuCNqNCCCCvCwxCCyzCNwNCCaCzbCCucCNzNyCCCaCzbCCucCNzNywCCCCdCefCtCNeNsCseCNuNCstCCCCCvCwxCCyzCNwNCCaCzbCCucCNzNyCCCaCzbCCucCNzNywCCCCdCefCtCNeNsCseCNuNCstq = D1D[0]D1D[3][1]
+[11] CCCpCqrCCCCsCtuCCCvwxCNtNCCyCxzCCawCNxNCvwCCCyCxzCCawCNxNCvwtCNqNCavCCavq = D1D[0]D1D[0]D1D[1][2]
+[12] CCCCCpCqrCsCNqNtCtqCCuCNCtsvCCwxCNNCtsNNwCCtsw = D[0][10]
+[13] CCCpCqrCCCstuCNqNCCCCvCwxCCsyCNwNCtyCCtywuCCCCCvCwxCCsyCNwNCtyCCtywuq = D1D[0][9]
+[14] CCCpCCCCCqCrsCCtuCNrNvCvrCNCCCCwCCNxNCyzaCxCNCNxNCyzNCCCbCcdCzCNcNyCycCCCCbCcdCzCNcNyCycCNxNCyzCNtNCCCCbCcdCzCNcNyCycxNCvCtueCCCfgCCyzxCNCCCCqCrsCCtuCNrNvCvrCNCCCCwCCNxNCyzaCxCNCNxNCyzNCCCbCcdCzCNcNyCycCCCCbCcdCzCNcNyCycCNxNCyzCNtNCCCCbCcdCzCNcNyCycxNCvCtuNCChCCCCCiCjkCgCNjNfCfjCNCCyzxNCfglCCCCCwCCNxNCyzaCxCNCNxNCyzNCCCbCcdCzCNcNyCycCCCCbCcdCzCNcNyCycCNxNCyzCNtNCCCCbCcdCzCNcNyCycxCNCCCCiCjkCgCNjNfCfjCNCCyzxNCfgNCCmCCNtNCCCCbCcdCzCNcNyCycxnCCCyzxCNCNtNCCCCbCcdCzCNcNyCycxNCCCwCCNxNCyzaCxCNCNxNCyzNCCCbCcdCzCNcNyCycCCCCbCcdCzCNcNyCycCNxNCyzCCCCCbCcdCzCNcNyCycxt = DD1D1DD1D1[1][1]D1D[1][1]
+[15] CCCpCqrCCCstCuCsvCNqNCuCtvCCuCtvq = D1D[0][13]
+[16] CCCpCqrCCCstCCuvCwvCNqNCwuCCwuq = D1D[0][14]
+[17] CCCpCqrCCCstCCuCtCNvNsCsvCNqNCCwCvxuCCCwCvxuq = D1D[0]D1D[0]D1D[1][7]
+[18] CCCpCqrCCCstuCNqNCCvCuwCCCCxCyzCCCtabCNyNCCsabCCCsabyCNuNCstCCCvCuwCCCCxCyzCCCtabCNyNCCsabCCCsabyCNuNCstq = D1D1D[0]D1D[0]D1D[1][8]
+[19] CCCpCqrCsCNqNCCtCNNsusCCCtCNNsusq = D1D[17]1
+[20] CCCpCqrCCCCsCNNtutvCNqNCCwCvxCtCNvNCCsCNNtutCCCwCvxCtCNvNCCsCNNtutq = D1[19]
+[21] CCCpCqrCCCsqtCNqNsCsq = DD[0]D[1]D1D[1][12]1
+[22] CCCpCqrCCstCNqNCCuCtvCCCstwCNtNsCCCuCtvCCCstwCNtNsq = D1[21]
 
 % Axiom 3 by Łukasiewicz (CpCNpq), i.e. 0→(¬0→1) ; 51 steps
-[7] CpCNpq = D[6]1
+[23] CpCNpq = D[21]1
+
+[24] CCCpCqrCCNstCNqNsCsq = D1[23]
+[25] CCCpCqrCCstCNqNCCuCtvCCNswCNtNsCCCuCtvCCNswCNtNsq = D1[24]
+[26] CpCCqrCqr = D[21][1]
+[27] CCCpCqrCCstCNqNCCCstutCCCCstutq = D1D[0][22]
+[28] CCCpCqrCCCstCstCNqNuCuq = D1[26]
+[29] CCCpCqrCCCCsCtuCvCNtNNwCNwtCNqNwCwq = D1D[24][0]
+[30] CCCpCqrCCCstuCNqNCCvCuwCCxCssCNuNCstCCCvCuwCCxCssCNuNCstq = D1D1D[0][27]
 
 % Identity principle (Cpp), i.e. 0→0 ; 65 steps
-[8] Cpp = D[6][3]
+[31] Cpp = D[21][6]
+
+[32] CCCpCqrCCstCNqNCCuCtvCsCNtNsCCCuCtvCsCNtNsq = D1D1[31]
+[33] CCCpCqrCCCCsCtuCvCNtNCCwCNNvxvCytCNqNCyCCwCNNvxvCCyCCwCNNvxvq = D1D[0]D1D[0]D1D1D[20][0]
+[34] CCCpCqrCCCCsCtuCvCNtNCCwCNNvxvCCCyCvzCaCNvNCwCNNvxtCNqNCCwCNNvxaCCCwCNNvxaq = D1D[0][33]
 
 % Axiom 1 by Frege (CpCqp), i.e. 0→(1→0) ; 75 steps
-[9] CpCqp = DD[0]DD1D1DD[0]D[0]D1D[0]D1D[2][5]1[1]1
+[35] CpCqp = DD[0]DD1D1DD[0]D[0]D1D[0]D1D[3][12]1[1]1
+
+[36] CCCpCNNqrsCCsqq = D[34][1]
+[37] CCCpCqrCCCsttCNqNCCuCNNtvsCCCuCNNtvsq = D1[36]
 
 % Axiom 3 for Frege by Łukasiewicz (CCNpNqCqp), i.e. (¬0→¬1)→(1→0) ; 95 steps
-[10] CCNpNqCqp = DD1D[0]DD1D1DD1D1[1][1]D1D[1][1]D1D1[7]
+[38] CCNpNqCqp = D[16][25]
 
 % Axiom 2 by Łukasiewicz (CCNppp), i.e. (¬0→0)→0 ; 99 steps
-[11] CCNppp = DD1[3]DD1D[0]D1D[0]D1D[0]D1D1DD1D1DD1D[0]D1D[0]D1D[1]D1D[0]D1D[0][2]1[0][1]
+[39] CCNppp = DD1[6][36]
+
+[40] CCCpCqrCCNstCNqNCCsutCCCsutq = D1D[0]D1D1D[21]D1D[0][25]
+[41] CCCpCqrCCCsttCNqNsCsq = D1D[21]D1D[0]D1DD1D[0][7][18]
+[42] CCCpCqrCCCstCsuCNqNCCvCCtuwCsuCCCvCCtuwCsuq = D1DD1D[0]D1D[21][10]D1D[0][18]
 
 % Axiom 2 by Frege (CCpCqrCCpqCpr), i.e. (0→(1→2))→((0→1)→(0→2)) ; 141 steps
-[12] CCpCqrCCpqCpr = D[0]D1DD1D[0]D1D[6][4]D1D[0]D1D1D[0]D1D[0]D1D[1]D1D[0]D1D[0]D1D[1][0]
+[43] CCpCqrCCpqCpr = D[0][42]
+
+[44] CCCpCqrCCstCNqNCCuCtvCCCCwCxyCCCCNszabCNxNCabCCabxCNtNsCCCuCtvCCCCwCxyCCCCNszabCNxNCabCCabxCNtNsq = D1D1DD1D[24]D1D[0]D1D[11]D1D1DD1D[0][20][0][0]
+[45] CCCpCqrCCCCCCsCtuCCvwCNtNxCxtCyCNvNzCCazCavCNqNCzyCCzyq = D1DD1D[0]D1D[2]D1D1DD1D1D[0]D1D[0]D1DD1D[2]D1D1DD1[32][0][9][0][5]
+[46] CCCpCqrCCCstCutCNqNCuCNtsCCuCNtsq = D1D[2]D1[45]
+
+% Walsh's 1st Axiom (CCpCCNpqrCsCCNtCrtCpt), i.e. (0→((¬0→1)→2))→(3→((¬4→(2→4))→(0→4))) ; 283 steps
+[47] CCpCCNpqrCsCCNtCrtCpt = DD1D[0]D1D[2]D1D1DD1D1D[0]D1D[0]D1D1D[16]D1D[22][0][0]D1D1D[28]D1D[0]D1D1D[0]D1D[0]D1D1D[0]D1D[0]D1D[1][15]
+
+% Walsh's 4th Axiom (CpCCNqCCNrsCtqCCrtCrq), i.e. 0→((¬1→((¬2→3)→(4→1)))→((2→4)→(2→1))) ; 489 steps
+[48] CpCCNqCCNrsCtqCCrtCrq = DD1D[28][0]D1D1DD1D[2]D1D1DD1D[29][37][0]D1DD1D[2]D1D1DD1D1D[16][22][0][42]
+
+% Meredith's Axiom (CCCCCpqCNrNsrtCCtpCsp), i.e. ((((0→1)→(¬2→¬3))→2)→4)→((4→0)→(3→0)) ; 591 steps
+[49] CCCCCpqCNrNsrtCCtpCsp = DD1D[0]D1D[2]D1D1DD1D1D[45]D1D1DD1DD1DDD[0]DD1D1D[0]D1DD1D[0][5][27][1]11[0]D1DD1D[0]D1[16]D1D[0]D1DD1D[21][14][40][0][1]
+
+% Walsh's 3rd Axiom (CpCCNqCCNrsCptCCtqCrq), i.e. 0→((¬1→((¬2→3)→(0→4)))→((4→1)→(2→1))) ; 623 steps
+[50] CpCCNqCCNrsCptCCtqCrq = DD1D[41]D1D[0]D1D[2]D1D[44][7]D1DD1D[2]D1D1DD1[46][0]D1D1D[26]1
+
+% Walsh's 6th Axiom (CCCpqCCCNrNsrtCCtpCsp), i.e. ((0→1)→(((¬2→¬3)→2)→4))→((4→0)→(3→0)) ; 665 steps
+[51] CCCpqCCCNrNsrtCCtpCsp = DD1D[40]D1D[2]D1D1DD1DD1D[29]D1D[34][9]D1DD1D[0]D1D[0][30][37][0][46]
+
+% Walsh's 2nd Axiom (CpCCqCprCCNrCCNstqCsr), i.e. 0→((1→(0→2))→((¬2→((¬3→4)→1))→(3→2))) ; 827 steps
+[52] CpCCqCprCCNrCCNstqCsr = DD1D[41]D1DD1D[0]D1D[17][15]D1D[0]D1D1D[11][44]D1D[8]D1DD1D1DD1DD1DD1DD[0]D[30][1]1[0][0]D1D1D[2]D1D1DD1D1DD1D[2]D1D1D[0]D1D[13][33][32][0][19]
