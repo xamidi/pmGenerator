@@ -50,7 +50,7 @@ This project is aimed towards:
 <ul><li><div align="justify">This tool can generate and process exhaustive and refined proof collections. It is highly beneficial when different researchers share these files for their systems of interest with others to download and build upon.</div></li></ul>
 </li>
 <li><div align="justify">Curious learners, including undergraduates, who can use this tool to handle and/or experiment with <em>Hilbert-style proofs</em>. Some universities require students to find such proofs in order to complete exercise sheets, for example.</div></li>
-<li><div align="justify">Motivated, capable individuals who are able to contribute to proof minimization challenges, like Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> or my <a href="https://github.com/xamidi/pmGenerator/discussions/2">1-basis challenge</a>.</div></li>
+<li><div align="justify">Motivated, capable individuals who are able to contribute to proof minimization challenges, like Metamath's <a href="https://us.metamath.org/mmsolitaire/pmproofs.txt">pmproofs.txt</a> or my <a href="https://github.com/xamidi/pmGenerator/discussions/10">1-basis challenges</a>.</div></li>
 <li><div align="justify">Proof theorists interested in the structure and/or complexity of proofs.</div>
 <ul><li><div align="justify">Ideally including some proof complexity theorists interested in further discussing how such technology, data, and algorithms could be used to tackle the issue of Frege system complexity, or similar.</div></li></ul>
 </li>
