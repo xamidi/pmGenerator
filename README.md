@@ -530,5 +530,5 @@ The system of modal logic illustrated below extends <a href="#freges-calculus-si
 </p>
 
 <p align="justify">
-<sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project <a href="pdf/rwth1392_extension_2025.pdf" title="View rwth1392_extension_2025.pdf">rwth1392</a>.</sub>
+<sup>❈</sup><sub>Generation and utilization were performed with computing resources granted by RWTH Aachen University under project <a href="pdf/rwth1392_extension_2026.pdf" title="View rwth1392_extension_2026.pdf">rwth1392</a>.</sub>
 </p>
