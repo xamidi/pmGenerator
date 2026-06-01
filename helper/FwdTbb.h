@@ -12,13 +12,23 @@
 
 namespace tbb {
 #if TBB_INTERFACE_VERSION >= 12002 // since v2021.1-beta08
-namespace detail::d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; template<typename Key, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_set; }
+namespace detail::d1 { template<typename T> class tbb_allocator; template<typename T> class cache_aligned_allocator; template<typename T, typename Allocator> class concurrent_vector; }
 using detail::d1::tbb_allocator;
 using detail::d1::cache_aligned_allocator;
 using detail::d1::concurrent_vector;
+#if TBB_INTERFACE_VERSION >= 12140 // since v2022.0.0
+namespace detail::d2 { template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; template<typename Key, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_set; }
+using detail::d2::concurrent_unordered_map;
+using detail::d2::concurrent_unordered_set;
+#else
+namespace detail::d1 { template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_map; template<typename Key, typename Hash, typename KeyEqual, typename Allocator> class concurrent_unordered_set; }
 using detail::d1::concurrent_unordered_map;
 using detail::d1::concurrent_unordered_set;
-#if TBB_INTERFACE_VERSION >= 12040 // since v2021.4.0
+#endif
+#if TBB_INTERFACE_VERSION >= 12180 // since v2023.0.0
+namespace detail::d3 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; }
+using detail::d3::concurrent_map;
+#elif TBB_INTERFACE_VERSION >= 12040 // since v2021.4.0
 namespace detail::d2 { template<typename Key, typename Value, typename Compare, typename Allocator> class concurrent_map; }
 using detail::d2::concurrent_map;
 #else
