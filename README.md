@@ -102,7 +102,7 @@ Eligible for high-performance computing. If you have access to a powerful comput
 
 ###### Frege's calculus simplified by Łukasiewicz ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg)) &nbsp;<sup><sub>[[top1000](data/top1000SmallestConclusions_1to39Steps.txt)] [[cardinalities](data/cardinalities.txt)] [[db](https://us.metamath.org/mmsolitaire/pmproofs.txt)] [[customization info](data/52436f9e87daeb2c361a73a9f389b061258328e641f750b1767addf7/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/default-plot_data_x500.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/default-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/default-plot_data_x500.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/default-bgraph.svg"><img src="svg/plot/default-bgraph.svg" alt="default-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -363,7 +363,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Meredith's Axiom; 1-basis ([CCCCCpqCNrNsrtCCtpCsp](svg/meredith.svg)) &nbsp;<sup><sub>[[top1000](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/top1000SmallestConclusions_1to83Steps.txt)] [[cardinalities](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/cardinalities.txt)] [[nd](data/m_ffx.txt)] [[sample](data/m.txt)] [[info](data/478804cd4793bc7f87041d99326aff4595662146d8a68175dda22bed/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/m-plot_data_x200.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/m-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/m-plot_data_x200.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/m-bgraph.svg"><img src="svg/plot/m-bgraph.svg" alt="m-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -383,7 +383,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 1st Axiom; 1-basis ([CCpCCNpqrCsCCNtCrtCpt](svg/walsh1st.svg)) &nbsp;<sup><sub>[[top1000](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/top1000SmallestConclusions_1to161Steps.txt)] [[cardinalities](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/cardinalities.txt)] [[nd](data/w1_ffx.txt)] [[sample](data/w1.txt)] [[info](data/02974777ff5f71e12ef58ccebedeef133584aad66e06a2a13b2b4b2c/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w1-plot_data_x400.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w1-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w1-plot_data_x400.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w1-bgraph.svg"><img src="svg/plot/w1-bgraph.svg" alt="w1-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -407,7 +407,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 2nd Axiom; 1-basis ([CpCCqCprCCNrCCNstqCsr](svg/walsh2nd.svg)) &nbsp;<sup><sub>[[top1000](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/top1000SmallestConclusions_1to43Steps.txt)] [[cardinalities](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/cardinalities.txt)] [[nd](data/w2_ffx.txt)] [[sample](data/w2.txt)] [[info](data/db25c49b13fec26ecf32e40bde65e4e2273f23b3c022cfd0fa986cff/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w2-plot_data_x6000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w2-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w2-plot_data_x6000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w2-bgraph.svg"><img src="svg/plot/w2-bgraph.svg" alt="w2-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -423,7 +423,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 3rd Axiom; 1-basis ([CpCCNqCCNrsCptCCtqCrq](svg/walsh3rd.svg)) &nbsp;<sup><sub>[[top1000](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/top1000SmallestConclusions_1to73Steps.txt)] [[cardinalities](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/cardinalities.txt)] [[nd](data/w3_ffx.txt)] [[sample](data/w3.txt)] [[info](data/0df075acc552c62513b49b6ed674bfcde1c1b018e532c665be229314/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w3-plot_data_x1000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w3-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w3-plot_data_x1000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w3-bgraph.svg"><img src="svg/plot/w3-bgraph.svg" alt="w3-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -441,7 +441,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 4th Axiom; 1-basis ([CpCCNqCCNrsCtqCCrtCrq](svg/walsh4th.svg)) &nbsp;<sup><sub>[[top1000](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/top1000SmallestConclusions_1to169Steps.txt)] [[cardinalities](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/cardinalities.txt)] [[nd](data/w4_ffx.txt)] [[sample](data/w4.txt)] [[info](data/fe7117b8aad7634fae344172b9fee05f77e5e23b035276b17d8c6ec9/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w4-plot_data_x1250.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w4-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w4-plot_data_x1250.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w4-bgraph.svg"><img src="svg/plot/w4-bgraph.svg" alt="w4-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -463,7 +463,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 5th Axiom; 1-basis ([CCpqCCCrCstCqCNsNpCps](svg/walsh5th.svg)) &nbsp;<sup><sub>[[top1000](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/top1000SmallestConclusions_1to55Steps.txt)] [[cardinalities](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/cardinalities.txt)] [[nd](data/w5_ffx.txt)] [[sample](data/w5.txt)] [[info](data/1d5f27494b1a2312e223b7f8dd3551abf717590ceef694c08dcbed72/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w5-plot_data_x30000.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w5-plot_data_x30000.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w5-bgraph.svg"><img src="svg/plot/w5-bgraph.svg" alt="w5-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -478,7 +478,7 @@ Target files are distinguished using a hexadecimal SHA-512/224 digest as a folde
 
 ###### Walsh's 6th Axiom; 1-basis ([CCCpqCCCNrNsrtCCtpCsp](svg/walsh6th.svg)) &nbsp;<sup><sub>[[top1000](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/top1000SmallestConclusions_1to95Steps.txt)] [[cardinalities](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/cardinalities.txt)] [[nd](data/w6_ffx.txt)] [[sample](data/w6.txt)] [[info](data/7f473b6ba952b3deadf36cd7f1c4b5286ef32fef64808d14fff70a69/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w6-plot_data_x800.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/w6-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/w6-plot_data_x800.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/w6-bgraph.svg"><img src="svg/plot/w6-bgraph.svg" alt="w6-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -507,7 +507,7 @@ The system of modal logic illustrated below extends <a href="#freges-calculus-si
 
 ###### S5 ([CpCqp](svg/frege-1.svg),[CCpCqrCCpqCpr](svg/frege-2.svg),[CCNpNqCqp](svg/lukasiewicz-3.svg),[CLpp](svg/truth-4.svg),[CLCpqCLpLq](svg/kripke-5.svg),[CNLNpLNLNp](svg/lewis-6.svg)) &nbsp;<sup><sub>[[top1000](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/top1000SmallestConclusions_1to30Steps.txt)] [[cardinalities](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/cardinalities.txt)] [[db](data/s5proofs.txt)] [[sample](data/s5.txt)] [[info](data/d03a044ec35d4d9a3f6d0f5118bc4f8a02a08e61fe7815b2002d007f/!.def)]</sub></sup>
 
-<details open><summary>Behavioral Graph<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/S5-plot_data_x150.txt">raw</a>]</sub></sup></summary>
+<details open><summary>Fingerprint<sup>✻</sup> <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture> &nbsp;<sup><sub>[<a href="svg/plot/S5-bgraph_grayscale.svg">grayscale</a>] [<a href="data/plot/S5-plot_data_x150.txt">raw</a>]</sub></sup></summary>
 <a href="https://xamidi.github.io/pmGenerator/svg/plot/S5-bgraph.svg"><img src="svg/plot/S5-bgraph.svg" alt="S5-bgraph.svg" width="700"></a></details>
 <details open><summary>Data <picture><img src="svg/click-cursor.svg" width="20" alt="☜"></picture></summary>
 
@@ -526,7 +526,7 @@ The system of modal logic illustrated below extends <a href="#freges-calculus-si
 <a name="footnotes"></a>
 
 <p align="justify">
-<sup>✻</sup><sub>A proof is <em>minimal</em> in context of a behavioral graph if it is the alphanumerically smallest sequence of all shortest possible proofs towards its theorem. Consequently, each proof counted in a behavioral graph uniquely represents its theorem. So these graphs illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain amount of proof steps. These alphanumeric minima may not actually occur in the proof files, but they clearly exist. In contrast, proof minimization usually aims towards finding a <em>shortest</em> proof (also “minimal”, but referring to length) — not “<em>the</em> minimal proof” as in this context.</sub>
+<sup>✻</sup><sub>These behavioral graphs capture “fingerprints” of proof systems as follows. They illustrate how many theorems (including but not counting all their infinitely many instances) of a certain size can first be proven using a certain number of proof steps. For example, a dot at 3 horizontally, 2 vertically, and colored as “proof length 5” would mean: “In the given proof system there are precisely two most general theorems that each consist of three symbols and are first provable in five steps.”</sub>
 </p>
 
 <p align="justify">

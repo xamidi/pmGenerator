@@ -15,7 +15,7 @@
 </linearGradient>
 <path id="B" d="M33120 33303c-67-24-154-115-174-183-45-152 14-294 151-362 54-26 77-32 132-32 115 0 213 62 269 169 38 74 38 178-1 257-34 69-101 131-164 152-58 20-154 19-213-1z"/>
 </defs>
-<text x="296" y="161.45" font-weight="bold" class="U V">w5: Amount of minimal condensed detachment proofs w.r.t symbolic conclusion lengths</text>
+<text x="296" y="161.45" font-weight="bold" class="U V">w5: Quantities of most general theorems by their symbolic lengths for minimal condensed detachment proofs</text>
 <text x="1310" y="206.45" class="U V">proof length 45</text>
 <circle cx="1287" cy="200.5" r="2" fill="#0f0"/>
 <text x="1310" y="234.45" class="U V">proof length 47</text>
@@ -75,6 +75,6 @@
 <text x="279" y="508.95" class="U V a">2,000</text>
 <text x="279" y="353.7" class="U V a">3,000</text>
 <text x="279" y="198.45" class="U V a">4,000</text>
-<text x="774.5" y="880.279" class="U V Z d">symbolic length of conclusion</text>
-<text x="-503" y="181.45" transform="rotate(270)" class="U V Z d">amount of minimal proofs for conclusions of specific length</text>
+<text x="774.5" y="880.279" class="U V Z d">symbolic theorem length</text>
+<text x="-503" y="181.45" transform="rotate(270)" class="U V Z d">number of most general theorems</text>
 </svg>

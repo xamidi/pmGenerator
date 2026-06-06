@@ -14,7 +14,7 @@
 <stop offset="95%" stop-color="#400080"/>
 </linearGradient>
 </defs>
-<text x="296" y="161.45" font-weight="bold" class="B C">Amount of minimal condensed detachment proofs w.r.t symbolic conclusion lengths</text>
+<text x="296" y="161.45" font-weight="bold" class="B C">Quantities of most general theorems by their symbolic lengths for minimal condensed detachment proofs</text>
 <text x="1310" y="206.45" class="B C">proof length 27</text>
 <circle cx="1287" cy="200.5" r="4" fill="#0f0"/>
 <text x="1310" y="234.45" class="B C">proof length 29</text>
@@ -2066,6 +2066,6 @@
 <text x="279" y="508.95" class="B C H">400,000</text>
 <text x="279" y="353.7" class="B C H">600,000</text>
 <text x="279" y="198.45" class="B C H">800,000</text>
-<text x="774.5" y="880.279" class="B C G K">symbolic length of conclusion</text>
-<text x="-503" y="181.45" transform="rotate(270)" class="B C G K">amount of minimal proofs for conclusions of specific length</text>
+<text x="774.5" y="880.279" class="B C G K">symbolic theorem length</text>
+<text x="-503" y="181.45" transform="rotate(270)" class="B C G K">number of most general theorems</text>
 </svg>
