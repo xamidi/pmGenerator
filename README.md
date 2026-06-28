@@ -1,8 +1,8 @@
 <img align="left" src="icon/icon-readme.png" alt="icon">
 
-# @xamidi/pmGenerator
+# [@xamidi/pmGenerator](https://github.com/xamidi/pmGenerator)
 
-[![DOI zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
+[![DOI 10.5281/zenodo.10931360](svg/zenodo.10931360.svg)](https://doi.org/10.5281/zenodo.10931360) [![releases](https://img.shields.io/github/v/release/xamidi/pmGenerator?label=latest%20release)](https://github.com/xamidi/pmGenerator/releases)
 
 <sup>A tool meant to assist research on logical systems with detachment.</sup>
 
