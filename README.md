@@ -134,7 +134,8 @@ Some more – and very special – proof systems are illustrated <a href="#custo
 
 - [C++20 branch](https://github.com/xamidi/pmGenerator/tree/master) (master)
 - [C++11 branch](https://github.com/xamidi/pmGenerator/tree/c++11) (version 1.2.0, discontinued)
-- [Mirror repository](https://codeberg.org/xamidi/pmGenerator) (on Codeberg.org)
+- [Mirror on Codeberg](https://codeberg.org/xamidi/pmGenerator) (hosted in Berlin, Germany)
+- [Mirror on git.nrw](https://gitlab.git.nrw/xamidi/pmGenerator) (provided by RWTH Aachen University)
 
 #### Usage
 
