@@ -526,26 +526,10 @@ int main(int argc, char* argv[]) { // argc = 1 + N, argv = { <command>, <arg1>, 
 	bool extractedEnv = false;
 	for (int i = 1; i < argc; i++) {
 		auto recent = [&](const string& s = "?") {
-			if (s == "c")
-				return Task::Customize;
-			else if (s == "g")
-				return Task::Generate;
-			else if (s == "r")
-				return Task::CreateReplacements;
-			else if (s == "a")
-				return Task::ApplyReplacements;
-			else if (s == "parse")
-				return Task::ParseAndPrintProofs;
-			else if (s == "search")
-				return Task::SearchProofFiles;
-			else if (s == "iterate")
-				return Task::IterateProofCandidates;
-			else if (s == "variate")
-				return Task::FileConversion;
-			else if (s == "plot")
-				return Task::ConclusionLengthPlot;
-			else if (s == "m")
-				return Task::MpiFilter;
+			static const unordered_map<string, Task> toTaskType = { { "c", Task::Customize }, { "g", Task::Generate }, { "r", Task::CreateReplacements }, { "a", Task::ApplyReplacements }, { "parse", Task::ParseAndPrintProofs }, { "transform", Task::TransformProofSummary }, { "unfold", Task::UnfoldProofSummary }, { "unite", Task::UniteProofSummaries }, { "rebase", Task::RebaseProofSummary }, { "ndconvert", Task::ConvertNaturalDeduction }, { "search", Task::SearchProofFiles }, { "extract", Task::ExtractFromProofFiles }, { "assess", Task::AssessGeneration }, { "iterate", Task::IterateProofCandidates }, { "variate", Task::FileConversion }, { "plot", Task::ConclusionLengthPlot }, { "m", Task::MpiFilter } };
+			unordered_map<string, Task>::const_iterator searchResult = toTaskType.find(s);
+			if (searchResult != toTaskType.end())
+				return searchResult->second;
 			else
 				return tasks.empty() ? Task::Invalid : tasks.back().task;
 		};
